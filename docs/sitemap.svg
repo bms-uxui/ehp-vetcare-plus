@@ -1,0 +1,459 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1700 1480" font-family="-apple-system, Helvetica, Arial, sans-serif">
+  <defs>
+    <style>
+      .bg { fill:#FAFAFA; }
+      .title { fill:#2E2E33; font-size:26px; font-weight:700; text-anchor:middle; }
+      .subtitle { fill:#6E6E74; font-size:13px; text-anchor:middle; }
+
+      .section-hdr { fill:#B86A7C; rx:10; }
+      .section-hdr-text { fill:#FFFFFF; font-size:14px; font-weight:700; }
+      .section-hdr-num { fill:#FBF3F4; font-size:11px; font-weight:600; letter-spacing:1px; }
+
+      .node { fill:#FFFFFF; stroke:#D0D0D4; stroke-width:1.2; rx:8; }
+      .node-entry { fill:#FFFFFF; stroke:#B86A7C; stroke-width:1.8; rx:8; }
+      .node-leaf { fill:#FAFAFA; stroke:#D0D0D4; stroke-width:1; rx:8; }
+
+      .num { fill:#B86A7C; font-size:10px; font-weight:700; letter-spacing:0.5px; }
+      .screen { fill:#2E2E33; font-size:13px; font-weight:600; }
+      .desc { fill:#6E6E74; font-size:10.5px; }
+
+      .connector { stroke:#D0D0D4; stroke-width:1.2; fill:none; }
+      .connector-primary { stroke:#B86A7C; stroke-width:1.5; fill:none; }
+
+      .link-tag { fill:#B86A7C; font-size:10px; font-weight:700; font-style:italic; }
+    </style>
+  </defs>
+
+  <rect width="1700" height="1480" class="bg"/>
+
+  <!-- HEADER -->
+  <text x="850" y="44" class="title">EHP VetCare Plus — Sitemap</text>
+  <text x="850" y="70" class="subtitle">Information architecture · 9 modules · 18 screens · Thai UI</text>
+
+  <!-- ROOT -->
+  <g transform="translate(740, 96)">
+    <rect class="section-hdr" width="220" height="52" style="fill:#B86A7C;"/>
+    <text x="110" y="22" text-anchor="middle" class="section-hdr-num">ROOT</text>
+    <text x="110" y="40" text-anchor="middle" class="section-hdr-text">VetCare Plus App</text>
+  </g>
+
+  <!-- ════════════════ ROW 1 — 5 top-level sections ════════════════ -->
+  <!-- Columns: Auth | Home | Pets | Appts | Profile  (x=60, 400, 740, 1080, 1420) -->
+
+  <!-- Connector lines from root to each section header -->
+  <path class="connector-primary" d="M 850 148 L 850 180 L 180 180 L 180 210"/>
+  <path class="connector-primary" d="M 850 180 L 520 180 L 520 210"/>
+  <path class="connector-primary" d="M 850 148 L 850 210"/>
+  <path class="connector-primary" d="M 850 180 L 1180 180 L 1180 210"/>
+  <path class="connector-primary" d="M 850 180 L 1540 180 L 1540 210"/>
+
+  <!-- ───── 1.0 Authentication ───── -->
+  <g transform="translate(60, 210)">
+    <rect class="section-hdr" width="240" height="52"/>
+    <text x="20" y="22" class="section-hdr-num">§ 1.0</text>
+    <text x="20" y="40" class="section-hdr-text">Authentication</text>
+  </g>
+  <!-- Auth spine -->
+  <line x1="80" y1="262" x2="80" y2="410" class="connector"/>
+
+  <g transform="translate(100, 280)">
+    <rect class="node-entry" width="200" height="58" rx="8"/>
+    <text x="12" y="18" class="num">1.1 · Entry</text>
+    <text x="12" y="36" class="screen">Login</text>
+    <text x="12" y="50" class="desc">email · Google · Facebook · LINE</text>
+  </g>
+  <line x1="80" y1="310" x2="100" y2="310" class="connector"/>
+
+  <g transform="translate(100, 352)">
+    <rect class="node" width="200" height="58" rx="8"/>
+    <text x="12" y="18" class="num">1.2</text>
+    <text x="12" y="36" class="screen">Signup</text>
+    <text x="12" y="50" class="desc">CID · name · phone · email</text>
+  </g>
+  <line x1="80" y1="382" x2="100" y2="382" class="connector"/>
+
+  <!-- ───── 2.0 Home Dashboard ───── -->
+  <g transform="translate(400, 210)">
+    <rect class="section-hdr" width="240" height="52"/>
+    <text x="20" y="22" class="section-hdr-num">§ 2.0 · TAB</text>
+    <text x="20" y="40" class="section-hdr-text">Home Dashboard</text>
+  </g>
+  <line x1="420" y1="262" x2="420" y2="620" class="connector"/>
+
+  <g transform="translate(440, 280)">
+    <rect class="node-entry" width="200" height="58" rx="8"/>
+    <text x="12" y="18" class="num">2.1 · Hub</text>
+    <text x="12" y="36" class="screen">Home</text>
+    <text x="12" y="50" class="desc">greeting · next appt · 6 tiles</text>
+  </g>
+  <line x1="420" y1="310" x2="440" y2="310" class="connector"/>
+
+  <!-- Tiles are listed as sub-items under Home -->
+  <g transform="translate(440, 352)">
+    <rect class="node-leaf" width="200" height="38" rx="8"/>
+    <text x="12" y="14" class="num">Tile →</text>
+    <text x="12" y="30" class="screen" style="font-size:12px;">🐶 Pets  <tspan class="link-tag">§ 3</tspan></text>
+  </g>
+  <line x1="420" y1="371" x2="440" y2="371" class="connector"/>
+
+  <g transform="translate(440, 400)">
+    <rect class="node-leaf" width="200" height="38" rx="8"/>
+    <text x="12" y="14" class="num">Tile →</text>
+    <text x="12" y="30" class="screen" style="font-size:12px;">📅 Appointments  <tspan class="link-tag">§ 4</tspan></text>
+  </g>
+  <line x1="420" y1="419" x2="440" y2="419" class="connector"/>
+
+  <g transform="translate(440, 448)">
+    <rect class="node-leaf" width="200" height="38" rx="8"/>
+    <text x="12" y="14" class="num">Tile →</text>
+    <text x="12" y="30" class="screen" style="font-size:12px;">🤖 ผู้ช่วย AI  <tspan class="link-tag">§ 8</tspan></text>
+  </g>
+  <line x1="420" y1="467" x2="440" y2="467" class="connector"/>
+
+  <g transform="translate(440, 496)">
+    <rect class="node-leaf" width="200" height="38" rx="8"/>
+    <text x="12" y="14" class="num">Tile →</text>
+    <text x="12" y="30" class="screen" style="font-size:12px;">🔔 Notifications  <tspan class="link-tag">§ 6</tspan></text>
+  </g>
+  <line x1="420" y1="515" x2="440" y2="515" class="connector"/>
+
+  <g transform="translate(440, 544)">
+    <rect class="node-leaf" width="200" height="38" rx="8"/>
+    <text x="12" y="14" class="num">Tile →</text>
+    <text x="12" y="30" class="screen" style="font-size:12px;">💬 Tele-Vet  <tspan class="link-tag">§ 7</tspan></text>
+  </g>
+  <line x1="420" y1="563" x2="440" y2="563" class="connector"/>
+
+  <g transform="translate(440, 592)">
+    <rect class="node-leaf" width="200" height="38" rx="8"/>
+    <text x="12" y="14" class="num">Tile →</text>
+    <text x="12" y="30" class="screen" style="font-size:12px;">🛍️ Pet Shop  <tspan class="link-tag">§ 9</tspan></text>
+  </g>
+  <line x1="420" y1="611" x2="440" y2="611" class="connector"/>
+
+  <!-- ───── 3.0 Pets ───── -->
+  <g transform="translate(740, 210)">
+    <rect class="section-hdr" width="240" height="52"/>
+    <text x="20" y="22" class="section-hdr-num">§ 3.0 · TAB</text>
+    <text x="20" y="40" class="section-hdr-text">Pets</text>
+  </g>
+  <line x1="760" y1="262" x2="760" y2="600" class="connector"/>
+
+  <g transform="translate(780, 280)">
+    <rect class="node-entry" width="200" height="58" rx="8"/>
+    <text x="12" y="18" class="num">3.1 · List</text>
+    <text x="12" y="36" class="screen">Pets List</text>
+    <text x="12" y="50" class="desc">grid of pet cards</text>
+  </g>
+  <line x1="760" y1="310" x2="780" y2="310" class="connector"/>
+
+  <g transform="translate(800, 352)">
+    <rect class="node" width="200" height="58" rx="8"/>
+    <text x="12" y="18" class="num">3.1.1</text>
+    <text x="12" y="36" class="screen">Pet Detail</text>
+    <text x="12" y="50" class="desc">breed · age · weight · vaccines</text>
+  </g>
+  <line x1="760" y1="382" x2="800" y2="382" class="connector"/>
+
+  <g transform="translate(820, 424)">
+    <rect class="node" width="200" height="58" rx="8"/>
+    <text x="12" y="18" class="num">3.1.1.1</text>
+    <text x="12" y="36" class="screen">Health Records</text>
+    <text x="12" y="50" class="desc">weight chart · clinic visits</text>
+  </g>
+  <line x1="760" y1="454" x2="820" y2="454" class="connector"/>
+
+  <g transform="translate(840, 496)">
+    <rect class="node" width="200" height="58" rx="8"/>
+    <text x="12" y="18" class="num">3.1.1.1.1</text>
+    <text x="12" y="36" class="screen">Visit Detail</text>
+    <text x="12" y="50" class="desc">vitals · labs · medications</text>
+  </g>
+  <line x1="760" y1="526" x2="840" y2="526" class="connector"/>
+
+  <g transform="translate(800, 568)">
+    <rect class="node" width="200" height="58" rx="8"/>
+    <text x="12" y="18" class="num">3.2</text>
+    <text x="12" y="36" class="screen">Add Pet</text>
+    <text x="12" y="50" class="desc">species · photo · vitals</text>
+  </g>
+  <line x1="760" y1="598" x2="800" y2="598" class="connector"/>
+
+  <!-- ───── 4.0 Appointments ───── -->
+  <g transform="translate(1080, 210)">
+    <rect class="section-hdr" width="240" height="52"/>
+    <text x="20" y="22" class="section-hdr-num">§ 4.0 · TAB</text>
+    <text x="20" y="40" class="section-hdr-text">Appointments</text>
+  </g>
+  <line x1="1100" y1="262" x2="1100" y2="470" class="connector"/>
+
+  <g transform="translate(1120, 280)">
+    <rect class="node-entry" width="200" height="58" rx="8"/>
+    <text x="12" y="18" class="num">4.1 · List</text>
+    <text x="12" y="36" class="screen">Appointments</text>
+    <text x="12" y="50" class="desc">upcoming · past</text>
+  </g>
+  <line x1="1100" y1="310" x2="1120" y2="310" class="connector"/>
+
+  <g transform="translate(1140, 352)">
+    <rect class="node" width="200" height="58" rx="8"/>
+    <text x="12" y="18" class="num">4.1.1</text>
+    <text x="12" y="36" class="screen">Appointment Detail</text>
+    <text x="12" y="50" class="desc">reschedule · cancel</text>
+  </g>
+  <line x1="1100" y1="382" x2="1140" y2="382" class="connector"/>
+
+  <g transform="translate(1140, 424)">
+    <rect class="node" width="200" height="58" rx="8"/>
+    <text x="12" y="18" class="num">4.2</text>
+    <text x="12" y="36" class="screen">Book Appointment</text>
+    <text x="12" y="50" class="desc">pet · type · date · vet</text>
+  </g>
+  <line x1="1100" y1="454" x2="1140" y2="454" class="connector"/>
+
+  <!-- ───── 5.0 Profile ───── -->
+  <g transform="translate(1420, 210)">
+    <rect class="section-hdr" width="240" height="52"/>
+    <text x="20" y="22" class="section-hdr-num">§ 5.0 · TAB</text>
+    <text x="20" y="40" class="section-hdr-text">Profile</text>
+  </g>
+  <line x1="1440" y1="262" x2="1440" y2="550" class="connector"/>
+
+  <g transform="translate(1460, 280)">
+    <rect class="node-entry" width="200" height="58" rx="8"/>
+    <text x="12" y="18" class="num">5.1 · Hub</text>
+    <text x="12" y="36" class="screen">Profile Menu</text>
+    <text x="12" y="50" class="desc">avatar · settings · billing</text>
+  </g>
+  <line x1="1440" y1="310" x2="1460" y2="310" class="connector"/>
+
+  <g transform="translate(1480, 352)">
+    <rect class="node-leaf" width="180" height="38" rx="8"/>
+    <text x="12" y="14" class="num">Menu →</text>
+    <text x="12" y="30" class="screen" style="font-size:12px;">💳 Expenses  <tspan class="link-tag">§ 9.2</tspan></text>
+  </g>
+  <line x1="1440" y1="371" x2="1480" y2="371" class="connector"/>
+
+  <g transform="translate(1480, 400)">
+    <rect class="node-leaf" width="180" height="38" rx="8"/>
+    <text x="12" y="14" class="num">Menu →</text>
+    <text x="12" y="30" class="screen" style="font-size:12px;">🔔 Notifications  <tspan class="link-tag">§ 6</tspan></text>
+  </g>
+  <line x1="1440" y1="419" x2="1480" y2="419" class="connector"/>
+
+  <g transform="translate(1480, 448)">
+    <rect class="node-leaf" width="180" height="38" rx="8"/>
+    <text x="12" y="14" class="num">Menu</text>
+    <text x="12" y="30" class="screen" style="font-size:12px;">ข้อมูลส่วนตัว</text>
+  </g>
+  <line x1="1440" y1="467" x2="1480" y2="467" class="connector"/>
+
+  <g transform="translate(1480, 496)">
+    <rect class="node-leaf" width="180" height="38" rx="8"/>
+    <text x="12" y="14" class="num">Menu</text>
+    <text x="12" y="30" class="screen" style="font-size:12px;">คลินิก · ความปลอดภัย · ฯลฯ</text>
+  </g>
+  <line x1="1440" y1="515" x2="1480" y2="515" class="connector"/>
+
+  <!-- ════════════════ ROW 2 — Cross-cutting modules ════════════════ -->
+
+  <!-- Divider line -->
+  <line x1="60" y1="720" x2="1640" y2="720" stroke="#E6E6E8" stroke-width="1"/>
+  <text x="850" y="760" class="subtitle">Modules reachable from Home tiles (or Profile menu)</text>
+
+  <!-- ───── 6.0 Notifications ───── -->
+  <g transform="translate(60, 790)">
+    <rect class="section-hdr" width="360" height="52"/>
+    <text x="20" y="22" class="section-hdr-num">§ 6.0 · MODULE</text>
+    <text x="20" y="40" class="section-hdr-text">Notifications &amp; Reminders</text>
+  </g>
+  <line x1="80" y1="842" x2="80" y2="1000" class="connector"/>
+
+  <g transform="translate(100, 860)">
+    <rect class="node-entry" width="320" height="58" rx="8"/>
+    <text x="12" y="18" class="num">6.1 · Hub</text>
+    <text x="12" y="36" class="screen">Notifications</text>
+    <text x="12" y="50" class="desc">inbox · schedules · settings (3 tabs)</text>
+  </g>
+  <line x1="80" y1="890" x2="100" y2="890" class="connector"/>
+
+  <g transform="translate(120, 932)">
+    <rect class="node" width="300" height="58" rx="8"/>
+    <text x="12" y="18" class="num">6.1.1</text>
+    <text x="12" y="36" class="screen">Add Feeding Schedule</text>
+    <text x="12" y="50" class="desc">type · pet · time · amount</text>
+  </g>
+  <line x1="80" y1="962" x2="120" y2="962" class="connector"/>
+
+  <!-- ───── 7.0 Tele-Vet ───── -->
+  <g transform="translate(460, 790)">
+    <rect class="section-hdr" width="360" height="52"/>
+    <text x="20" y="22" class="section-hdr-num">§ 7.0 · MODULE</text>
+    <text x="20" y="40" class="section-hdr-text">Tele-Vet Consultation</text>
+  </g>
+  <line x1="480" y1="842" x2="480" y2="1080" class="connector"/>
+
+  <g transform="translate(500, 860)">
+    <rect class="node-entry" width="320" height="58" rx="8"/>
+    <text x="12" y="18" class="num">7.1 · Hub</text>
+    <text x="12" y="36" class="screen">Tele-Vet</text>
+    <text x="12" y="50" class="desc">vet list · active conversations</text>
+  </g>
+  <line x1="480" y1="890" x2="500" y2="890" class="connector"/>
+
+  <g transform="translate(520, 932)">
+    <rect class="node" width="300" height="58" rx="8"/>
+    <text x="12" y="18" class="num">7.1.1</text>
+    <text x="12" y="36" class="screen">Chat</text>
+    <text x="12" y="50" class="desc">message thread · 📞 video call</text>
+  </g>
+  <line x1="480" y1="962" x2="520" y2="962" class="connector"/>
+
+  <g transform="translate(520, 1004)">
+    <rect class="node" width="300" height="58" rx="8"/>
+    <text x="12" y="18" class="num">7.2</text>
+    <text x="12" y="36" class="screen">Book Tele-Vet</text>
+    <text x="12" y="50" class="desc">chat/video · vet · date · reason</text>
+  </g>
+  <line x1="480" y1="1034" x2="520" y2="1034" class="connector"/>
+
+  <!-- ───── 8.0 Smart AI ───── -->
+  <g transform="translate(860, 790)">
+    <rect class="section-hdr" width="360" height="52"/>
+    <text x="20" y="22" class="section-hdr-num">§ 8.0 · MODULE</text>
+    <text x="20" y="40" class="section-hdr-text">AI / Smart Features</text>
+  </g>
+  <line x1="880" y1="842" x2="880" y2="1000" class="connector"/>
+
+  <g transform="translate(900, 860)">
+    <rect class="node-entry" width="320" height="58" rx="8"/>
+    <text x="12" y="18" class="num">8.1 · Hub</text>
+    <text x="12" y="36" class="screen">Smart Features</text>
+    <text x="12" y="50" class="desc">recommendations · face scan · symptom</text>
+  </g>
+  <line x1="880" y1="890" x2="900" y2="890" class="connector"/>
+
+  <g transform="translate(920, 932)">
+    <rect class="node" width="300" height="58" rx="8"/>
+    <text x="12" y="18" class="num">8.1.1</text>
+    <text x="12" y="36" class="screen">Symptom Check</text>
+    <text x="12" y="50" class="desc">pet → symptoms → details → result</text>
+  </g>
+  <line x1="880" y1="962" x2="920" y2="962" class="connector"/>
+
+  <!-- ───── 9.0 Pet Shop + Expenses ───── -->
+  <g transform="translate(1260, 790)">
+    <rect class="section-hdr" width="380" height="52"/>
+    <text x="20" y="22" class="section-hdr-num">§ 9.0 · MODULE</text>
+    <text x="20" y="40" class="section-hdr-text">Pet Shop &amp; Expenses</text>
+  </g>
+  <line x1="1280" y1="842" x2="1280" y2="1160" class="connector"/>
+
+  <g transform="translate(1300, 860)">
+    <rect class="node-entry" width="340" height="58" rx="8"/>
+    <text x="12" y="18" class="num">9.1 · Shop</text>
+    <text x="12" y="36" class="screen">Pet Shop</text>
+    <text x="12" y="50" class="desc">categories · featured · recommended</text>
+  </g>
+  <line x1="1280" y1="890" x2="1300" y2="890" class="connector"/>
+
+  <g transform="translate(1320, 932)">
+    <rect class="node" width="320" height="58" rx="8"/>
+    <text x="12" y="18" class="num">9.1.1</text>
+    <text x="12" y="36" class="screen">Product Detail</text>
+    <text x="12" y="50" class="desc">subscription toggle · add to cart</text>
+  </g>
+  <line x1="1280" y1="962" x2="1320" y2="962" class="connector"/>
+
+  <g transform="translate(1340, 1004)">
+    <rect class="node" width="300" height="58" rx="8"/>
+    <text x="12" y="18" class="num">9.1.1.1</text>
+    <text x="12" y="36" class="screen">🛒 Cart</text>
+    <text x="12" y="50" class="desc">qty · subtotal · checkout</text>
+  </g>
+  <line x1="1280" y1="1034" x2="1340" y2="1034" class="connector"/>
+
+  <g transform="translate(1300, 1076)">
+    <rect class="node-entry" width="340" height="58" rx="8"/>
+    <text x="12" y="18" class="num">9.2 · Expenses</text>
+    <text x="12" y="36" class="screen">Expenses</text>
+    <text x="12" y="50" class="desc">monthly summary · budget · categories</text>
+  </g>
+  <line x1="1280" y1="1106" x2="1300" y2="1106" class="connector"/>
+
+  <g transform="translate(1320, 1148)">
+    <rect class="node" width="320" height="58" rx="8"/>
+    <text x="12" y="18" class="num">9.2.1</text>
+    <text x="12" y="36" class="screen">Add Expense</text>
+    <text x="12" y="50" class="desc">category · pet · amount · note</text>
+  </g>
+  <line x1="1280" y1="1178" x2="1320" y2="1178" class="connector"/>
+
+  <!-- ════════════════ SUMMARY TABLE ════════════════ -->
+  <g transform="translate(60, 1250)">
+    <rect fill="#FFFFFF" stroke="#D0D0D4" stroke-width="1" width="1580" height="200" rx="12"/>
+    <text x="20" y="30" style="font-size:14px; font-weight:700; fill:#2E2E33;">Screen Inventory</text>
+
+    <!-- Column 1 -->
+    <text x="20" y="60" style="font-size:11px; font-weight:600; fill:#B86A7C;">AUTH</text>
+    <text x="20" y="78" style="font-size:11.5px; fill:#2E2E33;">1.1 Login</text>
+    <text x="20" y="94" style="font-size:11.5px; fill:#2E2E33;">1.2 Signup</text>
+
+    <text x="20" y="124" style="font-size:11px; font-weight:600; fill:#B86A7C;">TABS</text>
+    <text x="20" y="142" style="font-size:11.5px; fill:#2E2E33;">2.1 Home</text>
+    <text x="20" y="158" style="font-size:11.5px; fill:#2E2E33;">3.1 Pets List</text>
+    <text x="20" y="174" style="font-size:11.5px; fill:#2E2E33;">4.1 Appointments</text>
+
+    <!-- Column 2 -->
+    <text x="240" y="60" style="font-size:11px; font-weight:600; fill:#B86A7C;">PETS · HEALTH</text>
+    <text x="240" y="78" style="font-size:11.5px; fill:#2E2E33;">3.1.1 Pet Detail</text>
+    <text x="240" y="94" style="font-size:11.5px; fill:#2E2E33;">3.1.1.1 Health Records</text>
+    <text x="240" y="110" style="font-size:11.5px; fill:#2E2E33;">3.1.1.1.1 Visit Detail</text>
+    <text x="240" y="126" style="font-size:11.5px; fill:#2E2E33;">3.2 Add Pet</text>
+
+    <text x="240" y="156" style="font-size:11px; font-weight:600; fill:#B86A7C;">APPOINTMENTS</text>
+    <text x="240" y="174" style="font-size:11.5px; fill:#2E2E33;">4.1.1 Appointment Detail</text>
+
+    <!-- Column 3 -->
+    <text x="460" y="60" style="font-size:11px; font-weight:600; fill:#B86A7C;">(continued)</text>
+    <text x="460" y="78" style="font-size:11.5px; fill:#2E2E33;">4.2 Book Appointment</text>
+    <text x="460" y="94" style="font-size:11.5px; fill:#2E2E33;">5.1 Profile Menu</text>
+
+    <text x="460" y="124" style="font-size:11px; font-weight:600; fill:#B86A7C;">NOTIFICATIONS</text>
+    <text x="460" y="142" style="font-size:11.5px; fill:#2E2E33;">6.1 Notifications</text>
+    <text x="460" y="158" style="font-size:11.5px; fill:#2E2E33;">6.1.1 Add Feeding Schedule</text>
+
+    <!-- Column 4 -->
+    <text x="680" y="60" style="font-size:11px; font-weight:600; fill:#B86A7C;">TELE-VET</text>
+    <text x="680" y="78" style="font-size:11.5px; fill:#2E2E33;">7.1 Tele-Vet</text>
+    <text x="680" y="94" style="font-size:11.5px; fill:#2E2E33;">7.1.1 Chat</text>
+    <text x="680" y="110" style="font-size:11.5px; fill:#2E2E33;">7.2 Book Tele-Vet</text>
+
+    <text x="680" y="140" style="font-size:11px; font-weight:600; fill:#B86A7C;">SMART AI</text>
+    <text x="680" y="158" style="font-size:11.5px; fill:#2E2E33;">8.1 Smart Features</text>
+    <text x="680" y="174" style="font-size:11.5px; fill:#2E2E33;">8.1.1 Symptom Check</text>
+
+    <!-- Column 5 -->
+    <text x="900" y="60" style="font-size:11px; font-weight:600; fill:#B86A7C;">SHOP · EXPENSES</text>
+    <text x="900" y="78" style="font-size:11.5px; fill:#2E2E33;">9.1 Pet Shop</text>
+    <text x="900" y="94" style="font-size:11.5px; fill:#2E2E33;">9.1.1 Product Detail</text>
+    <text x="900" y="110" style="font-size:11.5px; fill:#2E2E33;">9.1.1.1 Cart</text>
+    <text x="900" y="126" style="font-size:11.5px; fill:#2E2E33;">9.2 Expenses</text>
+    <text x="900" y="142" style="font-size:11.5px; fill:#2E2E33;">9.2.1 Add Expense</text>
+
+    <!-- Column 6 - stats -->
+    <text x="1180" y="60" style="font-size:11px; font-weight:600; fill:#B86A7C;">TOTALS</text>
+    <text x="1180" y="80" style="font-size:12px; fill:#2E2E33;">Modules:</text>
+    <text x="1300" y="80" style="font-size:12px; font-weight:700; fill:#B86A7C;">9</text>
+    <text x="1180" y="98" style="font-size:12px; fill:#2E2E33;">Screens:</text>
+    <text x="1300" y="98" style="font-size:12px; font-weight:700; fill:#B86A7C;">18</text>
+    <text x="1180" y="116" style="font-size:12px; fill:#2E2E33;">Tab-level:</text>
+    <text x="1300" y="116" style="font-size:12px; font-weight:700; fill:#B86A7C;">4</text>
+    <text x="1180" y="134" style="font-size:12px; fill:#2E2E33;">Max depth:</text>
+    <text x="1300" y="134" style="font-size:12px; font-weight:700; fill:#B86A7C;">5 levels</text>
+    <text x="1180" y="152" style="font-size:12px; fill:#2E2E33;">Language:</text>
+    <text x="1300" y="152" style="font-size:12px; font-weight:700; fill:#B86A7C;">ไทย</text>
+    <text x="1180" y="170" style="font-size:12px; fill:#2E2E33;">Theme:</text>
+    <text x="1300" y="170" style="font-size:12px; font-weight:700; fill:#B86A7C;">Dusty Rose</text>
+  </g>
+</svg>

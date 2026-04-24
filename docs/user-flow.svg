@@ -1,0 +1,402 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1700 1320" font-family="-apple-system, Helvetica, Arial, sans-serif">
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#6E6E74"/>
+    </marker>
+    <marker id="arrow-rose" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#B86A7C"/>
+    </marker>
+
+    <style>
+      .box { fill:#FFFFFF; stroke:#D0D0D4; stroke-width:1.5; rx:10; }
+      .box-hub { fill:#FBF3F4; stroke:#B86A7C; stroke-width:2; rx:10; }
+      .box-primary { fill:#B86A7C; stroke:#B86A7C; stroke-width:1.5; rx:10; }
+      .box-mod-auth { fill:#FFFFFF; stroke:#B86A7C; stroke-width:1.5; rx:10; }
+      .box-mod-pet { fill:#FFFFFF; stroke:#D99A20; stroke-width:1.5; rx:10; }
+      .box-mod-appt { fill:#FFFFFF; stroke:#4A8FD1; stroke-width:1.5; rx:10; }
+      .box-mod-health { fill:#FFFFFF; stroke:#6CC28A; stroke-width:1.5; rx:10; }
+      .box-mod-notif { fill:#FFFFFF; stroke:#E8A87C; stroke-width:1.5; rx:10; }
+      .box-mod-ai { fill:#FFFFFF; stroke:#7B5CC8; stroke-width:1.5; rx:10; }
+      .box-mod-shop { fill:#FFFFFF; stroke:#4FB36C; stroke-width:1.5; rx:10; }
+      .box-mod-profile { fill:#FFFFFF; stroke:#6E6E74; stroke-width:1.5; rx:10; }
+
+      .label { fill:#2E2E33; font-size:13px; font-weight:600; text-anchor:middle; }
+      .sub { fill:#6E6E74; font-size:10px; text-anchor:middle; }
+      .label-white { fill:#FFFFFF; font-size:14px; font-weight:700; text-anchor:middle; }
+
+      .title { fill:#2E2E33; font-size:24px; font-weight:700; text-anchor:middle; }
+      .subtitle { fill:#6E6E74; font-size:13px; text-anchor:middle; }
+      .section-label { fill:#B86A7C; font-size:11px; font-weight:700; letter-spacing:1.5px; text-transform:uppercase; text-anchor:middle; }
+
+      .edge { stroke:#9A9AA0; stroke-width:1.3; fill:none; }
+      .edge-primary { stroke:#B86A7C; stroke-width:1.6; fill:none; }
+      .edge-dashed { stroke:#9A9AA0; stroke-width:1.3; fill:none; stroke-dasharray:5,4; }
+
+      .legend-box { fill:#FFFFFF; stroke:#D0D0D4; stroke-width:1; rx:10; }
+    </style>
+  </defs>
+
+  <!-- Background -->
+  <rect width="1700" height="1320" fill="#FAFAFA"/>
+
+  <!-- Header -->
+  <text x="850" y="46" class="title">EHP VetCare Plus — User Flow</text>
+  <text x="850" y="72" class="subtitle">React Native (Expo) · 9 modules · Thai UI · Dusty Rose theme</text>
+
+  <!-- ═════════════════════════ AUTH ═════════════════════════ -->
+  <text x="850" y="120" class="section-label">AUTHENTICATION</text>
+
+  <!-- App Launch -->
+  <g transform="translate(770, 140)">
+    <rect class="box" width="160" height="48" rx="10"/>
+    <text x="80" y="22" class="label">App Launch</text>
+    <text x="80" y="38" class="sub">entry point</text>
+  </g>
+
+  <!-- Login -->
+  <g transform="translate(670, 220)">
+    <rect class="box-mod-auth" width="160" height="48" rx="10"/>
+    <text x="80" y="22" class="label">Login</text>
+    <text x="80" y="38" class="sub">email · Google · FB · LINE</text>
+  </g>
+
+  <!-- Signup -->
+  <g transform="translate(870, 220)">
+    <rect class="box-mod-auth" width="160" height="48" rx="10"/>
+    <text x="80" y="22" class="label">Signup</text>
+    <text x="80" y="38" class="sub">CID · name · phone</text>
+  </g>
+
+  <!-- Arrows: App Launch ↓ Login ; Login ⇄ Signup -->
+  <path class="edge" d="M 850 188 L 750 220" marker-end="url(#arrow)"/>
+  <path class="edge" d="M 830 244 L 870 244" marker-end="url(#arrow)"/>
+  <path class="edge" d="M 870 256 L 830 256" marker-end="url(#arrow)"/>
+
+  <!-- ═════════════════════════ MAIN TABS ═════════════════════════ -->
+
+  <!-- Main (Bottom Tab Bar) -->
+  <g transform="translate(700, 310)">
+    <rect class="box-primary" width="300" height="58" rx="14"/>
+    <text x="150" y="24" class="label-white">Main (Tab Bar)</text>
+    <text x="150" y="44" style="fill:#FBF3F4; font-size:11px; text-anchor:middle;">after auth</text>
+  </g>
+
+  <!-- Login -> Main -->
+  <path class="edge-primary" d="M 750 268 L 750 308" marker-end="url(#arrow-rose)"/>
+  <!-- Signup -> Main -->
+  <path class="edge-primary" d="M 950 268 L 950 308" marker-end="url(#arrow-rose)"/>
+
+  <!-- Tabs -->
+  <g transform="translate(260, 410)">
+    <rect class="box-hub" width="140" height="52" rx="10"/>
+    <text x="70" y="22" class="label">🏠 Home</text>
+    <text x="70" y="40" class="sub">dashboard · 6 tiles</text>
+  </g>
+  <g transform="translate(620, 410)">
+    <rect class="box-hub" width="140" height="52" rx="10"/>
+    <text x="70" y="22" class="label">🐾 Pets</text>
+    <text x="70" y="40" class="sub">list of pets</text>
+  </g>
+  <g transform="translate(940, 410)">
+    <rect class="box-hub" width="140" height="52" rx="10"/>
+    <text x="70" y="22" class="label">📅 Appointments</text>
+    <text x="70" y="40" class="sub">upcoming · past</text>
+  </g>
+  <g transform="translate(1300, 410)">
+    <rect class="box-hub" width="140" height="52" rx="10"/>
+    <text x="70" y="22" class="label">👤 Profile</text>
+    <text x="70" y="40" class="sub">menu · settings</text>
+  </g>
+
+  <!-- Main -> 4 tabs -->
+  <path class="edge" d="M 780 368 L 330 408" marker-end="url(#arrow)"/>
+  <path class="edge" d="M 830 368 L 690 408" marker-end="url(#arrow)"/>
+  <path class="edge" d="M 870 368 L 1010 408" marker-end="url(#arrow)"/>
+  <path class="edge" d="M 920 368 L 1370 408" marker-end="url(#arrow)"/>
+
+  <!-- ═════════════════════════ HOME TILES → DESTINATIONS ═════════════════════════ -->
+  <text x="330" y="520" class="section-label">HOME · 6 QUICK TILES</text>
+
+  <!-- Tiles labeled as 6 boxes in a row representing the dashboard; arrows below -->
+  <g transform="translate(30, 540)">
+    <rect class="box" width="110" height="46" rx="10"/>
+    <text x="55" y="20" class="label">🐶 สัตว์เลี้ยง</text>
+    <text x="55" y="36" class="sub">→ Pets tab</text>
+  </g>
+  <g transform="translate(150, 540)">
+    <rect class="box" width="110" height="46" rx="10"/>
+    <text x="55" y="20" class="label">📅 นัดหมาย</text>
+    <text x="55" y="36" class="sub">→ Appts tab</text>
+  </g>
+  <g transform="translate(270, 540)">
+    <rect class="box-mod-ai" width="110" height="46" rx="10"/>
+    <text x="55" y="20" class="label">🤖 ผู้ช่วย AI</text>
+    <text x="55" y="36" class="sub">Module 8</text>
+  </g>
+  <g transform="translate(390, 540)">
+    <rect class="box-mod-notif" width="110" height="46" rx="10"/>
+    <text x="55" y="20" class="label">🔔 แจ้งเตือน</text>
+    <text x="55" y="36" class="sub">Module 5</text>
+  </g>
+  <g transform="translate(510, 540)">
+    <rect class="box-mod-health" width="110" height="46" rx="10"/>
+    <text x="55" y="20" class="label">💬 ปรึกษาสพ.</text>
+    <text x="55" y="36" class="sub">Module 6</text>
+  </g>
+  <g transform="translate(630, 540)">
+    <rect class="box-mod-shop" width="110" height="46" rx="10"/>
+    <text x="55" y="20" class="label">🛍️ ร้านค้า</text>
+    <text x="55" y="36" class="sub">Module 9</text>
+  </g>
+
+  <!-- Home → tile row (vertical) -->
+  <path class="edge" d="M 330 462 L 330 540" marker-end="url(#arrow)"/>
+  <!-- tiles duplicate routing to tabs (dashed, because already in tab bar) -->
+  <path class="edge-dashed" d="M 85 540 L 260 462" marker-end="url(#arrow)"/>
+  <path class="edge-dashed" d="M 205 540 L 620 462" marker-end="url(#arrow)"/>
+
+  <!-- ═════════════════════════ MODULE 8 — AI ═════════════════════════ -->
+  <g transform="translate(270, 630)">
+    <rect class="box-mod-ai" width="110" height="46" rx="10"/>
+    <text x="55" y="20" class="label">Smart Features</text>
+    <text x="55" y="36" class="sub">hub · recs</text>
+  </g>
+  <g transform="translate(270, 710)">
+    <rect class="box-mod-ai" width="110" height="46" rx="10"/>
+    <text x="55" y="20" class="label">Symptom Check</text>
+    <text x="55" y="36" class="sub">4-step AI flow</text>
+  </g>
+  <g transform="translate(100, 710)">
+    <rect class="box" width="140" height="46" rx="10"/>
+    <text x="70" y="20" class="label">📷 Face Recognition</text>
+    <text x="70" y="36" class="sub">camera (stub)</text>
+  </g>
+  <path class="edge" d="M 325 586 L 325 630" marker-end="url(#arrow)"/>
+  <path class="edge" d="M 325 676 L 325 710" marker-end="url(#arrow)"/>
+  <path class="edge" d="M 290 676 L 220 710" marker-end="url(#arrow)"/>
+
+  <!-- Symptom → BookAppointment (cross-link) -->
+  <path class="edge-dashed" d="M 380 733 L 1020 668" marker-end="url(#arrow)"/>
+
+  <!-- ═════════════════════════ MODULE 5 — NOTIFICATIONS ═════════════════════════ -->
+  <g transform="translate(390, 630)">
+    <rect class="box-mod-notif" width="110" height="46" rx="10"/>
+    <text x="55" y="20" class="label">Notifications</text>
+    <text x="55" y="36" class="sub">inbox · schedules · settings</text>
+  </g>
+  <g transform="translate(390, 710)">
+    <rect class="box-mod-notif" width="110" height="46" rx="10"/>
+    <text x="55" y="20" class="label">Add Feeding</text>
+    <text x="55" y="36" class="sub">schedule form</text>
+  </g>
+  <path class="edge" d="M 445 586 L 445 630" marker-end="url(#arrow)"/>
+  <path class="edge" d="M 445 676 L 445 710" marker-end="url(#arrow)"/>
+
+  <!-- ═════════════════════════ MODULE 6 — TELE-VET ═════════════════════════ -->
+  <g transform="translate(510, 630)">
+    <rect class="box-mod-health" width="110" height="46" rx="10"/>
+    <text x="55" y="20" class="label">Tele-Vet</text>
+    <text x="55" y="36" class="sub">vets · conversations</text>
+  </g>
+  <g transform="translate(440, 710)">
+    <rect class="box-mod-health" width="110" height="46" rx="10"/>
+    <text x="55" y="20" class="label">Chat</text>
+    <text x="55" y="36" class="sub">message + 📞 call</text>
+  </g>
+  <g transform="translate(560, 710)">
+    <rect class="box-mod-health" width="110" height="46" rx="10"/>
+    <text x="55" y="20" class="label">Book Tele-Vet</text>
+    <text x="55" y="36" class="sub">advance booking</text>
+  </g>
+  <path class="edge" d="M 565 586 L 565 630" marker-end="url(#arrow)"/>
+  <path class="edge" d="M 540 676 L 500 710" marker-end="url(#arrow)"/>
+  <path class="edge" d="M 595 676 L 615 710" marker-end="url(#arrow)"/>
+
+  <!-- ═════════════════════════ MODULE 9 — SHOP ═════════════════════════ -->
+  <g transform="translate(630, 630)">
+    <rect class="box-mod-shop" width="110" height="46" rx="10"/>
+    <text x="55" y="20" class="label">Pet Shop</text>
+    <text x="55" y="36" class="sub">categories · featured · recs</text>
+  </g>
+  <g transform="translate(630, 710)">
+    <rect class="box-mod-shop" width="110" height="46" rx="10"/>
+    <text x="55" y="20" class="label">Product Detail</text>
+    <text x="55" y="36" class="sub">subscription toggle</text>
+  </g>
+  <g transform="translate(630, 790)">
+    <rect class="box-mod-shop" width="110" height="46" rx="10"/>
+    <text x="55" y="20" class="label">🛒 Cart</text>
+    <text x="55" y="36" class="sub">checkout · qty</text>
+  </g>
+  <path class="edge" d="M 685 586 L 685 630" marker-end="url(#arrow)"/>
+  <path class="edge" d="M 685 676 L 685 710" marker-end="url(#arrow)"/>
+  <path class="edge" d="M 685 756 L 685 790" marker-end="url(#arrow)"/>
+  <!-- Shop icon → Cart direct -->
+  <path class="edge-dashed" d="M 740 650 L 765 800 L 740 810" marker-end="url(#arrow)"/>
+
+  <!-- ═════════════════════════ MODULE 2 + 3 — PETS + HEALTH ═════════════════════════ -->
+  <text x="690" y="520" class="section-label">PETS · HEALTH RECORDS</text>
+
+  <g transform="translate(560, 540)">
+    <rect class="box-mod-pet" width="130" height="46" rx="10"/>
+    <text x="65" y="20" class="label">Pet Detail</text>
+    <text x="65" y="36" class="sub">profile · stats</text>
+  </g>
+  <g transform="translate(710, 540)">
+    <rect class="box-mod-pet" width="130" height="46" rx="10"/>
+    <text x="65" y="20" class="label">Add Pet</text>
+    <text x="65" y="36" class="sub">species · photo · vitals</text>
+  </g>
+  <g transform="translate(560, 620)">
+    <rect class="box-mod-health" width="130" height="46" rx="10"/>
+    <text x="65" y="20" class="label">Health Records</text>
+    <text x="65" y="36" class="sub">weight chart · visits</text>
+  </g>
+  <g transform="translate(560, 700)">
+    <rect class="box-mod-health" width="130" height="46" rx="10"/>
+    <text x="65" y="20" class="label">Visit Detail</text>
+    <text x="65" y="36" class="sub">labs · meds · vitals</text>
+  </g>
+
+  <!-- Pets tab → Pet Detail / Add Pet -->
+  <path class="edge" d="M 690 462 L 625 540" marker-end="url(#arrow)"/>
+  <path class="edge" d="M 690 462 L 775 540" marker-end="url(#arrow)"/>
+  <!-- Pet Detail → Health Records -->
+  <path class="edge" d="M 625 586 L 625 620" marker-end="url(#arrow)"/>
+  <!-- Health Records → Visit Detail -->
+  <path class="edge" d="M 625 666 L 625 700" marker-end="url(#arrow)"/>
+
+  <!-- ═════════════════════════ MODULE 4 — APPOINTMENTS ═════════════════════════ -->
+  <text x="1020" y="520" class="section-label">APPOINTMENTS</text>
+
+  <g transform="translate(920, 540)">
+    <rect class="box-mod-appt" width="140" height="46" rx="10"/>
+    <text x="70" y="20" class="label">Appointment Detail</text>
+    <text x="70" y="36" class="sub">reschedule · cancel</text>
+  </g>
+  <g transform="translate(1080, 540)">
+    <rect class="box-mod-appt" width="140" height="46" rx="10"/>
+    <text x="70" y="20" class="label">Book Appointment</text>
+    <text x="70" y="36" class="sub">pet · type · date · vet</text>
+  </g>
+
+  <!-- Appts tab → detail / book -->
+  <path class="edge" d="M 1010 462 L 990 540" marker-end="url(#arrow)"/>
+  <path class="edge" d="M 1010 462 L 1150 540" marker-end="url(#arrow)"/>
+  <!-- Detail → Book (reschedule) -->
+  <path class="edge-dashed" d="M 1060 563 L 1080 563" marker-end="url(#arrow)"/>
+
+  <!-- ═════════════════════════ MODULE 7 — PROFILE + EXPENSES ═════════════════════════ -->
+  <text x="1420" y="520" class="section-label">PROFILE · EXPENSES</text>
+
+  <g transform="translate(1340, 540)">
+    <rect class="box-mod-profile" width="160" height="46" rx="10"/>
+    <text x="80" y="20" class="label">Profile Menu</text>
+    <text x="80" y="36" class="sub">settings · billing</text>
+  </g>
+  <g transform="translate(1340, 620)">
+    <rect class="box" width="160" height="46" rx="10"/>
+    <text x="80" y="20" class="label">💳 Expenses</text>
+    <text x="80" y="36" class="sub">monthly · budget</text>
+  </g>
+  <g transform="translate(1340, 700)">
+    <rect class="box" width="160" height="46" rx="10"/>
+    <text x="80" y="20" class="label">Add Expense</text>
+    <text x="80" y="36" class="sub">category · amount</text>
+  </g>
+
+  <!-- Profile tab → Menu -->
+  <path class="edge" d="M 1370 462 L 1420 540" marker-end="url(#arrow)"/>
+  <!-- Menu → Expenses -->
+  <path class="edge" d="M 1420 586 L 1420 620" marker-end="url(#arrow)"/>
+  <!-- Expenses → Add -->
+  <path class="edge" d="M 1420 666 L 1420 700" marker-end="url(#arrow)"/>
+  <!-- Menu → Notifications (cross link) -->
+  <path class="edge-dashed" d="M 1340 570 L 500 660" marker-end="url(#arrow)"/>
+
+  <!-- ═════════════════════════ LEGEND ═════════════════════════ -->
+  <g transform="translate(40, 900)">
+    <rect class="legend-box" width="520" height="200" rx="14"/>
+    <text x="20" y="30" style="font-size:13px; font-weight:700; fill:#2E2E33;">Legend</text>
+
+    <!-- Module colors -->
+    <g transform="translate(20, 50)">
+      <rect width="18" height="14" rx="3" fill="#FFFFFF" stroke="#B86A7C" stroke-width="1.5"/>
+      <text x="28" y="12" style="font-size:12px; fill:#2E2E33;">Module 1 — Accounts</text>
+    </g>
+    <g transform="translate(20, 72)">
+      <rect width="18" height="14" rx="3" fill="#FFFFFF" stroke="#D99A20" stroke-width="1.5"/>
+      <text x="28" y="12" style="font-size:12px; fill:#2E2E33;">Module 2 — Pet Profile</text>
+    </g>
+    <g transform="translate(20, 94)">
+      <rect width="18" height="14" rx="3" fill="#FFFFFF" stroke="#6CC28A" stroke-width="1.5"/>
+      <text x="28" y="12" style="font-size:12px; fill:#2E2E33;">Module 3 — Health Records</text>
+    </g>
+    <g transform="translate(20, 116)">
+      <rect width="18" height="14" rx="3" fill="#FFFFFF" stroke="#4A8FD1" stroke-width="1.5"/>
+      <text x="28" y="12" style="font-size:12px; fill:#2E2E33;">Module 4 — Appointments</text>
+    </g>
+    <g transform="translate(20, 138)">
+      <rect width="18" height="14" rx="3" fill="#FFFFFF" stroke="#E8A87C" stroke-width="1.5"/>
+      <text x="28" y="12" style="font-size:12px; fill:#2E2E33;">Module 5 — Notifications</text>
+    </g>
+
+    <g transform="translate(260, 50)">
+      <rect width="18" height="14" rx="3" fill="#FFFFFF" stroke="#6CC28A" stroke-width="1.5"/>
+      <text x="28" y="12" style="font-size:12px; fill:#2E2E33;">Module 6 — Tele-Vet</text>
+    </g>
+    <g transform="translate(260, 72)">
+      <rect width="18" height="14" rx="3" fill="#FFFFFF" stroke="#6E6E74" stroke-width="1.5"/>
+      <text x="28" y="12" style="font-size:12px; fill:#2E2E33;">Module 7 — Expenses</text>
+    </g>
+    <g transform="translate(260, 94)">
+      <rect width="18" height="14" rx="3" fill="#FFFFFF" stroke="#7B5CC8" stroke-width="1.5"/>
+      <text x="28" y="12" style="font-size:12px; fill:#2E2E33;">Module 8 — AI / Smart</text>
+    </g>
+    <g transform="translate(260, 116)">
+      <rect width="18" height="14" rx="3" fill="#FFFFFF" stroke="#4FB36C" stroke-width="1.5"/>
+      <text x="28" y="12" style="font-size:12px; fill:#2E2E33;">Module 9 — Pet Shop</text>
+    </g>
+    <g transform="translate(260, 138)">
+      <rect width="40" height="28" rx="6" fill="#B86A7C"/>
+      <text x="50" y="18" style="font-size:12px; fill:#2E2E33;">Hub / primary route</text>
+    </g>
+
+    <!-- Arrow styles -->
+    <g transform="translate(20, 170)">
+      <line x1="0" y1="8" x2="40" y2="8" class="edge" marker-end="url(#arrow)"/>
+      <text x="50" y="12" style="font-size:12px; fill:#2E2E33;">Navigate</text>
+    </g>
+    <g transform="translate(160, 170)">
+      <line x1="0" y1="8" x2="40" y2="8" class="edge-dashed" marker-end="url(#arrow)"/>
+      <text x="50" y="12" style="font-size:12px; fill:#2E2E33;">Cross-link / alternate entry</text>
+    </g>
+  </g>
+
+  <!-- Flow summary box -->
+  <g transform="translate(600, 900)">
+    <rect class="legend-box" width="1060" height="200" rx="14"/>
+    <text x="20" y="30" style="font-size:13px; font-weight:700; fill:#2E2E33;">Key User Journeys</text>
+
+    <text x="20" y="58" style="font-size:12px; font-weight:600; fill:#B86A7C;">1. Onboard</text>
+    <text x="110" y="58" style="font-size:12px; fill:#2E2E33;">App Launch → Login (or Signup with CID/name/phone) → Main</text>
+
+    <text x="20" y="82" style="font-size:12px; font-weight:600; fill:#B86A7C;">2. View pet</text>
+    <text x="110" y="82" style="font-size:12px; fill:#2E2E33;">Pets tab → Pet Detail → ดูประวัติสุขภาพ → Health Records → Visit Detail (labs/meds)</text>
+
+    <text x="20" y="106" style="font-size:12px; font-weight:600; fill:#B86A7C;">3. Book vet</text>
+    <text x="110" y="106" style="font-size:12px; fill:#2E2E33;">Appointments tab → + จองนัดหมายใหม่ → pick pet/type/date/time/vet → Confirm</text>
+
+    <text x="20" y="130" style="font-size:12px; font-weight:600; fill:#B86A7C;">4. AI check</text>
+    <text x="110" y="130" style="font-size:12px; fill:#2E2E33;">Home → ผู้ช่วย AI → Symptom Check (pet → symptoms → details → result) → Book Appt if urgent</text>
+
+    <text x="20" y="154" style="font-size:12px; font-weight:600; fill:#B86A7C;">5. Tele-vet</text>
+    <text x="110" y="154" style="font-size:12px; fill:#2E2E33;">Home → ปรึกษาสัตวแพทย์ → select vet → Chat (or schedule advance booking)</text>
+
+    <text x="20" y="178" style="font-size:12px; font-weight:600; fill:#B86A7C;">6. Shop</text>
+    <text x="110" y="178" style="font-size:12px; fill:#2E2E33;">Home → ร้านค้า → Product Detail (enable subscription for discount) → Cart → Checkout</text>
+  </g>
+
+  <!-- Footer -->
+  <text x="850" y="1180" class="subtitle">9 modules · 18 screens · Expo Go prototype · Frontend-only (backend integrations mocked)</text>
+</svg>

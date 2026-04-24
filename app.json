@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "vetcare-app-tmp",
-    "slug": "vetcare-app-tmp",
+    "name": "EHP VetCare Plus",
+    "slug": "ehp-vetcare-plus",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -24,7 +24,15 @@
       "predictiveBackGestureEnabled": false
     },
     "web": {
-      "favicon": "./assets/favicon.png"
-    }
+      "favicon": "./assets/favicon.png",
+      "bundler": "metro",
+      "output": "single"
+    },
+    "experiments": {
+      "baseUrl": "/ehp-vetcare-plus"
+    },
+    "plugins": [
+      "expo-font"
+    ]
   }
 }
