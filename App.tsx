@@ -30,6 +30,7 @@ import SymptomCheckScreen from './src/screens/SymptomCheckScreen';
 import PetShopScreen from './src/screens/PetShopScreen';
 import ProductDetailScreen from './src/screens/ProductDetailScreen';
 import CartScreen from './src/screens/CartScreen';
+import CheckoutScreen from './src/screens/CheckoutScreen';
 import AppTabs from './src/navigation/AppTabs';
 import { semantic } from './src/theme';
 
@@ -61,6 +62,7 @@ export type RootStackParamList = {
   PetShop: undefined;
   ProductDetail: { productId: string };
   Cart: undefined;
+  Checkout: { selectedIds?: string[] } | undefined;
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -100,7 +102,7 @@ export default function App() {
     <SafeAreaProvider>
       <StatusBar style="dark" />
       <NavigationContainer theme={navTheme}>
-        <Stack.Navigator initialRouteName="Main">
+        <Stack.Navigator initialRouteName="Login">
           <Stack.Screen
             name="Login"
             component={LoginScreen}
@@ -199,12 +201,17 @@ export default function App() {
           <Stack.Screen
             name="ProductDetail"
             component={ProductDetailScreen}
-            options={transparentHeader}
+            options={{ headerShown: false }}
           />
           <Stack.Screen
             name="Cart"
             component={CartScreen}
-            options={transparentHeader}
+            options={{ headerShown: false }}
+          />
+          <Stack.Screen
+            name="Checkout"
+            component={CheckoutScreen}
+            options={{ headerShown: false }}
           />
         </Stack.Navigator>
       </NavigationContainer>

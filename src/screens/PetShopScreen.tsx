@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { Image, Pressable, StyleSheet, View } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../App';
 import { Card, Icon, Screen, Text } from '../components';
@@ -166,10 +166,21 @@ function CategoryChip({
 
 function ProductTile({ product, onPress }: { product: Product; onPress: () => void }) {
   const cat = categoryMeta[product.category];
+  const [imgFailed, setImgFailed] = useState(false);
+  const showImage = !!product.imageUrl && !imgFailed;
   return (
     <Card variant="elevated" padding={0} onPress={onPress} style={styles.tile}>
       <View style={[styles.tileImage, { backgroundColor: cat.bg }]}>
-        <Text style={{ fontSize: 56 }}>{product.emoji}</Text>
+        {showImage ? (
+          <Image
+            source={{ uri: product.imageUrl }}
+            style={StyleSheet.absoluteFill}
+            resizeMode="cover"
+            onError={() => setImgFailed(true)}
+          />
+        ) : (
+          <Text style={{ fontSize: 56 }}>{product.emoji}</Text>
+        )}
         {product.originalPriceBaht && (
           <View style={styles.saleBadge}>
             <Text variant="caption" color={semantic.onPrimary} weight="600" style={{ fontSize: 10 }}>

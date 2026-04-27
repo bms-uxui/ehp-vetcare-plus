@@ -4,6 +4,7 @@ export type Product = {
   id: string;
   category: ProductCategory;
   emoji: string;
+  imageUrl?: string;
   name: string;
   brand: string;
   description: string;
@@ -16,6 +17,26 @@ export type Product = {
   recommendedFor: ('dog' | 'cat' | 'rabbit')[];
   tags?: string[]; // e.g. "hypoallergenic", "senior"
   clinic?: string; // clinic that fulfills the order
+};
+
+const img = (id: string) =>
+  `https://images.unsplash.com/photo-${id}?w=900&auto=format&fit=crop&q=80`;
+
+// Shared gallery photos appended after each product's primary image.
+// Each product ends up with 3 swipeable images.
+export const categoryGallery: Record<ProductCategory, string[]> = {
+  food:     [img('1601758228041-f3b2795255f1'), img('1546069901-ba9599a7e63c')],
+  treats:   [img('1543466835-00a7907e9de1'),    img('1583337130417-3346a1be7dee')],
+  toys:     [img('1518791841217-8f162f1e1131'),  img('1592194996308-7b43878e84a6')],
+  supplies: [img('1601758125946-6ec2ef64daf8'),  img('1591946614720-90a587da4a36')],
+  health:   [img('1576091160399-112ba8d25d1f'),  img('1607619056574-7b8d3ee536b2')],
+};
+
+export const getProductImages = (p: Product): string[] => {
+  const list: string[] = [];
+  if (p.imageUrl) list.push(p.imageUrl);
+  list.push(...categoryGallery[p.category]);
+  return list;
 };
 
 const DEFAULT_CLINIC = 'EHP VetCare สาขาสุขุมวิท';
@@ -33,6 +54,7 @@ export const mockProducts: Product[] = [
     id: 'pr1',
     category: 'food',
     emoji: '🥘',
+    imageUrl: img('1568640347023-a616a30bc3bd'),
     name: 'Prescription Diet Hypoallergenic',
     brand: 'Hills',
     description: 'อาหารสูตรลดการแพ้ เหมาะกับสุนัขที่มีภูมิแพ้ผิวหนังหรือระบบทางเดินอาหาร',
@@ -50,6 +72,7 @@ export const mockProducts: Product[] = [
     id: 'pr2',
     category: 'food',
     emoji: '🍗',
+    imageUrl: img('1574231164645-d6f0e8553590'),
     name: 'Royal Canin Indoor Adult',
     brand: 'Royal Canin',
     description: 'สูตรสำหรับแมวอยู่ในร่ม ช่วยควบคุมน้ำหนักและลดกลิ่นอุจจาระ',
@@ -66,6 +89,7 @@ export const mockProducts: Product[] = [
     id: 'pr3',
     category: 'food',
     emoji: '🥬',
+    imageUrl: img('1583337130417-3346a1be7dee'),
     name: 'Timothy Hay Premium',
     brand: 'Oxbow',
     description: 'หญ้าทิโมธีคุณภาพสูง สำหรับกระต่ายและหนูแกสบี้ แหล่งใยอาหารที่ดีที่สุด',
@@ -82,6 +106,7 @@ export const mockProducts: Product[] = [
     id: 'pr4',
     category: 'treats',
     emoji: '🦴',
+    imageUrl: img('1605568427561-40dd23c2acea'),
     name: 'Dental Chew Small',
     brand: 'Whimzees',
     description: 'ขนมขัดฟันรูปแปรงสีฟัน ช่วยลดคราบหินปูน',
@@ -95,6 +120,7 @@ export const mockProducts: Product[] = [
     id: 'pr5',
     category: 'toys',
     emoji: '🎾',
+    imageUrl: img('1576201836106-db1758fd1c97'),
     name: 'Interactive Ball Launcher',
     brand: 'Chuckit!',
     description: 'ลูกบอลยางทนทาน ใช้คู่กับที่โยนเพื่อออกกำลังกาย',
@@ -108,6 +134,7 @@ export const mockProducts: Product[] = [
     id: 'pr6',
     category: 'toys',
     emoji: '🐭',
+    imageUrl: img('1535268647677-300dbf3d78d1'),
     name: 'Feather Teaser Wand',
     brand: 'Petstages',
     description: 'ของเล่นตกแมว กระตุ้นสัญชาตญาณนักล่า',
@@ -121,6 +148,7 @@ export const mockProducts: Product[] = [
     id: 'pr7',
     category: 'supplies',
     emoji: '🛏️',
+    imageUrl: img('1541599468348-e96984315921'),
     name: 'Memory Foam Pet Bed Medium',
     brand: 'PetComfort',
     description: 'เตียงโฟมรองรับน้ำหนัก เหมาะกับสุนัขอายุมากหรือข้อต่ออักเสบ',
@@ -135,6 +163,7 @@ export const mockProducts: Product[] = [
     id: 'pr8',
     category: 'supplies',
     emoji: '🧴',
+    imageUrl: img('1556228720-195a672e8a03'),
     name: 'Chlorhexidine Shampoo 250ml',
     brand: 'Virbac',
     description: 'แชมพูรักษาผิวหนัง ใช้ในกรณีแพ้หรือติดเชื้อผิวหนัง',
@@ -150,6 +179,7 @@ export const mockProducts: Product[] = [
     id: 'pr9',
     category: 'health',
     emoji: '💊',
+    imageUrl: img('1584308666744-24d5c474f2ae'),
     name: 'Frontline Plus Spot-On',
     brand: 'Frontline',
     description: 'ยาหยอดป้องกันเห็บหมัด 3 แพ็ค',
@@ -164,6 +194,7 @@ export const mockProducts: Product[] = [
     id: 'pr10',
     category: 'health',
     emoji: '🍵',
+    imageUrl: img('1607619056574-7b8d3ee536b2'),
     name: 'Joint Support Supplement',
     brand: 'Nutramax',
     description: 'อาหารเสริมบำรุงข้อต่อ Glucosamine + Chondroitin',
