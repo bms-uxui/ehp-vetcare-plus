@@ -21,7 +21,7 @@ type Props = {
   style?: ViewStyle;
 };
 
-const BTN_RADIUS = radii.lg;
+const BTN_RADIUS = radii.pill;
 
 export default function Button({
   label,
@@ -54,9 +54,9 @@ export default function Button({
         { height: s.height, borderRadius: BTN_RADIUS },
         fullWidth && styles.fullWidth,
         variant === 'primary' && shadows.lift,
-        variant === 'primary' && { borderWidth: 1, borderColor: 'rgba(255,255,255,0.15)' },
+        variant === 'primary' && { borderWidth: 1, borderColor: 'rgba(255,255,255,0.18)' },
         variant === 'destructive' && shadows.md,
-        variant === 'destructive' && { borderWidth: 1, borderColor: 'rgba(255,255,255,0.15)' },
+        variant === 'destructive' && { borderWidth: 1, borderColor: 'rgba(255,255,255,0.18)' },
         variant === 'secondary' && shadows.sm,
         variant === 'ghost' && styles.ghostReset,
         variant === 'secondary' && { backgroundColor: semantic.surface, borderWidth: 1.5, borderColor: semantic.primary },
@@ -75,10 +75,8 @@ export default function Button({
             end={{ x: 1, y: 1 }}
             style={StyleSheet.absoluteFill}
           />
-          {/* Inset top highlight — 1.5px bright line inside */}
-          <View pointerEvents="none" style={styles.insetTop} />
-          {/* Inset bottom shadow — 1.5px dark line inside */}
-          <View pointerEvents="none" style={styles.insetBottom} />
+          <View pointerEvents="none" style={styles.topBevel} />
+          <View pointerEvents="none" style={styles.bottomBevel} />
         </>
       )}
       {variant === 'destructive' && (
@@ -90,8 +88,8 @@ export default function Button({
             end={{ x: 1, y: 1 }}
             style={StyleSheet.absoluteFill}
           />
-          <View pointerEvents="none" style={styles.insetTop} />
-          <View pointerEvents="none" style={styles.insetBottom} />
+          <View pointerEvents="none" style={styles.topBevel} />
+          <View pointerEvents="none" style={styles.bottomBevel} />
         </>
       )}
 
@@ -143,21 +141,21 @@ const styles = StyleSheet.create({
   ghostReset: {
     borderWidth: 0,
   },
-  insetTop: {
+  topBevel: {
     position: 'absolute',
     top: 0,
     left: 0,
     right: 0,
     height: 1.5,
-    backgroundColor: 'rgba(255,255,255,0.3)',
+    backgroundColor: 'rgba(255,255,255,0.35)',
   },
-  insetBottom: {
+  bottomBevel: {
     position: 'absolute',
     bottom: 0,
     left: 0,
     right: 0,
     height: 1.5,
-    backgroundColor: 'rgba(0,0,0,0.12)',
+    backgroundColor: 'rgba(0,0,0,0.16)',
   },
 });
 
