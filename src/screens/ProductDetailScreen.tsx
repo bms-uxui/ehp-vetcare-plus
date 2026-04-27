@@ -102,9 +102,9 @@ export default function ProductDetailScreen({ route, navigation }: Props) {
     });
   };
 
-  // Bar appears as user scrolls past the hero title (around 70-95% of hero scrolled)
-  const FADE_START = HERO_HEIGHT * 0.55;
-  const FADE_END = HERO_HEIGHT * 0.85;
+  // Bar fades in early as user starts scrolling — quick, snappy iOS 26 feel
+  const FADE_START = HERO_HEIGHT * 0.3;
+  const FADE_END = HERO_HEIGHT * 0.55;
 
   const barBgStyle = useAnimatedStyle(() => ({
     opacity: interpolate(
@@ -518,24 +518,29 @@ export default function ProductDetailScreen({ route, navigation }: Props) {
         pointerEvents="box-none"
         style={[styles.appbar, { paddingTop: insets.top, height: insets.top + 56 }]}
       >
-        {/* Backing bar — fades in when scrolled past hero title */}
+        {/* Apple-style nav bar — progressive blur fading top→bottom.
+            Stacked BlurView layers + gradient white tint for iOS 26 look. */}
         <Animated.View style={[StyleSheet.absoluteFill, barBgStyle]} pointerEvents="none">
-          {LIQUID_GLASS ? (
-            <GlassView
-              glassEffectStyle="regular"
-              colorScheme="light"
-              style={StyleSheet.absoluteFill}
-            />
-          ) : (
-            <>
-              <BlurView
-                intensity={90}
-                tint="systemChromeMaterialLight"
-                style={StyleSheet.absoluteFill}
-              />
-              <View style={[StyleSheet.absoluteFill, styles.barTint]} />
-            </>
-          )}
+          <BlurView
+            intensity={40}
+            tint="systemChromeMaterialLight"
+            style={StyleSheet.absoluteFill}
+          />
+          <BlurView
+            intensity={60}
+            tint="systemChromeMaterialLight"
+            style={styles.blurMid}
+          />
+          <BlurView
+            intensity={100}
+            tint="systemChromeMaterialLight"
+            style={styles.blurTop}
+          />
+          <LinearGradient
+            colors={['rgba(255,255,255,0.55)', 'rgba(255,255,255,0)']}
+            locations={[0, 1]}
+            style={StyleSheet.absoluteFill}
+          />
           <View style={styles.barHairline} />
         </Animated.View>
 
@@ -903,7 +908,21 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   barTint: {
-    backgroundColor: 'rgba(255,255,255,0.5)',
+    backgroundColor: 'rgba(255,255,255,0.4)',
+  },
+  blurMid: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: '70%',
+  },
+  blurTop: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: '40%',
   },
   barHairline: {
     position: 'absolute',
