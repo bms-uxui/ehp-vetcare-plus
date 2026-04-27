@@ -16,6 +16,8 @@ export type Pet = {
   id: string;
   name: string;
   emoji: string;
+  /** Optional photo. require() a local asset; falls back to emoji avatar. */
+  photo?: number;
   species: 'dog' | 'cat' | 'rabbit' | 'other';
   speciesLabel: string;
   breed: string;
@@ -35,6 +37,7 @@ export const mockPets: Pet[] = [
     id: 'p1',
     name: 'ข้าวปั้น',
     emoji: '🐕',
+    photo: require('../../assets/shiba.jpg'),
     species: 'dog',
     speciesLabel: 'สุนัข',
     breed: 'ชิบะ อินุ',
@@ -58,6 +61,7 @@ export const mockPets: Pet[] = [
     id: 'p2',
     name: 'มะลิ',
     emoji: '🐈',
+    photo: require('../../assets/mali.jpg'),
     species: 'cat',
     speciesLabel: 'แมว',
     breed: 'สก็อตติช โฟลด์',
