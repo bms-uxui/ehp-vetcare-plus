@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Product } from './products';
+import { mockProducts, Product } from './products';
 
 export type CartItem = {
   product: Product;
@@ -7,8 +7,27 @@ export type CartItem = {
   subscribe: boolean;
 };
 
+// Demo seed: pre-populate the cart with 5 sample items so the screen
+// shows realistic content on first load. Remove or guard with a dev flag
+// once real cart persistence (AsyncStorage / API) is in place.
+const seedCart = (): CartItem[] => {
+  const seedIds: Array<{ id: string; qty: number; subscribe: boolean }> = [
+    { id: 'pr1', qty: 2, subscribe: true },  // Hill's hypoallergenic — subscriber
+    { id: 'pr2', qty: 1, subscribe: false }, // Royal Canin
+    { id: 'pr4', qty: 3, subscribe: false }, // Dental chews
+    { id: 'pr8', qty: 1, subscribe: false }, // Chlorhexidine shampoo
+    { id: 'pr9', qty: 1, subscribe: true },  // Frontline — subscriber
+  ];
+  return seedIds
+    .map(({ id, qty, subscribe }) => {
+      const product = mockProducts.find((p) => p.id === id);
+      return product ? { product, qty, subscribe } : null;
+    })
+    .filter((x): x is CartItem => x !== null);
+};
+
 // Module-level state — simple singleton. Survives navigation within a session.
-let items: CartItem[] = [];
+let items: CartItem[] = seedCart();
 const listeners = new Set<() => void>();
 
 const notify = () => listeners.forEach((l) => l());
