@@ -6,7 +6,6 @@ import Animated, {
   useAnimatedStyle,
 } from 'react-native-reanimated';
 import { BlurView } from 'expo-blur';
-import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as LucideIcons from 'lucide-react-native';
 import IconButton from './IconButton';
@@ -112,36 +111,17 @@ export default function StickyAppBar({
         { paddingTop: insets.top, height: insets.top + 56 },
       ]}
     >
-      {/* Apple-style nav bar — progressive blur fading from top to bottom edge.
-          Stacked BlurView layers + gradient white tint for iOS 26 look. */}
+      {/* Apple-style nav bar — single glass blur with subtle white tint */}
       <Animated.View
         pointerEvents="none"
         style={[StyleSheet.absoluteFill, barBgStyle]}
       >
-        {/* Bottom layer — light blur covering entire bar */}
         <BlurView
-          intensity={40}
+          intensity={80}
           tint="systemChromeMaterialLight"
           style={StyleSheet.absoluteFill}
         />
-        {/* Mid layer — medium blur, top 70% only */}
-        <BlurView
-          intensity={60}
-          tint="systemChromeMaterialLight"
-          style={[styles.blurMid]}
-        />
-        {/* Top layer — heaviest blur, top 40% only */}
-        <BlurView
-          intensity={100}
-          tint="systemChromeMaterialLight"
-          style={[styles.blurTop]}
-        />
-        {/* Gradient white tint — solid at top, fades at bottom edge */}
-        <LinearGradient
-          colors={['rgba(255,255,255,0.55)', 'rgba(255,255,255,0)']}
-          locations={[0, 1]}
-          style={StyleSheet.absoluteFill}
-        />
+        <View style={[StyleSheet.absoluteFill, styles.barTint]} />
         <View style={styles.barHairline} />
       </Animated.View>
 
@@ -209,19 +189,8 @@ const styles = StyleSheet.create({
     maxWidth: '60%',
     textAlign: 'center',
   },
-  blurMid: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    height: '70%',
-  },
-  blurTop: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    height: '40%',
+  barTint: {
+    backgroundColor: 'rgba(255,255,255,0.4)',
   },
   barHairline: {
     position: 'absolute',

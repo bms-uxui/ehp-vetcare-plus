@@ -42,3 +42,4 @@ yarn-error.*
 
 # Claude Code local settings / memory
 .claude/
+expo-qr.png

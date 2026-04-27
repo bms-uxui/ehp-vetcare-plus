@@ -79,8 +79,6 @@ export default function Card({
           />
           {/* 1px bright top edge — the glass lip */}
           <View pointerEvents="none" style={styles.topEdge} />
-          {/* 1px subtle bottom shade — press/bottom depth */}
-          <View pointerEvents="none" style={styles.bottomEdge} />
         </>
       )}
       <View style={{ padding: paddingValue, flex: 1 }}>{children}</View>
@@ -135,14 +133,6 @@ const styles = StyleSheet.create({
     right: 0,
     height: 1.5,
     backgroundColor: 'rgba(255,255,255,0.95)',
-  },
-  bottomEdge: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    height: 1,
-    backgroundColor: 'rgba(94,48,60,0.08)',
   },
 });
 

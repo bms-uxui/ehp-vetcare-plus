@@ -23,7 +23,7 @@ import { Dimensions } from 'react-native';
 
 const SCREEN_W = Dimensions.get('window').width;
 import { BlurView } from 'expo-blur';
-import { GlassView, isLiquidGlassAvailable } from 'expo-glass-effect';
+import { GlassView, isLiquidGlassAvailable } from '../lib/glass-effect';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { RootStackParamList } from '../../App';

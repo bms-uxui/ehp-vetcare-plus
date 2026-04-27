@@ -1,11 +1,11 @@
-import { useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { ComponentProps, useState } from 'react';
+import { Image, Pressable, StyleSheet, View } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../App';
-import { Button, Card, Icon, Screen, Text } from '../components';
+import { Card, Icon, Screen, Text } from '../components';
 import { radii, semantic, spacing } from '../theme';
 import { mockAppointments, Appointment, typeMeta, thWeekday, thDateShort } from '../data/appointments';
-import { mockVets, mockConversations, statusMeta, thRelative, TeleVet } from '../data/televet';
+import { mockVets, mockConversations, TeleVet } from '../data/televet';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Vet'>;
 
@@ -27,13 +27,24 @@ export default function VetHubScreen({ navigation }: Props) {
   return (
     <Screen scroll tabBarSpace>
       <View style={styles.header}>
-        <Text variant="h1">สัตวแพทย์</Text>
-        <Text variant="body" color={semantic.textSecondary}>
-          นัดหมาย ปรึกษาออนไลน์ และประวัติการรักษา
-        </Text>
+        <View style={styles.headerText}>
+          <Text variant="h1">สัตวแพทย์</Text>
+          <Text variant="body" color={semantic.textSecondary}>
+            นัดหมาย ปรึกษาออนไลน์ และประวัติการรักษา
+          </Text>
+        </View>
+        <Pressable
+          onPress={() => {
+            const first = mockConversations[0];
+            if (first) navigation.navigate('Chat', { conversationId: first.id });
+          }}
+          style={({ pressed }) => [styles.headerIconBtn, pressed && styles.iconBtnPressed]}
+        >
+          <Icon name="MessageCircle" size={20} color={semantic.textPrimary} />
+        </Pressable>
       </View>
 
-      {/* Quick action bento — 2 tiles side by side */}
+      {/* Quick action bento */}
       <View style={styles.bentoRow}>
         <Card
           variant="elevated"
@@ -41,27 +52,17 @@ export default function VetHubScreen({ navigation }: Props) {
           onPress={() => navigation.navigate('BookAppointment')}
           style={styles.bentoTile}
         >
-          <View style={styles.bentoIcon}>
-            <Icon name="CalendarPlus" size={22} color={semantic.primary} />
+          <View style={styles.bentoTileRow}>
+            <View style={styles.bentoIcon}>
+              <Icon name="CalendarPlus" size={22} color={semantic.primary} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text variant="bodyStrong" style={{ fontSize: 14 }}>จองนัดคลินิก</Text>
+              <Text variant="caption" color={semantic.textSecondary}>
+                ตรวจ · วัคซีน · อาบน้ำ
+              </Text>
+            </View>
           </View>
-          <Text variant="bodyStrong" style={{ fontSize: 14 }}>จองนัดคลินิก</Text>
-          <Text variant="caption" color={semantic.textSecondary}>
-            ตรวจ · วัคซีน · อาบน้ำ
-          </Text>
-        </Card>
-        <Card
-          variant="elevated"
-          padding="lg"
-          onPress={() => navigation.navigate('BookTeleVet')}
-          style={styles.bentoTile}
-        >
-          <View style={[styles.bentoIcon, { backgroundColor: '#E0F0FB' }]}>
-            <Icon name="Video" size={22} color="#4A8FD1" />
-          </View>
-          <Text variant="bodyStrong" style={{ fontSize: 14 }}>ปรึกษาออนไลน์</Text>
-          <Text variant="caption" color={semantic.textSecondary}>
-            แชทหรือวิดีโอคอล
-          </Text>
         </Card>
       </View>
 
@@ -163,61 +164,10 @@ function HistoryTab({
 function OnlineTab({ vets, navigation }: { vets: TeleVet[]; navigation: Props['navigation'] }) {
   return (
     <>
-      {/* Recent conversations */}
-      {mockConversations.length > 0 && (
-        <>
-          <Text variant="overline" color={semantic.textSecondary} style={styles.sectionLabel}>
-            การสนทนาล่าสุด
-          </Text>
-          <View style={styles.list}>
-            {mockConversations.map((c) => {
-              const vet = mockVets.find((v) => v.id === c.vetId);
-              if (!vet) return null;
-              return (
-                <Card
-                  key={c.id}
-                  variant="elevated"
-                  padding="md"
-                  onPress={() => navigation.navigate('Chat', { conversationId: c.id })}
-                >
-                  <View style={styles.convoRow}>
-                    <View style={styles.vetAvatar}>
-                      <Icon name="UserCircle" size={28} color={semantic.primary} strokeWidth={1.5} />
-                      <View style={[styles.statusDot, { backgroundColor: statusMeta[vet.status].color }]} />
-                    </View>
-                    <View style={{ flex: 1 }}>
-                      <View style={styles.convoTopRow}>
-                        <Text variant="bodyStrong" numberOfLines={1} style={{ flex: 1 }}>
-                          {vet.name}
-                        </Text>
-                        <Text variant="caption" color={semantic.textMuted}>
-                          {thRelative(c.lastSentAtISO)}
-                        </Text>
-                      </View>
-                      <Text variant="caption" color={semantic.textSecondary} numberOfLines={1}>
-                        {c.lastMessage}
-                      </Text>
-                    </View>
-                    {c.unread > 0 && (
-                      <View style={styles.unreadBadge}>
-                        <Text variant="caption" color={semantic.onPrimary} weight="600" style={{ fontSize: 11 }}>
-                          {c.unread}
-                        </Text>
-                      </View>
-                    )}
-                  </View>
-                </Card>
-              );
-            })}
-          </View>
-        </>
-      )}
-
-      {/* Online vets */}
       <Text
         variant="overline"
         color={semantic.textSecondary}
-        style={[styles.sectionLabel, { marginTop: spacing.lg }]}
+        style={styles.sectionLabel}
       >
         สัตวแพทย์ออนไลน์ ({vets.length})
       </Text>
@@ -234,58 +184,92 @@ function OnlineTab({ vets, navigation }: { vets: TeleVet[]; navigation: Props['n
         </Card>
       ) : (
         <View style={styles.list}>
-          {vets.map((v) => (
-            <Card key={v.id} variant="elevated" padding="lg">
-              <View style={styles.vetRow}>
-                <View style={styles.vetAvatar}>
-                  <Icon name="UserCircle" size={36} color={semantic.primary} strokeWidth={1.5} />
-                  <View style={[styles.statusDot, { backgroundColor: '#4FB36C' }]} />
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text variant="bodyStrong">{v.name}</Text>
-                  <Text variant="caption" color={semantic.textSecondary}>
-                    {v.specialty}
-                  </Text>
-                  <View style={styles.starRow}>
-                    <Icon name="Star" size={12} color="#D99A20" fill="#D99A20" />
-                    <Text variant="caption" color={semantic.textMuted}>
-                      {v.rating} · ฿{v.ratePerMin}/นาที
+          {vets.map((v) => {
+            const onChat = () => {
+              const existing = mockConversations.find((c) => c.vetId === v.id);
+              navigation.navigate('Chat', {
+                conversationId: existing?.id ?? `new-${v.id}`,
+                vetId: v.id,
+              });
+            };
+            return (
+              <Card
+                key={v.id}
+                variant="elevated"
+                padding="md"
+                onPress={() => navigation.navigate('VetDetail', { vetId: v.id })}
+              >
+                {/* Top: avatar + name + chips */}
+                <View style={styles.vetTopRow}>
+                  <View style={styles.vetAvatar}>
+                    <Image source={{ uri: v.avatar }} style={styles.vetAvatarImg} />
+                    <View style={[styles.statusDot, { backgroundColor: '#4FB36C' }]} />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text variant="bodyStrong" numberOfLines={1} style={{ fontSize: 14 }}>
+                      {v.name}
                     </Text>
+                    <View style={styles.chipRow}>
+                      <ChipItem icon="Stethoscope" label={v.specialty} />
+                      <ChipItem icon="Briefcase" label={`${v.experienceYears} ปี`} />
+                      <ChipItem icon="MapPin" label={v.clinic} />
+                    </View>
                   </View>
                 </View>
-              </View>
-              <View style={styles.actionRow}>
-                <Button
-                  label="แชท"
-                  size="sm"
-                  fullWidth={false}
-                  uppercase={false}
-                  onPress={() => {
-                    const existing = mockConversations.find((c) => c.vetId === v.id);
-                    navigation.navigate('Chat', {
-                      conversationId: existing?.id ?? `new-${v.id}`,
-                      vetId: v.id,
-                    });
-                  }}
-                  leftIcon={<Icon name="MessageCircle" size={14} color={semantic.onPrimary} />}
-                  style={{ flex: 1 }}
-                />
-                <Button
-                  label="วิดีโอ"
-                  size="sm"
-                  variant="secondary"
-                  uppercase={false}
-                  fullWidth={false}
-                  onPress={() => {}}
-                  leftIcon={<Icon name="Video" size={14} color={semantic.primary} />}
-                  style={{ flex: 1 }}
-                />
-              </View>
-            </Card>
-          ))}
+
+                <View style={styles.divider} />
+
+                {/* Bottom: info left + 2 icon buttons right */}
+                <View style={styles.vetBottomRow}>
+                  <View style={styles.vetBottomInfo}>
+                    <View style={styles.bottomInfoLine}>
+                      <Icon name="Clock" size={11} color={semantic.textMuted} strokeWidth={2} />
+                      <Text variant="caption" color={semantic.textSecondary} numberOfLines={1}>
+                        จ.-ส. 09:00 - 18:00 น.
+                      </Text>
+                    </View>
+                    <View style={styles.bottomInfoLine}>
+                      <Icon name="Star" size={10} color="#D99A20" fill="#D99A20" />
+                      <Text variant="caption" color={semantic.textMuted}>
+                        {v.rating} ({v.reviewCount} Review)
+                      </Text>
+                    </View>
+                  </View>
+                  <View style={styles.iconBtnRow}>
+                    <Pressable onPress={onChat} style={({ pressed }) => [styles.iconBtn, pressed && styles.iconBtnPressed]}>
+                      <Icon name="MessageCircle" size={20} color={semantic.primary} />
+                    </Pressable>
+                    <Pressable
+                      onPress={() => navigation.navigate('BookTeleVet')}
+                      style={({ pressed }) => [styles.iconBtn, pressed && styles.iconBtnPressed]}
+                    >
+                      <Icon name="CalendarPlus" size={20} color={semantic.primary} />
+                    </Pressable>
+                  </View>
+                </View>
+              </Card>
+            );
+          })}
         </View>
       )}
     </>
+  );
+}
+
+function ChipItem({
+  icon,
+  label,
+}: {
+  icon: ComponentProps<typeof Icon>['name'];
+  label: string;
+}) {
+  return (
+    <View style={styles.chipItem}>
+      <Icon name={icon} size={11} color={semantic.textMuted} strokeWidth={2} />
+      <Text variant="caption" color={semantic.textSecondary} numberOfLines={1} style={{ fontSize: 10 }}>
+        {label}
+      </Text>
+    </View>
   );
 }
 
@@ -324,9 +308,28 @@ function AppointmentRow({
 
 const styles = StyleSheet.create({
   header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
     marginTop: spacing.sm,
     marginBottom: spacing.lg,
+  },
+  headerText: {
+    flex: 1,
     gap: spacing.xs,
+  },
+  headerIconBtn: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: semantic.surface,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    elevation: 3,
   },
   bentoRow: {
     flexDirection: 'row',
@@ -337,6 +340,11 @@ const styles = StyleSheet.create({
     flex: 1,
     gap: spacing.xs,
   },
+  bentoTileRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+  },
   bentoIcon: {
     width: 44,
     height: 44,
@@ -344,10 +352,10 @@ const styles = StyleSheet.create({
     backgroundColor: semantic.primaryMuted,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: spacing.sm,
   },
   tabRow: {
     flexDirection: 'row',
+    alignSelf: 'flex-start',
     backgroundColor: semantic.surfaceMuted,
     borderRadius: radii.pill,
     padding: 4,
@@ -355,8 +363,8 @@ const styles = StyleSheet.create({
     gap: 2,
   },
   tabBtn: {
-    flex: 1,
     paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: radii.pill,
@@ -396,11 +404,6 @@ const styles = StyleSheet.create({
     gap: 4,
     marginBottom: 2,
   },
-  vetRow: {
-    flexDirection: 'row',
-    gap: spacing.md,
-    marginBottom: spacing.md,
-  },
   vetAvatar: {
     width: 52,
     height: 52,
@@ -408,6 +411,11 @@ const styles = StyleSheet.create({
     backgroundColor: semantic.primaryMuted,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  vetAvatarImg: {
+    width: 52,
+    height: 52,
+    borderRadius: 26,
   },
   statusDot: {
     position: 'absolute',
@@ -419,15 +427,57 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: semantic.surface,
   },
-  starRow: {
+  vetTopRow: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+    alignItems: 'center',
+  },
+  chipRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    alignItems: 'center',
+    gap: spacing.sm,
+    marginTop: 4,
+  },
+  chipItem: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    marginTop: 2,
   },
-  actionRow: {
+  divider: {
+    height: 1,
+    backgroundColor: semantic.border,
+    marginVertical: spacing.sm,
+  },
+  vetBottomRow: {
     flexDirection: 'row',
+    alignItems: 'center',
     gap: spacing.sm,
+  },
+  vetBottomInfo: {
+    flex: 1,
+    gap: 4,
+  },
+  bottomInfoLine: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  iconBtnRow: {
+    flexDirection: 'row',
+    gap: spacing.xs,
+  },
+  iconBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    backgroundColor: semantic.primaryMuted,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  iconBtnPressed: {
+    opacity: 0.7,
+    transform: [{ scale: 0.96 }],
   },
   convoRow: {
     flexDirection: 'row',
