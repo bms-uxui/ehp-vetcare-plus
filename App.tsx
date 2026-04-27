@@ -27,7 +27,6 @@ import ExpensesScreen from './src/screens/ExpensesScreen';
 import AddExpenseScreen from './src/screens/AddExpenseScreen';
 import SmartFeaturesScreen from './src/screens/SmartFeaturesScreen';
 import SymptomCheckScreen from './src/screens/SymptomCheckScreen';
-import PetShopScreen from './src/screens/PetShopScreen';
 import ProductDetailScreen from './src/screens/ProductDetailScreen';
 import CartScreen from './src/screens/CartScreen';
 import CheckoutScreen from './src/screens/CheckoutScreen';
@@ -191,11 +190,6 @@ export default function App() {
           <Stack.Screen
             name="SymptomCheck"
             component={SymptomCheckScreen}
-            options={transparentHeader}
-          />
-          <Stack.Screen
-            name="PetShop"
-            component={PetShopScreen}
             options={transparentHeader}
           />
           <Stack.Screen
