@@ -23,6 +23,7 @@ import AddFeedingScheduleScreen from './src/screens/AddFeedingScheduleScreen';
 import TeleVetScreen from './src/screens/TeleVetScreen';
 import ChatScreen from './src/screens/ChatScreen';
 import BookTeleVetScreen from './src/screens/BookTeleVetScreen';
+import VetDetailScreen from './src/screens/VetDetailScreen';
 import ExpensesScreen from './src/screens/ExpensesScreen';
 import AddExpenseScreen from './src/screens/AddExpenseScreen';
 import SmartFeaturesScreen from './src/screens/SmartFeaturesScreen';
@@ -54,6 +55,7 @@ export type RootStackParamList = {
   TeleVet: undefined;
   Chat: { conversationId: string; vetId?: string };
   BookTeleVet: undefined;
+  VetDetail: { vetId: string };
   Expenses: undefined;
   AddExpense: undefined;
   SmartFeatures: undefined;
@@ -135,7 +137,7 @@ export default function App() {
           <Stack.Screen
             name="BookAppointment"
             component={BookAppointmentScreen}
-            options={transparentHeader}
+            options={{ headerShown: false }}
           />
           <Stack.Screen
             name="HealthRecords"
@@ -170,7 +172,12 @@ export default function App() {
           <Stack.Screen
             name="BookTeleVet"
             component={BookTeleVetScreen}
-            options={transparentHeader}
+            options={{ headerShown: false }}
+          />
+          <Stack.Screen
+            name="VetDetail"
+            component={VetDetailScreen}
+            options={{ headerShown: false }}
           />
           <Stack.Screen
             name="Expenses"
