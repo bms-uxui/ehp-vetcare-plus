@@ -291,7 +291,7 @@ export default function HomeScreen({ navigation }: Props) {
         <Text variant="overline" color={semantic.textSecondary}>
           แนะนำสำหรับสัตว์ของคุณ
         </Text>
-        <Pressable onPress={() => navigation.navigate('PetShop')} hitSlop={8}>
+        <Pressable onPress={() => navigation.navigate('PetShop' as never)} hitSlop={8}>
           <View style={styles.seeAllRow}>
             <Text variant="caption" color={semantic.primary} weight="600">ดูทั้งหมด</Text>
             <Icon name="ChevronRight" size={14} color={semantic.primary} />
