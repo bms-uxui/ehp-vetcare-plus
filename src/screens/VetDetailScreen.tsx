@@ -525,7 +525,7 @@ const styles = StyleSheet.create({
   reviewCard: {
     borderWidth: 1,
     borderColor: '#F5E4E7',
-    borderRadius: 24,
+    borderRadius: 16,
     padding: spacing.lg,
     gap: spacing.sm,
     backgroundColor: '#FFFFFF',
@@ -573,7 +573,7 @@ const styles = StyleSheet.create({
   expItem: {
     borderWidth: 1,
     borderColor: '#F5E4E7',
-    borderRadius: 24,
+    borderRadius: 16,
     padding: spacing.lg,
     gap: spacing.sm,
     backgroundColor: '#FFFFFF',
@@ -682,7 +682,7 @@ const styles = StyleSheet.create({
   chatBtn: {
     width: 56,
     height: 48,
-    borderRadius: 24,
+    borderRadius: 16,
     backgroundColor: '#FFFFFF',
     alignItems: 'center',
     justifyContent: 'center',
@@ -691,7 +691,7 @@ const styles = StyleSheet.create({
     flex: 1,
     height: 48,
     paddingHorizontal: spacing.lg,
-    borderRadius: 24,
+    borderRadius: 16,
     backgroundColor: semantic.primary,
     flexDirection: 'row',
     alignItems: 'center',

@@ -1,7 +1,7 @@
 import { StyleSheet, View } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../App';
-import { Button, Card, Screen, Text } from '../components';
+import { Button, Card, PetAvatar, Screen, Text } from '../components';
 import { semantic, spacing } from '../theme';
 import { mockPets, petAgeString, Pet } from '../data/pets';
 
@@ -43,9 +43,11 @@ function PetCard({ pet, onPress }: { pet: Pet; onPress: () => void }) {
   return (
     <Card variant="elevated" padding="lg" onPress={onPress}>
       <View style={styles.cardRow}>
-        <View style={styles.avatar}>
-          <Text style={{ fontSize: 40 }}>{pet.emoji}</Text>
-        </View>
+        <PetAvatar
+          pet={pet}
+          size={72}
+          backgroundColor={semantic.primaryMuted}
+        />
 
         <View style={styles.info}>
           <Text variant="h3">{pet.name}</Text>

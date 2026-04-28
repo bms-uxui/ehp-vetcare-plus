@@ -1,149 +1,627 @@
-import { useState } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { ReactNode, useState } from 'react';
+import {
+  Modal,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  TextInput,
+  View,
+} from 'react-native';
+import DateTimePicker, {
+  DateTimePickerEvent,
+} from '@react-native-community/datetimepicker';
+import Animated, {
+  useAnimatedScrollHandler,
+  useSharedValue,
+} from 'react-native-reanimated';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { RootStackParamList } from '../../App';
-import { Button, Card, Icon, Input, Screen, Text } from '../components';
+import {
+  AppBackground,
+  Button,
+  Icon,
+  PetAvatar,
+  StickyAppBar,
+  Text,
+} from '../components';
 import { semantic, spacing } from '../theme';
 import { categoryMeta, ExpenseCategory } from '../data/expenses';
 import { mockPets } from '../data/pets';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'AddExpense'>;
 
+const TH_MONTHS = [
+  'มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน',
+  'พฤษภาคม', 'มิถุนายน', 'กรกฎาคม', 'สิงหาคม',
+  'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม',
+];
+
+const fmtThaiDate = (d: Date) =>
+  `${d.getDate()} ${TH_MONTHS[d.getMonth()]} ${d.getFullYear() + 543}`;
+
 export default function AddExpenseScreen({ navigation }: Props) {
+  const insets = useSafeAreaInsets();
+  const scrollY = useSharedValue(0);
+  const scrollHandler = useAnimatedScrollHandler((e) => {
+    scrollY.value = e.contentOffset.y;
+  });
+
   const [category, setCategory] = useState<ExpenseCategory>('food');
-  const [petId, setPetId] = useState<string | null>(null);
+  const [selectedPetIds, setSelectedPetIds] = useState<Set<string>>(
+    () => new Set(),
+  );
+  const [date, setDate] = useState<Date>(() => new Date());
+  const [datePickerOpen, setDatePickerOpen] = useState(false);
+
+  const togglePet = (id: string) => {
+    setSelectedPetIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const onDateChange = (_e: DateTimePickerEvent, selected?: Date) => {
+    if (selected) setDate(selected);
+    // Android picker auto-closes; iOS picker stays open until Done
+    if (Platform.OS === 'android') setDatePickerOpen(false);
+  };
   const [title, setTitle] = useState('');
   const [amount, setAmount] = useState('');
-  const [date, setDate] = useState('');
   const [note, setNote] = useState('');
 
-  const canSubmit = !!(title.trim() && amount.trim() && Number(amount) > 0 && date);
+  const canSubmit = !!(
+    title.trim() &&
+    amount.trim() &&
+    Number(amount) > 0
+  );
 
   const onSubmit = () => {
     if (!canSubmit) return;
     navigation.goBack();
   };
 
+  const categories = Object.keys(categoryMeta) as ExpenseCategory[];
+
   return (
-    <Screen scroll keyboardAvoiding>
-      <Text variant="h1" align="center" style={styles.title}>บันทึกค่าใช้จ่าย</Text>
-      <Text variant="body" color={semantic.textSecondary} align="center" style={styles.subtitle}>
-        บันทึกค่าใช้จ่ายเพื่อติดตามงบประมาณ
-      </Text>
+    <View style={styles.root}>
+      <AppBackground />
 
-      <Section label="หมวดหมู่">
-        <View style={styles.grid}>
-          {(Object.keys(categoryMeta) as ExpenseCategory[]).map((c) => {
-            const m = categoryMeta[c];
-            return (
-              <Card
-                key={c}
-                variant="elevated"
-                selected={category === c}
-                padding="md"
-                onPress={() => setCategory(c)}
-                style={styles.catTile}
-              >
-                <View style={styles.catInner}>
-                  <Icon name={m.icon as any} size={26} color={m.color} />
-                  <Text variant="bodyStrong" style={{ fontSize: 12 }}>{m.label}</Text>
-                </View>
-              </Card>
-            );
-          })}
+      <StickyAppBar
+        scrollY={scrollY}
+        fadeStartAt={60}
+        fadeEndAt={120}
+        title="บันทึกค่าใช้จ่าย"
+        leading={{
+          icon: 'ChevronLeft',
+          onPress: () => navigation.goBack(),
+          accessibilityLabel: 'ย้อนกลับ',
+        }}
+      />
+
+      <Animated.ScrollView
+        contentContainerStyle={[
+          styles.scroll,
+          { paddingTop: insets.top + 56, paddingBottom: insets.bottom + 100 },
+        ]}
+        showsVerticalScrollIndicator={false}
+        onScroll={scrollHandler}
+        scrollEventThrottle={16}
+        keyboardShouldPersistTaps="handled"
+      >
+        {/* Hero */}
+        <View style={styles.hero}>
+          <Text variant="h1" style={styles.heroTitle}>
+            บันทึกค่าใช้จ่าย
+          </Text>
+          <Text weight="500" style={styles.heroDescription}>
+            เพิ่มรายการเพื่อติดตามงบประมาณรายเดือน
+          </Text>
         </View>
-      </Section>
 
-      <Section label="รายการ">
-        <Input placeholder="เช่น Prescription Diet 7kg" value={title} onChangeText={setTitle} />
-      </Section>
+        {/* Category — wrap chips into 2 rows (no horizontal scroll) */}
+        <View style={styles.chipsSection}>
+          <Text weight="500" style={[styles.sectionTitle, styles.chipsTitle]}>
+            หมวดหมู่
+          </Text>
+          <View style={styles.chipsWrap}>
+            {categories.map((c) => {
+              const meta = categoryMeta[c];
+              const selected = category === c;
+              return (
+                <Pressable
+                  key={c}
+                  onPress={() => setCategory(c)}
+                  style={({ pressed }) => [
+                    styles.catChip,
+                    selected && styles.catChipSelected,
+                    pressed && { opacity: 0.7 },
+                  ]}
+                >
+                  <Icon
+                    name={meta.icon as any}
+                    size={14}
+                    color={selected ? '#FFFFFF' : meta.color}
+                    strokeWidth={2.4}
+                  />
+                  <Text
+                    weight={selected ? '600' : '500'}
+                    style={[
+                      styles.catChipText,
+                      selected && styles.catChipTextSelected,
+                    ]}
+                  >
+                    {meta.label}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </View>
+        </View>
 
-      <Section label="จำนวนเงิน (บาท)">
-        <Input
-          placeholder="0"
-          value={amount}
-          onChangeText={setAmount}
-          keyboardType="decimal-pad"
-        />
-      </Section>
-
-      <Section label="วันที่">
-        <Input placeholder="ปปปป-ดด-วว (เช่น 2026-04-24)" value={date} onChangeText={setDate} />
-      </Section>
-
-      <Section label="สัตว์เลี้ยง (ถ้ามี)">
-        <View style={styles.grid}>
-          <Card
-            variant="elevated"
-            selected={petId === null}
-            padding="md"
-            onPress={() => setPetId(null)}
-            style={styles.petTile}
-          >
-            <View style={styles.petInner}>
-              <Text style={{ fontSize: 24 }}>—</Text>
-              <Text variant="bodyStrong" style={{ fontSize: 12 }}>ไม่ระบุ</Text>
-            </View>
-          </Card>
-          {mockPets.map((p) => (
-            <Card
-              key={p.id}
-              variant="elevated"
-              selected={petId === p.id}
-              padding="md"
-              onPress={() => setPetId(p.id)}
-              style={styles.petTile}
+        {/* Form fields — title, amount, date */}
+        <View style={styles.formSection}>
+          <Field
+            label="รายการ"
+            value={title}
+            onChangeText={setTitle}
+            placeholder="เช่น Prescription Diet 7kg"
+          />
+          <Field
+            label="จำนวนเงิน (บาท)"
+            value={amount}
+            onChangeText={setAmount}
+            placeholder="0"
+            keyboardType="decimal-pad"
+          />
+          {/* Date picker — tap to open native iOS calendar */}
+          <View style={styles.field}>
+            <Text weight="400" style={styles.fieldLabel}>
+              วันที่
+            </Text>
+            <Pressable
+              onPress={() => setDatePickerOpen(true)}
+              style={({ pressed }) => [
+                styles.fieldInput,
+                styles.dateField,
+                pressed && { opacity: 0.7 },
+              ]}
             >
-              <View style={styles.petInner}>
-                <View style={styles.petAvatar}>
-                  <Text style={{ fontSize: 22 }}>{p.emoji}</Text>
-                </View>
-                <Text variant="bodyStrong" style={{ fontSize: 12 }}>{p.name}</Text>
-              </View>
-            </Card>
-          ))}
+              <Text weight="500" style={styles.dateValue}>
+                {fmtThaiDate(date)}
+              </Text>
+              <Icon
+                name="Calendar"
+                size={18}
+                color={semantic.textSecondary}
+                strokeWidth={2.2}
+              />
+            </Pressable>
+          </View>
         </View>
-      </Section>
 
-      <Section label="หมายเหตุ (ถ้ามี)">
-        <Input placeholder="รายละเอียดเพิ่มเติม" value={note} onChangeText={setNote} multiline />
-      </Section>
+        {/* Pet grid — 3 cols, multi-select */}
+        <Section title="สัตว์เลี้ยง">
+          <View style={styles.tileGrid}>
+            {mockPets.map((p) => {
+              const selected = selectedPetIds.has(p.id);
+              return (
+                <Pressable
+                  key={p.id}
+                  onPress={() => togglePet(p.id)}
+                  style={({ pressed }) => [
+                    styles.tile,
+                    pressed && { opacity: 0.85 },
+                  ]}
+                >
+                  <View
+                    style={[
+                      styles.petRing,
+                      selected && styles.petRingSelected,
+                    ]}
+                  >
+                    <PetAvatar
+                      pet={p}
+                      size={60}
+                      backgroundColor={semantic.primaryMuted}
+                    />
+                    {selected && (
+                      <View style={styles.petCheckBadge} pointerEvents="none">
+                        <Icon
+                          name="Check"
+                          size={11}
+                          color="#FFFFFF"
+                          strokeWidth={3}
+                        />
+                      </View>
+                    )}
+                  </View>
+                  <Text
+                    weight={selected ? '600' : '500'}
+                    style={[
+                      styles.tileLabel,
+                      selected && { color: semantic.primary },
+                    ]}
+                    numberOfLines={1}
+                  >
+                    {p.name}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </View>
+        </Section>
 
-      <View style={styles.submit}>
-        <Button label="บันทึก" onPress={onSubmit} disabled={!canSubmit} />
+        {/* Note — multiline */}
+        <View style={styles.formSection}>
+          <Field
+            label="หมายเหตุ"
+            value={note}
+            onChangeText={setNote}
+            placeholder="รายละเอียดเพิ่มเติม"
+            multiline
+          />
+        </View>
+      </Animated.ScrollView>
+
+      {/* Save button — pinned at bottom, primary gradient with bevel */}
+      <View
+        style={[
+          styles.saveBar,
+          { paddingBottom: insets.bottom + 16 },
+        ]}
+      >
+        <Button
+          label="บันทึก"
+          onPress={onSubmit}
+          disabled={!canSubmit}
+          uppercase={false}
+          fullWidth
+        />
       </View>
-    </Screen>
+
+      {/* Date picker modal — bottom sheet with native inline calendar */}
+      {datePickerOpen && (
+        <Modal
+          visible
+          transparent
+          animationType="slide"
+          onRequestClose={() => setDatePickerOpen(false)}
+          statusBarTranslucent
+        >
+          <Pressable
+            style={styles.dateBackdrop}
+            onPress={() => setDatePickerOpen(false)}
+          >
+            <Pressable
+              style={[
+                styles.dateSheet,
+                { paddingBottom: insets.bottom + 16 },
+              ]}
+              onPress={() => {}}
+            >
+              <View style={styles.dateSheetHandle} />
+              <View style={styles.dateSheetHeader}>
+                <Text weight="500" style={styles.dateSheetTitle}>
+                  เลือกวันที่
+                </Text>
+                <Pressable
+                  onPress={() => setDatePickerOpen(false)}
+                  hitSlop={8}
+                >
+                  <Text weight="600" style={styles.dateSheetDone}>
+                    เสร็จ
+                  </Text>
+                </Pressable>
+              </View>
+              <DateTimePicker
+                value={date}
+                mode="date"
+                display={Platform.OS === 'ios' ? 'inline' : 'default'}
+                onChange={onDateChange}
+                locale="th-TH"
+                themeVariant="light"
+                maximumDate={new Date()}
+                style={styles.dateSheetPicker}
+              />
+            </Pressable>
+          </Pressable>
+        </Modal>
+      )}
+    </View>
   );
 }
 
-function Section({ label, children }: { label: string; children: React.ReactNode }) {
+/* ---------- Sub-components ---------- */
+
+function Section({
+  title,
+  children,
+}: {
+  title: string;
+  children: ReactNode;
+}) {
   return (
     <View style={styles.section}>
-      <Text variant="caption" color={semantic.textSecondary} style={styles.sectionLabel}>
-        {label}
+      <Text weight="500" style={styles.sectionTitle}>
+        {title}
       </Text>
       {children}
     </View>
   );
 }
 
+function Field({
+  label,
+  value,
+  onChangeText,
+  placeholder,
+  keyboardType,
+  multiline,
+}: {
+  label: string;
+  value: string;
+  onChangeText: (s: string) => void;
+  placeholder?: string;
+  keyboardType?: 'default' | 'decimal-pad' | 'number-pad';
+  multiline?: boolean;
+}) {
+  return (
+    <View style={styles.field}>
+      <Text weight="400" style={styles.fieldLabel}>
+        {label}
+      </Text>
+      <TextInput
+        value={value}
+        onChangeText={onChangeText}
+        placeholder={placeholder}
+        placeholderTextColor="#9A9AA0"
+        keyboardType={keyboardType}
+        multiline={multiline}
+        style={[styles.fieldInput, multiline && styles.fieldInputMultiline]}
+      />
+    </View>
+  );
+}
+
+/* ---------- Styles ---------- */
+
 const styles = StyleSheet.create({
-  title: { marginTop: spacing.sm, marginBottom: spacing.xs },
-  subtitle: { marginBottom: spacing.xl },
-  section: { marginBottom: spacing.xl, gap: spacing.sm },
-  sectionLabel: { marginLeft: spacing.xs },
-  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
-  catTile: { flexBasis: '30%', flexGrow: 1 },
-  catInner: { alignItems: 'center', gap: spacing.xs, paddingVertical: spacing.xs },
-  petTile: { flexBasis: '22%', flexGrow: 1 },
-  petInner: { alignItems: 'center', gap: spacing.xs },
-  petAvatar: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: semantic.primaryMuted,
+  root: {
+    flex: 1,
+    backgroundColor: semantic.background,
+  },
+  scroll: {
+    paddingBottom: 0,
+  },
+
+  hero: {
+    paddingHorizontal: 16,
+    paddingTop: spacing.sm,
+    paddingBottom: spacing.sm,
+    gap: 6,
+  },
+  heroTitle: {
+    fontSize: 34,
+    lineHeight: 41,
+    color: '#1A1A1A',
+    letterSpacing: -0.4,
+  },
+  heroDescription: {
+    fontSize: 14,
+    color: '#1A1A1A',
+  },
+
+  section: {
+    paddingHorizontal: 16,
+    paddingVertical: spacing.sm,
+    gap: 10,
+  },
+  sectionTitle: {
+    fontSize: 14,
+    color: '#1A1A1A',
+  },
+
+  // Category chip row — horizontal scroll
+  chipsSection: {
+    paddingTop: spacing.sm,
+    paddingBottom: spacing.sm,
+    gap: 10,
+  },
+  chipsTitle: {
+    paddingHorizontal: 16,
+  },
+  chipsWrap: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    paddingHorizontal: 16,
+    paddingVertical: 6,
+    rowGap: 10,
+    columnGap: 8,
+  },
+  catChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 100,
+    backgroundColor: '#F2F2F3',
+  },
+  catChipSelected: {
+    backgroundColor: semantic.primary,
+    shadowColor: semantic.primary,
+    shadowOpacity: 0.25,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 3,
+  },
+  catChipText: {
+    fontSize: 14,
+    color: '#1A1A1A',
+  },
+  catChipTextSelected: {
+    color: '#FFFFFF',
+  },
+
+  // Tile grid (categories + pets) — 3 cols, 64px circle items
+  tileGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+    rowGap: 16,
+  },
+  tile: {
+    width: '31%',
+    alignItems: 'center',
+    gap: 8,
+  },
+  iconCircle: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  submit: { marginTop: spacing.sm, marginBottom: spacing.xl },
+  iconCircleSelected: {
+    shadowColor: '#5E303C',
+    shadowOpacity: 0.18,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 4,
+  },
+  // Pet avatar — 60px photo inside a 68px ring (gives a 4px halo of breathing
+  // room). Unselected ring is a soft hairline; selected fills with primary.
+  petRing: {
+    width: 68,
+    height: 68,
+    borderRadius: 9999,
+    backgroundColor: '#FFFFFF',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: '#EBE3E5',
+    position: 'relative',
+  },
+  petRingSelected: {
+    borderWidth: 2,
+    borderColor: semantic.primary,
+    backgroundColor: semantic.primaryMuted,
+    shadowColor: semantic.primary,
+    shadowOpacity: 0.18,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 3,
+  },
+  petCheckBadge: {
+    position: 'absolute',
+    bottom: -2,
+    right: -2,
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: semantic.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 2,
+    borderColor: '#FFFFFF',
+  },
+  tileLabel: {
+    fontSize: 14,
+    color: '#1A1A1A',
+    textAlign: 'center',
+  },
+
+  // Form fields
+  formSection: {
+    paddingHorizontal: 16,
+    paddingVertical: spacing.sm,
+    gap: 16,
+  },
+  field: {
+    gap: 6,
+  },
+  fieldLabel: {
+    fontSize: 11,
+    color: '#6E6E74',
+    letterSpacing: 0.3,
+    textTransform: 'uppercase',
+    paddingHorizontal: 4,
+  },
+  fieldInput: {
+    fontSize: 16,
+    color: '#1A1A1A',
+    backgroundColor: '#F2F2F3',
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+  },
+  fieldInputMultiline: {
+    minHeight: 100,
+    textAlignVertical: 'top',
+    paddingTop: 14,
+  },
+  dateField: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  dateValue: {
+    fontSize: 16,
+    color: '#1A1A1A',
+  },
+
+  // Date picker bottom sheet
+  dateBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.4)',
+    justifyContent: 'flex-end',
+  },
+  dateSheet: {
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
+    paddingHorizontal: 16,
+    paddingTop: 8,
+  },
+  dateSheetHandle: {
+    alignSelf: 'center',
+    width: 36,
+    height: 5,
+    borderRadius: 100,
+    backgroundColor: '#D0D0D4',
+    marginTop: 4,
+    marginBottom: 12,
+  },
+  dateSheetHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 4,
+    paddingBottom: 8,
+  },
+  dateSheetTitle: {
+    fontSize: 16,
+    color: '#1A1A1A',
+  },
+  dateSheetDone: {
+    fontSize: 16,
+    color: semantic.primary,
+  },
+  dateSheetPicker: {
+    minHeight: 380,
+    width: '100%',
+  },
+
+  // Save button bar — soft hairline + safe area pad
+  saveBar: {
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    backgroundColor: semantic.background,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: '#F0E6E8',
+  },
 });

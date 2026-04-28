@@ -33,7 +33,8 @@
       "baseUrl": "/ehp-vetcare-plus"
     },
     "plugins": [
-      "expo-font"
+      "expo-font",
+      "@react-native-community/datetimepicker"
     ]
   }
 }

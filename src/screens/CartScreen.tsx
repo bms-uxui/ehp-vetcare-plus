@@ -823,7 +823,7 @@ const styles = StyleSheet.create({
   // Swipe-to-reveal — outer container clips overflow, action buttons sit underneath
   swipeContainer: {
     height: 96,
-    borderRadius: 24,
+    borderRadius: 16,
     overflow: 'hidden',
     backgroundColor: 'transparent',
   },
@@ -872,7 +872,7 @@ const styles = StyleSheet.create({
   itemCard: {
     flexDirection: 'row',
     height: 96,
-    borderRadius: 24,
+    borderRadius: 16,
     backgroundColor: '#FFFFFF',
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: '#E6E6E8',
@@ -1005,6 +1005,6 @@ const styles = StyleSheet.create({
   checkoutBtn: {
     width: '100%',
     height: 48,
-    borderRadius: 24,
+    borderRadius: 16,
   },
 });

@@ -31,6 +31,7 @@ import SymptomCheckScreen from './src/screens/SymptomCheckScreen';
 import ProductDetailScreen from './src/screens/ProductDetailScreen';
 import CartScreen from './src/screens/CartScreen';
 import CheckoutScreen from './src/screens/CheckoutScreen';
+import OrderTrackingScreen from './src/screens/OrderTrackingScreen';
 import AppTabs from './src/navigation/AppTabs';
 import { semantic } from './src/theme';
 
@@ -64,6 +65,7 @@ export type RootStackParamList = {
   ProductDetail: { productId: string };
   Cart: undefined;
   Checkout: { selectedIds?: string[] } | undefined;
+  OrderTracking: undefined;
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -182,12 +184,12 @@ export default function App() {
           <Stack.Screen
             name="Expenses"
             component={ExpensesScreen}
-            options={transparentHeader}
+            options={{ headerShown: false }}
           />
           <Stack.Screen
             name="AddExpense"
             component={AddExpenseScreen}
-            options={transparentHeader}
+            options={{ headerShown: false }}
           />
           <Stack.Screen
             name="SmartFeatures"
@@ -212,6 +214,11 @@ export default function App() {
           <Stack.Screen
             name="Checkout"
             component={CheckoutScreen}
+            options={{ headerShown: false }}
+          />
+          <Stack.Screen
+            name="OrderTracking"
+            component={OrderTrackingScreen}
             options={{ headerShown: false }}
           />
         </Stack.Navigator>

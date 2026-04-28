@@ -998,7 +998,7 @@ const styles = StyleSheet.create({
     marginHorizontal: spacing.lg,
     marginBottom: spacing.sm,
     padding: spacing.lg,
-    borderRadius: 24,
+    borderRadius: 16,
     backgroundColor: '#FFFFFF',
     borderWidth: 1,
     borderColor: '#F5E4E7',
@@ -1050,7 +1050,7 @@ const styles = StyleSheet.create({
   itemCard: {
     flexDirection: 'row',
     height: 96,
-    borderRadius: 24,
+    borderRadius: 16,
     backgroundColor: '#FFFFFF',
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: '#E6E6E8',
@@ -1108,7 +1108,7 @@ const styles = StyleSheet.create({
   },
   summaryCard: {
     padding: spacing.lg,
-    borderRadius: 24,
+    borderRadius: 16,
     backgroundColor: '#FFFFFF',
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: '#E6E6E8',
@@ -1198,7 +1198,7 @@ const styles = StyleSheet.create({
   },
   flexBtn: {
     height: 48,
-    borderRadius: 24,
+    borderRadius: 16,
     width: '100%',
   },
 
@@ -1448,7 +1448,7 @@ const styles = StyleSheet.create({
   },
   payBanner: {
     height: 96,
-    borderRadius: 24,
+    borderRadius: 16,
     paddingHorizontal: spacing.lg,
     flexDirection: 'row',
     alignItems: 'center',
@@ -1485,7 +1485,7 @@ const styles = StyleSheet.create({
   payMethodCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    borderRadius: 24,
+    borderRadius: 16,
     backgroundColor: '#FAFAFA',
     overflow: 'hidden',
   },
@@ -1551,7 +1551,7 @@ const styles = StyleSheet.create({
   couponCardV2: {
     flexDirection: 'row',
     alignItems: 'center',
-    borderRadius: 24,
+    borderRadius: 16,
     backgroundColor: '#FAFAFA',
     overflow: 'hidden',
   },

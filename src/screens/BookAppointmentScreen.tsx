@@ -251,7 +251,7 @@ const styles = StyleSheet.create({
   petAvatar: {
     width: 48,
     height: 48,
-    borderRadius: 24,
+    borderRadius: 16,
     backgroundColor: semantic.primaryMuted,
     alignItems: 'center',
     justifyContent: 'center',
