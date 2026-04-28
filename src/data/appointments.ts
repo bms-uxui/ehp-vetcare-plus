@@ -25,6 +25,18 @@ export const typeMeta: Record<AppointmentType, { label: string; icon: string; co
   consultation: { label: 'ปรึกษาสัตวแพทย์', icon: 'MessageCircle', color: '#E8A87C' },
 };
 
+// Compute relative dates so Video call button works on any "current day"
+const _today = new Date();
+const _isoOf = (d: Date) =>
+  `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+const _addDays = (n: number) => {
+  const d = new Date(_today);
+  d.setDate(_today.getDate() + n);
+  return _isoOf(d);
+};
+const TODAY_ISO = _isoOf(_today);
+const ONLINE_FUTURE_ISO = _addDays(27);
+
 export const mockAppointments: Appointment[] = [
   {
     id: 'ap1',
@@ -66,6 +78,34 @@ export const mockAppointments: Appointment[] = [
     durationMin: 90,
     vetName: 'คุณฝน',
     clinicName: 'EHP Grooming',
+    status: 'upcoming',
+  },
+  {
+    id: 'ap_online_today',
+    petId: 'p2',
+    petName: 'มะลิ',
+    petEmoji: '🐈',
+    type: 'consultation',
+    typeLabel: 'ปรึกษาอาการเบื้องต้น',
+    dateISO: TODAY_ISO,
+    time: '16:00',
+    durationMin: 30,
+    vetName: 'สพ.ญ. ณัฐา',
+    clinicName: 'ปรึกษาออนไลน์',
+    status: 'upcoming',
+  },
+  {
+    id: 'ap_online_future',
+    petId: 'p1',
+    petName: 'ข้าวปั้น',
+    petEmoji: '🐕',
+    type: 'consultation',
+    typeLabel: 'ติดตามอาการ',
+    dateISO: ONLINE_FUTURE_ISO,
+    time: '10:30',
+    durationMin: 30,
+    vetName: 'สพ. อนุพงษ์',
+    clinicName: 'ปรึกษาออนไลน์',
     status: 'upcoming',
   },
   {

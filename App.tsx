@@ -1,4 +1,4 @@
-import { NavigationContainer, DefaultTheme } from '@react-navigation/native';
+import { NavigationContainer, DefaultTheme, createNavigationContainerRef } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
@@ -22,6 +22,10 @@ import NotificationsScreen from './src/screens/NotificationsScreen';
 import AddFeedingScheduleScreen from './src/screens/AddFeedingScheduleScreen';
 import TeleVetScreen from './src/screens/TeleVetScreen';
 import ChatScreen from './src/screens/ChatScreen';
+import ChatListScreen from './src/screens/ChatListScreen';
+import VideoCallScreen from './src/screens/VideoCallScreen';
+import { CallProvider } from './src/data/callContext';
+import MiniCallOverlay from './src/components/MiniCallOverlay';
 import BookTeleVetScreen from './src/screens/BookTeleVetScreen';
 import VetDetailScreen from './src/screens/VetDetailScreen';
 import ExpensesScreen from './src/screens/ExpensesScreen';
@@ -54,6 +58,8 @@ export type RootStackParamList = {
   AddFeedingSchedule: undefined;
   TeleVet: undefined;
   Chat: { conversationId: string; vetId?: string };
+  ChatList: undefined;
+  VideoCall: { vetId: string };
   BookTeleVet: undefined;
   VetDetail: { vetId: string };
   Expenses: undefined;
@@ -67,6 +73,8 @@ export type RootStackParamList = {
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
+
+export const navigationRef = createNavigationContainerRef<RootStackParamList>();
 
 const navTheme = {
   ...DefaultTheme,
@@ -102,8 +110,9 @@ export default function App() {
   return (
     <SafeAreaProvider>
       <StatusBar style="dark" />
-      <NavigationContainer theme={navTheme}>
-        <Stack.Navigator initialRouteName="Login">
+      <CallProvider>
+        <NavigationContainer ref={navigationRef} theme={navTheme}>
+          <Stack.Navigator initialRouteName="Login">
           <Stack.Screen
             name="Login"
             component={LoginScreen}
@@ -170,6 +179,16 @@ export default function App() {
             options={{ headerShown: false }}
           />
           <Stack.Screen
+            name="ChatList"
+            component={ChatListScreen}
+            options={{ headerShown: false }}
+          />
+          <Stack.Screen
+            name="VideoCall"
+            component={VideoCallScreen}
+            options={{ headerShown: false, animation: 'fade' }}
+          />
+          <Stack.Screen
             name="BookTeleVet"
             component={BookTeleVetScreen}
             options={{ headerShown: false }}
@@ -214,8 +233,10 @@ export default function App() {
             component={CheckoutScreen}
             options={{ headerShown: false }}
           />
-        </Stack.Navigator>
-      </NavigationContainer>
+          </Stack.Navigator>
+        </NavigationContainer>
+        <MiniCallOverlay />
+      </CallProvider>
     </SafeAreaProvider>
   );
 }
