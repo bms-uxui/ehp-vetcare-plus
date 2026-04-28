@@ -152,6 +152,7 @@ export default function GlassTabBar({ state, descriptors, navigation }: BottomTa
 
   const fabRoute = state.routes[FAB_INDEX];
   const fabFocused = state.index === FAB_INDEX;
+  const fabIcon = (descriptors[fabRoute.key].options as any).tabIcon as string | undefined;
   const fabPress = () => {
     const event = navigation.emit({
       type: 'tabPress',
@@ -190,18 +191,9 @@ export default function GlassTabBar({ state, descriptors, navigation }: BottomTa
       >
         <Animated.View
           pointerEvents="none"
-          style={[styles.activePill, shadows.lift, pillStyles[index]]}
-        >
-          <LinearGradient
-            colors={['#EFA5B8', '#DA8AA1', '#C87390']}
-            locations={[0, 0.4, 1]}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={StyleSheet.absoluteFill}
-          />
-          <View pointerEvents="none" style={styles.pillTopBevel} />
-          <View pointerEvents="none" style={styles.pillBottomBevel} />
-        </Animated.View>
+          style={[styles.activePill, pillStyles[index]]}
+        />
+
 
         <View style={styles.tabContent}>
           <Animated.View style={[styles.contentLayer, iconStyles[index]]}>
@@ -285,7 +277,7 @@ export default function GlassTabBar({ state, descriptors, navigation }: BottomTa
             />
           </Animated.View>
           <Icon
-            name="Stethoscope"
+            name={(fabIcon ?? 'Heart') as any}
             size={28}
             color={fabFocused ? semantic.onPrimary : semantic.primary}
             strokeWidth={2.2}
@@ -343,9 +335,7 @@ const styles = StyleSheet.create({
   activePill: {
     ...StyleSheet.absoluteFillObject,
     borderRadius: radii.pill,
-    overflow: 'hidden',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.18)',
+    backgroundColor: semantic.primary,
   },
   tabContent: {
     flex: 1,

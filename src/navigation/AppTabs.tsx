@@ -28,14 +28,14 @@ export default function AppTabs() {
         options={{ tabBarLabel: 'หน้าแรก', tabIcon: 'House' } as any}
       />
       <Tab.Screen
+        name="Vet"
+        component={VetHubScreen}
+        options={{ tabBarLabel: 'สัตว์แพทย์', tabIcon: 'Stethoscope' } as any}
+      />
+      <Tab.Screen
         name="PetsList"
         component={PetsListScreen}
         options={{ tabBarLabel: 'สัตว์เลี้ยง', tabIcon: 'PawPrint' } as any}
-      />
-      <Tab.Screen
-        name="Vet"
-        component={VetHubScreen}
-        options={{ tabBarLabel: 'บริการสัตว์แพทย์', tabIcon: 'Stethoscope' } as any}
       />
       <Tab.Screen
         name="PetShop"
