@@ -1,7 +1,7 @@
 import { StyleSheet, View } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../App';
-import { Card, Icon, Screen, Text, WeightChart } from '../components';
+import { Card, Icon, PetAvatar, Screen, Text, WeightChart } from '../components';
 import { semantic, spacing } from '../theme';
 import { mockPets } from '../data/pets';
 import { visitsForPet, thDate } from '../data/visits';
@@ -31,9 +31,11 @@ export default function HealthRecordsScreen({ route, navigation }: Props) {
   return (
     <Screen scroll>
       <View style={styles.header}>
-        <View style={styles.avatar}>
-          <Text style={{ fontSize: 40 }}>{pet.emoji}</Text>
-        </View>
+        <PetAvatar
+          pet={pet}
+          size={72}
+          backgroundColor={semantic.primaryMuted}
+        />
         <View style={styles.headerText}>
           <Text variant="overline" color={semantic.primary}>ประวัติสุขภาพ</Text>
           <Text variant="h2">{pet.name}</Text>

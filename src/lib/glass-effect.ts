@@ -1,7 +1,13 @@
-// Re-export expo-glass-effect (iOS 26 Liquid Glass) through this shim so all
-// callers go via one path. SDK 55 ships the real native module —
-// `isLiquidGlassAvailable()` returns true on iOS 26+ and false everywhere
-// else, so existing `LIQUID_GLASS ? GlassView : BlurView` fallbacks keep
-// working unchanged.
-export { GlassView, isLiquidGlassAvailable } from 'expo-glass-effect';
+// Force every caller through the BlurView fallback by reporting that Liquid
+// Glass is not available, even when the native module is present. iOS 26
+// Liquid Glass is not supported on every device the team is targeting and
+// some users on older OS versions saw broken rendering, so we disable it
+// system-wide. The BlurView fallback paths (shadows + hairline border +
+// material tint) already provide enough depth on their own.
+//
+// `GlassView` is re-exported so existing imports keep type-checking, but
+// it should never actually render because `isLiquidGlassAvailable()` is
+// false everywhere.
+export { GlassView } from 'expo-glass-effect';
 export type { GlassViewProps } from 'expo-glass-effect';
+export const isLiquidGlassAvailable = () => false;

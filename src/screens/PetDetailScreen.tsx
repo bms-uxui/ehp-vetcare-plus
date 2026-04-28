@@ -1,7 +1,7 @@
 import { StyleSheet, View } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../App';
-import { Button, Card, Screen, Text } from '../components';
+import { Button, Card, PetAvatar, Screen, Text } from '../components';
 import { semantic, spacing } from '../theme';
 import { mockPets, petAgeString } from '../data/pets';
 
@@ -27,9 +27,12 @@ export default function PetDetailScreen({ route, navigation }: Props) {
   return (
     <Screen scroll>
       <View style={styles.hero}>
-        <View style={styles.avatar}>
-          <Text style={{ fontSize: 80 }}>{pet.emoji}</Text>
-        </View>
+        <PetAvatar
+          pet={pet}
+          size={140}
+          backgroundColor={semantic.primaryMuted}
+          style={styles.avatar}
+        />
         <Text variant="display" align="center" style={styles.name}>
           {pet.name}
         </Text>
@@ -171,12 +174,6 @@ const styles = StyleSheet.create({
     gap: spacing.xs,
   },
   avatar: {
-    width: 140,
-    height: 140,
-    borderRadius: 70,
-    backgroundColor: semantic.primaryMuted,
-    alignItems: 'center',
-    justifyContent: 'center',
     marginBottom: spacing.md,
   },
   name: {
