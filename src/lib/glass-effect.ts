@@ -1,19 +1,13 @@
-// SDK 54 stub for expo-glass-effect (only ships in SDK 55+).
-// `isLiquidGlassAvailable()` always returns false here, so all
-// `LIQUID_GLASS ? GlassView : BlurView` call sites fall through to
-// BlurView and `GlassView` is never actually rendered.
-import { View } from 'react-native';
-import type { ComponentType, ReactNode } from 'react';
-import type { ViewStyle, StyleProp } from 'react-native';
-
-export type GlassViewProps = {
-  glassEffectStyle?: 'regular' | 'clear';
-  colorScheme?: 'light' | 'dark';
-  isInteractive?: boolean;
-  tintColor?: string;
-  style?: StyleProp<ViewStyle>;
-  children?: ReactNode;
-};
-
-export const GlassView = View as unknown as ComponentType<GlassViewProps>;
+// Force every caller through the BlurView fallback by reporting that Liquid
+// Glass is not available, even when the native module is present. iOS 26
+// Liquid Glass is not supported on every device the team is targeting and
+// some users on older OS versions saw broken rendering, so we disable it
+// system-wide. The BlurView fallback paths (shadows + hairline border +
+// material tint) already provide enough depth on their own.
+//
+// `GlassView` is re-exported so existing imports keep type-checking, but
+// it should never actually render because `isLiquidGlassAvailable()` is
+// false everywhere.
+export { GlassView } from 'expo-glass-effect';
+export type { GlassViewProps } from 'expo-glass-effect';
 export const isLiquidGlassAvailable = () => false;

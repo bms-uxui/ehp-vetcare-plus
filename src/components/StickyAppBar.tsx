@@ -111,19 +111,15 @@ export default function StickyAppBar({
         { paddingTop: insets.top, height: insets.top + 56 },
       ]}
     >
-      {/* Apple-style nav bar — single continuous BlurView covering status bar
-          + 56pt content area. Fades in on scroll like Apple's apps where the
-          bar materializes once content scrolls under it. */}
       <Animated.View
         pointerEvents="none"
         style={[StyleSheet.absoluteFill, barBgStyle]}
       >
         <BlurView
-          intensity={80}
-          tint="systemChromeMaterialLight"
+          intensity={30}
+          tint="light"
           style={StyleSheet.absoluteFill}
         />
-        <View style={[StyleSheet.absoluteFill, styles.barTint]} />
         <View style={styles.barHairline} />
       </Animated.View>
 
@@ -191,8 +187,19 @@ const styles = StyleSheet.create({
     maxWidth: '60%',
     textAlign: 'center',
   },
-  barTint: {
-    backgroundColor: 'rgba(255,255,255,0.4)',
+  blurMid: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: '70%',
+  },
+  blurTop: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: '40%',
   },
   barHairline: {
     position: 'absolute',

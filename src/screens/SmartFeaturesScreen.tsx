@@ -1,7 +1,7 @@
 import { Alert, StyleSheet, View } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../App';
-import { Card, Icon, Screen, Text } from '../components';
+import { Card, Icon, PetAvatar, Screen, Text } from '../components';
 import { radii, semantic, spacing } from '../theme';
 import { mockRecommendations, recTypeMeta } from '../data/smart';
 import { mockPets } from '../data/pets';
@@ -68,9 +68,11 @@ export default function SmartFeaturesScreen({ navigation }: Props) {
           return (
             <Card key={pet.id} variant="elevated" padding="lg">
               <View style={styles.petHeader}>
-                <View style={styles.petAvatar}>
-                  <Text style={{ fontSize: 28 }}>{pet.emoji}</Text>
-                </View>
+                <PetAvatar
+                  pet={pet}
+                  size={56}
+                  backgroundColor={semantic.primaryMuted}
+                />
                 <View style={{ flex: 1 }}>
                   <Text variant="bodyStrong">{pet.name}</Text>
                   <Text variant="caption" color={semantic.textSecondary}>
@@ -173,7 +175,7 @@ const styles = StyleSheet.create({
   petAvatar: {
     width: 48,
     height: 48,
-    borderRadius: 24,
+    borderRadius: 16,
     backgroundColor: semantic.primaryMuted,
     alignItems: 'center',
     justifyContent: 'center',

@@ -1091,7 +1091,7 @@ const styles = StyleSheet.create({
   shipCard: {
     marginHorizontal: spacing.lg,
     padding: spacing.lg,
-    borderRadius: 24,
+    borderRadius: 16,
     borderWidth: 1,
     borderColor: '#F5E4E7',
     gap: spacing.md,
@@ -1288,7 +1288,7 @@ const styles = StyleSheet.create({
   },
   flexBtn: {
     height: 48,
-    borderRadius: 24,
+    borderRadius: 16,
     width: '100%',
   },
   flexBtnWrap: {

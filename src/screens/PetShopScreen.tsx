@@ -1,20 +1,27 @@
-import { ReactNode, useMemo, useState } from 'react';
+import { ReactNode, useMemo, useRef, useState } from 'react';
 import {
   Dimensions,
   Image,
+  Keyboard,
   Pressable,
   ScrollView,
   StyleSheet,
+  TextInput,
   View,
 } from 'react-native';
 import Animated, {
   Extrapolation,
   interpolate,
+  runOnJS,
   useAnimatedScrollHandler,
   useAnimatedStyle,
   useSharedValue,
+  withSpring,
+  withTiming,
 } from 'react-native-reanimated';
 import { BlurView } from 'expo-blur';
+import { LinearGradient } from 'expo-linear-gradient';
+import { GlassView, isLiquidGlassAvailable } from '../lib/glass-effect';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
@@ -32,6 +39,7 @@ import {
 } from '../data/products';
 import { mockPets } from '../data/pets';
 import { useCart } from '../data/cart';
+import { mockOrders } from '../data/orders';
 
 type Props = BottomTabScreenProps<AppTabsParamList, 'PetShop'>;
 
@@ -44,13 +52,86 @@ const CARD_W = (SCREEN_W - SECTION_PAD * 2 - CARD_GAP) / 2;
 const FADE_START = 30;
 const FADE_END = 90;
 
+// Morph search field — same constants as CartScreen for consistency
+const LIQUID_GLASS = isLiquidGlassAvailable();
+const FIELD_MIN_W = 44;
+const CANCEL_W = 60;
+const CANCEL_GAP = 12;
+const TOOLBAR_PAD = 16;
+const FIELD_MAX_W = SCREEN_W - TOOLBAR_PAD * 2 - CANCEL_W - CANCEL_GAP;
+
 export default function PetShopScreen({}: Props) {
   const insets = useSafeAreaInsets();
   const rootNav = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const { count } = useCart();
+  const activeOrderCount = useMemo(
+    () =>
+      mockOrders.filter(
+        (o) => o.status === 'packing' || o.status === 'shipping',
+      ).length,
+    [],
+  );
   const [activeCategory, setActiveCategory] = useState<ProductCategory | null>(
     null,
   );
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const searchInputRef = useRef<TextInput>(null);
+  const searchAnim = useSharedValue(0);
+
+  const openSearch = () => {
+    setSearchOpen(true);
+    searchAnim.value = withSpring(1, {
+      damping: 22,
+      stiffness: 200,
+      mass: 0.8,
+    });
+    setTimeout(() => searchInputRef.current?.focus(), 100);
+  };
+  const closeSearch = () => {
+    Keyboard.dismiss();
+    searchAnim.value = withTiming(0, { duration: 220 }, (finished) => {
+      if (finished) {
+        runOnJS(setSearchOpen)(false);
+        runOnJS(setSearchQuery)('');
+      }
+    });
+  };
+
+  const fieldStyle = useAnimatedStyle(() => ({
+    width: interpolate(
+      searchAnim.value,
+      [0, 1],
+      [FIELD_MIN_W, FIELD_MAX_W],
+    ),
+  }));
+  const fieldContentStyle = useAnimatedStyle(() => ({
+    opacity: interpolate(
+      searchAnim.value,
+      [0.4, 0.9],
+      [0, 1],
+      Extrapolation.CLAMP,
+    ),
+  }));
+  const cancelStyle = useAnimatedStyle(() => ({
+    opacity: interpolate(
+      searchAnim.value,
+      [0.55, 1],
+      [0, 1],
+      Extrapolation.CLAMP,
+    ),
+    transform: [
+      {
+        translateX: interpolate(
+          searchAnim.value,
+          [0.55, 1],
+          [24, 0],
+          Extrapolation.CLAMP,
+        ),
+      },
+    ],
+    width: interpolate(searchAnim.value, [0, 0.55, 1], [0, 0, CANCEL_W]),
+  }));
 
   const scrollY = useSharedValue(0);
   const scrollHandler = useAnimatedScrollHandler((e) => {
@@ -98,6 +179,17 @@ export default function PetShopScreen({}: Props) {
   const allProducts = activeCategory
     ? mockProducts.filter((p) => p.category === activeCategory)
     : mockProducts;
+
+  const trimmedQuery = searchQuery.trim();
+  const searchResults = trimmedQuery
+    ? mockProducts.filter((p) => {
+        const q = trimmedQuery.toLowerCase();
+        return (
+          p.name.toLowerCase().includes(q) ||
+          p.brand.toLowerCase().includes(q)
+        );
+      })
+    : [];
 
   const goToProduct = (id: string) =>
     rootNav.navigate('ProductDetail', { productId: id });
@@ -148,34 +240,68 @@ export default function PetShopScreen({}: Props) {
           ))}
         </ScrollView>
 
-        {/* Promotion */}
-        {!activeCategory && featured.length > 0 && (
-          <Section title="โปรโมชั่น">
-            <Grid data={featured} onPress={goToProduct} />
+        {trimmedQuery ? (
+          // Search results — replaces all sections when query is active
+          <Section title={`ผลการค้นหา (${searchResults.length})`}>
+            {searchResults.length > 0 ? (
+              <Grid data={searchResults} onPress={goToProduct} />
+            ) : (
+              <View style={styles.searchEmpty}>
+                <Icon
+                  name="SearchX"
+                  size={32}
+                  color={semantic.textMuted}
+                  strokeWidth={1.6}
+                />
+                <Text variant="body" color={semantic.textSecondary}>
+                  ไม่พบ "{trimmedQuery}"
+                </Text>
+              </View>
+            )}
           </Section>
-        )}
+        ) : (
+          <>
+            {/* Promotion */}
+            {!activeCategory && featured.length > 0 && (
+              <Section title="โปรโมชั่น">
+                <Grid data={featured} onPress={goToProduct} />
+              </Section>
+            )}
 
-        {/* Recommend for your pets */}
-        {!activeCategory && recommended.length > 0 && (
-          <Section title="แนะนำสำหรับสัตว์ของคุณ">
-            <Grid data={recommended.slice(0, 4)} onPress={goToProduct} />
-          </Section>
-        )}
+            {/* Recommend for your pets */}
+            {!activeCategory && recommended.length > 0 && (
+              <Section
+                title="แนะนำสำหรับสัตว์ของคุณ"
+                trailing={<PetStack />}
+              >
+                <Grid data={recommended.slice(0, 4)} onPress={goToProduct} />
+              </Section>
+            )}
 
-        {/* All products / filtered */}
-        <Section
-          title={
-            activeCategory
-              ? `${categoryMeta[activeCategory].label} (${allProducts.length})`
-              : `สินค้าทั้งหมด (${allProducts.length})`
-          }
-        >
-          <Grid data={allProducts} onPress={goToProduct} />
-        </Section>
+            {/* All products / filtered */}
+            <Section
+              title={
+                activeCategory
+                  ? `${categoryMeta[activeCategory].label} (${allProducts.length})`
+                  : `สินค้าทั้งหมด (${allProducts.length})`
+              }
+            >
+              <Grid data={allProducts} onPress={goToProduct} />
+            </Section>
+          </>
+        )}
 
         {/* Bottom space for tab bar */}
         <View style={{ height: 110 }} />
       </Animated.ScrollView>
+
+      {/* Top fade — soft white wash matching Screen wrapper used by other tabs */}
+      <LinearGradient
+        pointerEvents="none"
+        colors={['#FFFDFB', 'rgba(255,253,251,0.85)', 'rgba(255,253,251,0)']}
+        locations={[0, 0.55, 1]}
+        style={[styles.topFade, { height: insets.top + 24 }]}
+      />
 
       {/* Sticky AppBar — same pattern as ProductDetailScreen */}
       <View
@@ -213,37 +339,147 @@ export default function PetShopScreen({}: Props) {
           </Animated.View>
 
           <View style={styles.appbarActions}>
-            <IconButton
-              icon="Search"
-              size="md"
-              onPress={() => {}}
-              accessibilityLabel="ค้นหา"
-            />
-            <View>
-              <IconButton
-                icon="ShoppingCart"
-                size="md"
-                onPress={() => rootNav.navigate('Cart')}
-                accessibilityLabel="ตะกร้า"
-              />
-              {count > 0 && (
-                <View style={styles.cartBadge} pointerEvents="none">
-                  <Text weight="700" style={styles.cartBadgeText}>
-                    {count > 99 ? '99+' : count}
-                  </Text>
+            {!searchOpen && (
+              <>
+                <IconButton
+                  icon="Search"
+                  size="md"
+                  onPress={openSearch}
+                  accessibilityLabel="ค้นหา"
+                />
+                <View>
+                  <IconButton
+                    icon="Package"
+                    size="md"
+                    onPress={() => rootNav.navigate('OrderTracking')}
+                    accessibilityLabel="ติดตามคำสั่งซื้อ"
+                  />
+                  {activeOrderCount > 0 && (
+                    <View style={styles.cartBadge} pointerEvents="none">
+                      <Text weight="700" style={styles.cartBadgeText}>
+                        {activeOrderCount > 99 ? '99+' : activeOrderCount}
+                      </Text>
+                    </View>
+                  )}
                 </View>
-              )}
-            </View>
+                <View>
+                  <IconButton
+                    icon="ShoppingCart"
+                    size="md"
+                    onPress={() => rootNav.navigate('Cart')}
+                    accessibilityLabel="ตะกร้า"
+                  />
+                  {count > 0 && (
+                    <View style={styles.cartBadge} pointerEvents="none">
+                      <Text weight="700" style={styles.cartBadgeText}>
+                        {count > 99 ? '99+' : count}
+                      </Text>
+                    </View>
+                  )}
+                </View>
+              </>
+            )}
           </View>
         </View>
       </View>
+
+      {/* Apple-style morph search overlay — sits above appbar (zIndex 11) */}
+      {searchOpen && (
+        <View
+          pointerEvents="box-none"
+          style={[
+            styles.searchOverlay,
+            { paddingTop: insets.top, height: insets.top + 56 },
+          ]}
+        >
+          <View style={styles.searchMorphRow}>
+            <Animated.View style={[styles.searchMorphField, fieldStyle]}>
+              {LIQUID_GLASS ? (
+                <GlassView
+                  glassEffectStyle="regular"
+                  colorScheme="light"
+                  style={StyleSheet.absoluteFill}
+                />
+              ) : (
+                <>
+                  <BlurView
+                    intensity={70}
+                    tint="systemThinMaterialLight"
+                    style={StyleSheet.absoluteFill}
+                  />
+                  <View
+                    pointerEvents="none"
+                    style={[StyleSheet.absoluteFill, styles.searchMorphTint]}
+                  />
+                </>
+              )}
+              <View
+                pointerEvents="none"
+                style={[StyleSheet.absoluteFill, styles.searchMorphHairline]}
+              />
+              <Icon
+                name="Search"
+                size={18}
+                color="#1A1A1A"
+                strokeWidth={2.2}
+              />
+              <Animated.View
+                style={[styles.searchMorphInner, fieldContentStyle]}
+              >
+                <TextInput
+                  ref={searchInputRef}
+                  style={styles.searchInput}
+                  value={searchQuery}
+                  onChangeText={setSearchQuery}
+                  placeholder="ค้นหาสินค้า"
+                  placeholderTextColor={semantic.textMuted}
+                  returnKeyType="search"
+                  autoCorrect={false}
+                  autoCapitalize="none"
+                />
+                {searchQuery.length > 0 && (
+                  <Pressable
+                    onPress={() => setSearchQuery('')}
+                    hitSlop={8}
+                    accessibilityLabel="ล้างคำค้น"
+                  >
+                    <View style={styles.searchClear}>
+                      <Icon
+                        name="X"
+                        size={11}
+                        color="#FFFFFF"
+                        strokeWidth={3}
+                      />
+                    </View>
+                  </Pressable>
+                )}
+              </Animated.View>
+            </Animated.View>
+            <Animated.View style={cancelStyle}>
+              <Pressable onPress={closeSearch} hitSlop={8}>
+                <Text weight="500" style={styles.searchCancel}>
+                  ยกเลิก
+                </Text>
+              </Pressable>
+            </Animated.View>
+          </View>
+        </View>
+      )}
     </View>
   );
 }
 
 /* ---------- Sections ---------- */
 
-function Section({ title, children }: { title: string; children: ReactNode }) {
+function Section({
+  title,
+  trailing,
+  children,
+}: {
+  title: string;
+  trailing?: ReactNode;
+  children: ReactNode;
+}) {
   return (
     <View style={styles.section}>
       <View style={styles.sectionHeader}>
@@ -256,8 +492,32 @@ function Section({ title, children }: { title: string; children: ReactNode }) {
         <Text weight="600" style={styles.sectionTitle}>
           {title}
         </Text>
+        {trailing}
       </View>
       {children}
+    </View>
+  );
+}
+
+function PetStack() {
+  return (
+    <View style={styles.petStack}>
+      {mockPets.slice(0, 4).map((pet, i) => (
+        <View
+          key={pet.id}
+          style={[styles.petAvatar, i > 0 && styles.petAvatarOverlap]}
+        >
+          {pet.photo ? (
+            <Image
+              source={pet.photo}
+              style={StyleSheet.absoluteFill}
+              resizeMode="cover"
+            />
+          ) : (
+            <Text style={styles.petAvatarEmoji}>{pet.emoji}</Text>
+          )}
+        </View>
+      ))}
     </View>
   );
 }
@@ -287,7 +547,6 @@ function ProductCard({
   product: Product;
   onPress: () => void;
 }) {
-  const cat = categoryMeta[product.category];
   const [imgFailed, setImgFailed] = useState(false);
   const isOnSale = !!product.originalPriceBaht;
   const priceColor = isOnSale ? '#C25450' : '#4FB36C';
@@ -300,7 +559,7 @@ function ProductCard({
         pressed && { opacity: 0.92, transform: [{ scale: 0.98 }] },
       ]}
     >
-      <View style={[styles.cardImage, { backgroundColor: cat.bg }]}>
+      <View style={styles.cardImage}>
         {product.imageUrl && !imgFailed ? (
           <Image
             source={{ uri: product.imageUrl }}
@@ -323,7 +582,7 @@ function ProductCard({
         <Text weight="600" style={styles.cardBrand} numberOfLines={1}>
           {product.brand}
         </Text>
-        <Text weight="600" style={styles.cardName} numberOfLines={2}>
+        <Text weight="600" style={styles.cardName} numberOfLines={1}>
           {product.name}
         </Text>
         <Text weight="700" style={[styles.cardPrice, { color: priceColor }]}>
@@ -374,9 +633,17 @@ function CategoryChip({
 const styles = StyleSheet.create({
   root: {
     flex: 1,
+    backgroundColor: semantic.background,
   },
   scroll: {
     paddingBottom: 0,
+  },
+
+  topFade: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
   },
 
   // Sticky AppBar — same as ProductDetail
@@ -504,6 +771,28 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#1A1A1A',
   },
+  petStack: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginLeft: 6,
+  },
+  petAvatar: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    overflow: 'hidden',
+    backgroundColor: semantic.surface,
+    borderWidth: 1.5,
+    borderColor: '#FFFFFF',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  petAvatarOverlap: {
+    marginLeft: -8,
+  },
+  petAvatarEmoji: {
+    fontSize: 14,
+  },
 
   // Grid
   grid: {
@@ -512,15 +801,21 @@ const styles = StyleSheet.create({
     gap: CARD_GAP,
   },
 
-  // Card
+  // Card — white container holds image + body, single drop shadow
   card: {
     width: CARD_W,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    overflow: 'hidden',
+    shadowColor: '#5E303C',
+    shadowOpacity: 0.08,
+    shadowRadius: 16,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 4,
   },
   cardImage: {
     width: CARD_W,
     height: CARD_W,
-    borderRadius: 24,
-    overflow: 'hidden',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -543,8 +838,7 @@ const styles = StyleSheet.create({
     letterSpacing: 0.6,
   },
   cardBody: {
-    paddingTop: 8,
-    paddingHorizontal: 4,
+    padding: 12,
     gap: 2,
   },
   cardBrand: {
@@ -563,5 +857,74 @@ const styles = StyleSheet.create({
     fontSize: 15,
     lineHeight: 20,
     marginTop: 2,
+  },
+
+  // Apple-style morph search overlay (matches CartScreen)
+  searchOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    zIndex: 11, // above sticky AppBar (10)
+  },
+  searchMorphRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'flex-end',
+    gap: spacing.md,
+    paddingHorizontal: SECTION_PAD,
+    height: 56,
+  },
+  searchMorphField: {
+    height: 44,
+    borderRadius: 22,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 14,
+    backgroundColor: 'transparent',
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOpacity: 0.12,
+    shadowRadius: 20,
+    shadowOffset: { width: 0, height: 8 },
+    elevation: 6,
+  },
+  searchMorphTint: {
+    backgroundColor: 'rgba(255,255,255,0.55)',
+  },
+  searchMorphHairline: {
+    borderRadius: 22,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: 'rgba(255,255,255,0.55)',
+  },
+  searchMorphInner: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    marginLeft: spacing.sm,
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: 15,
+    color: '#1A1A1A',
+    paddingVertical: 0,
+  },
+  searchClear: {
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    backgroundColor: '#9A9AA0',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  searchCancel: {
+    fontSize: 15,
+    color: semantic.primary,
+  },
+  searchEmpty: {
+    paddingVertical: spacing['2xl'],
+    alignItems: 'center',
+    gap: spacing.sm,
   },
 });

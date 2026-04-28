@@ -14,6 +14,9 @@ import LoginScreen from './src/screens/LoginScreen';
 import SignupScreen from './src/screens/SignupScreen';
 import PetDetailScreen from './src/screens/PetDetailScreen';
 import AddPetScreen from './src/screens/AddPetScreen';
+import AddPetManualScreen from './src/screens/AddPetManualScreen';
+import AddPetScanScreen from './src/screens/AddPetScanScreen';
+import AddPetMicrochipScreen from './src/screens/AddPetMicrochipScreen';
 import AppointmentDetailScreen from './src/screens/AppointmentDetailScreen';
 import BookAppointmentScreen from './src/screens/BookAppointmentScreen';
 import HealthRecordsScreen from './src/screens/HealthRecordsScreen';
@@ -35,6 +38,7 @@ import SymptomCheckScreen from './src/screens/SymptomCheckScreen';
 import ProductDetailScreen from './src/screens/ProductDetailScreen';
 import CartScreen from './src/screens/CartScreen';
 import CheckoutScreen from './src/screens/CheckoutScreen';
+import OrderTrackingScreen from './src/screens/OrderTrackingScreen';
 import AppTabs from './src/navigation/AppTabs';
 import { semantic } from './src/theme';
 
@@ -50,6 +54,19 @@ export type RootStackParamList = {
   // Stack-only routes above tabs
   PetDetail: { petId: string };
   AddPet: undefined;
+  AddPetScan: undefined;
+  AddPetMicrochip: undefined;
+  AddPetManual:
+    | {
+        prefill?: {
+          name?: string;
+          breed?: string;
+          birthDate?: string;
+          microchipId?: string;
+          speciesLabel?: string;
+        };
+      }
+    | undefined;
   AppointmentDetail: { appointmentId: string };
   BookAppointment: undefined;
   HealthRecords: { petId: string };
@@ -70,6 +87,7 @@ export type RootStackParamList = {
   ProductDetail: { productId: string };
   Cart: undefined;
   Checkout: { selectedIds?: string[] } | undefined;
+  OrderTracking: undefined;
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -131,11 +149,26 @@ export default function App() {
           <Stack.Screen
             name="PetDetail"
             component={PetDetailScreen}
-            options={transparentHeader}
+            options={{ headerShown: false }}
           />
           <Stack.Screen
             name="AddPet"
             component={AddPetScreen}
+            options={transparentHeader}
+          />
+          <Stack.Screen
+            name="AddPetScan"
+            component={AddPetScanScreen}
+            options={transparentHeader}
+          />
+          <Stack.Screen
+            name="AddPetMicrochip"
+            component={AddPetMicrochipScreen}
+            options={transparentHeader}
+          />
+          <Stack.Screen
+            name="AddPetManual"
+            component={AddPetManualScreen}
             options={transparentHeader}
           />
           <Stack.Screen
@@ -201,12 +234,12 @@ export default function App() {
           <Stack.Screen
             name="Expenses"
             component={ExpensesScreen}
-            options={transparentHeader}
+            options={{ headerShown: false }}
           />
           <Stack.Screen
             name="AddExpense"
             component={AddExpenseScreen}
-            options={transparentHeader}
+            options={{ headerShown: false }}
           />
           <Stack.Screen
             name="SmartFeatures"
@@ -231,6 +264,11 @@ export default function App() {
           <Stack.Screen
             name="Checkout"
             component={CheckoutScreen}
+            options={{ headerShown: false }}
+          />
+          <Stack.Screen
+            name="OrderTracking"
+            component={OrderTrackingScreen}
             options={{ headerShown: false }}
           />
           </Stack.Navigator>
