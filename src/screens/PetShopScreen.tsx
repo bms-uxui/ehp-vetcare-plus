@@ -1,136 +1,340 @@
-import { useMemo, useState } from 'react';
-import { Image, Pressable, StyleSheet, View } from 'react-native';
-import { NativeStackScreenProps } from '@react-navigation/native-stack';
+import { ReactNode, useMemo, useState } from 'react';
+import {
+  Dimensions,
+  Image,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  View,
+} from 'react-native';
+import Animated, {
+  Extrapolation,
+  interpolate,
+  useAnimatedScrollHandler,
+  useAnimatedStyle,
+  useSharedValue,
+} from 'react-native-reanimated';
+import { BlurView } from 'expo-blur';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useNavigation } from '@react-navigation/native';
+import { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { AppTabsParamList } from '../navigation/AppTabs';
 import { RootStackParamList } from '../../App';
-import { Card, Icon, Screen, Text } from '../components';
-import { radii, semantic, spacing } from '../theme';
-import { mockProducts, categoryMeta, ProductCategory, fmtBaht, Product } from '../data/products';
+import { AppBackground, Icon, IconButton, Text } from '../components';
+import { semantic, spacing } from '../theme';
+import {
+  mockProducts,
+  categoryMeta,
+  ProductCategory,
+  fmtBaht,
+  Product,
+} from '../data/products';
 import { mockPets } from '../data/pets';
 import { useCart } from '../data/cart';
 
-type Props = NativeStackScreenProps<RootStackParamList, 'PetShop'>;
+type Props = BottomTabScreenProps<AppTabsParamList, 'PetShop'>;
 
-export default function PetShopScreen({ navigation }: Props) {
+const SCREEN_W = Dimensions.get('window').width;
+const SECTION_PAD = 16;
+const CARD_GAP = 10;
+const CARD_W = (SCREEN_W - SECTION_PAD * 2 - CARD_GAP) / 2;
+
+// Bar fades in once the large title scrolls under the app bar
+const FADE_START = 30;
+const FADE_END = 90;
+
+export default function PetShopScreen({}: Props) {
+  const insets = useSafeAreaInsets();
+  const rootNav = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const { count } = useCart();
-  const [activeCategory, setActiveCategory] = useState<ProductCategory | null>(null);
+  const [activeCategory, setActiveCategory] = useState<ProductCategory | null>(
+    null,
+  );
 
-  const featured = useMemo(() => mockProducts.filter((p) => p.originalPriceBaht), []);
+  const scrollY = useSharedValue(0);
+  const scrollHandler = useAnimatedScrollHandler((e) => {
+    scrollY.value = e.contentOffset.y;
+  });
+
+  const barBgStyle = useAnimatedStyle(() => ({
+    opacity: interpolate(
+      scrollY.value,
+      [FADE_START, FADE_END],
+      [0, 1],
+      Extrapolation.CLAMP,
+    ),
+  }));
+
+  const titleStyle = useAnimatedStyle(() => ({
+    opacity: interpolate(
+      scrollY.value,
+      [FADE_START + 30, FADE_END],
+      [0, 1],
+      Extrapolation.CLAMP,
+    ),
+    transform: [
+      {
+        translateY: interpolate(
+          scrollY.value,
+          [FADE_START + 30, FADE_END],
+          [8, 0],
+          Extrapolation.CLAMP,
+        ),
+      },
+    ],
+  }));
+
+  const featured = useMemo(
+    () => mockProducts.filter((p) => p.originalPriceBaht),
+    [],
+  );
   const recommended = useMemo(() => {
     const species = Array.from(new Set(mockPets.map((p) => p.species)));
     return mockProducts.filter((p) =>
       p.recommendedFor.some((kind) => species.includes(kind as any)),
     );
   }, []);
-
-  const filtered = activeCategory
+  const allProducts = activeCategory
     ? mockProducts.filter((p) => p.category === activeCategory)
     : mockProducts;
 
+  const goToProduct = (id: string) =>
+    rootNav.navigate('ProductDetail', { productId: id });
+
+  const categories: { key: ProductCategory | null; icon: string; label: string }[] = [
+    { key: null, icon: 'LayoutGrid', label: 'ทั้งหมด' },
+    ...(Object.keys(categoryMeta) as ProductCategory[]).map((c) => ({
+      key: c,
+      icon: categoryMeta[c].icon,
+      label: categoryMeta[c].label,
+    })),
+  ];
+
   return (
-    <Screen scroll>
-      <View style={styles.header}>
-        <View style={{ flex: 1 }}>
-          <Text variant="h1">ร้านค้า</Text>
-          <Text variant="body" color={semantic.textSecondary}>
-            อาหารและอุปกรณ์จากคลินิก EHP VetCare
+    <View style={styles.root}>
+      <AppBackground />
+
+      <Animated.ScrollView
+        contentContainerStyle={[
+          styles.scroll,
+          { paddingTop: insets.top + 56 + spacing.sm },
+        ]}
+        showsVerticalScrollIndicator={false}
+        onScroll={scrollHandler}
+        scrollEventThrottle={16}
+      >
+        {/* Large title (Apple App Store style) — scrolls away on scroll */}
+        <View style={styles.heroTitleWrap}>
+          <Text variant="h1" style={styles.heroTitle}>
+            ร้านค้า
           </Text>
         </View>
-        <Pressable onPress={() => navigation.navigate('Cart')} style={styles.cartBtn} hitSlop={8}>
-          <Icon name="ShoppingCart" size={22} color={semantic.primary} />
-          {count > 0 && (
-            <View style={styles.cartBadge}>
-              <Text variant="caption" color={semantic.onPrimary} weight="600" style={{ fontSize: 11 }}>
-                {count}
-              </Text>
-            </View>
-          )}
-        </Pressable>
-      </View>
 
-      {/* Categories */}
-      <View style={styles.catRow}>
-        <CategoryChip
-          icon="LayoutGrid"
-          label="ทั้งหมด"
-          active={activeCategory === null}
-          onPress={() => setActiveCategory(null)}
-        />
-        {(Object.keys(categoryMeta) as ProductCategory[]).map((c) => {
-          const m = categoryMeta[c];
-          return (
+        {/* Category chips — horizontal scroll */}
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.chipsScroll}
+        >
+          {categories.map((c) => (
             <CategoryChip
-              key={c}
-              icon={m.icon}
-              label={m.label}
-              active={activeCategory === c}
-              onPress={() => setActiveCategory(c)}
+              key={c.key ?? 'all'}
+              icon={c.icon}
+              label={c.label}
+              active={activeCategory === c.key}
+              onPress={() => setActiveCategory(c.key)}
             />
-          );
-        })}
-      </View>
+          ))}
+        </ScrollView>
 
-      {/* Featured */}
-      {!activeCategory && featured.length > 0 && (
-        <>
-          <Text variant="overline" color={semantic.textSecondary} style={styles.sectionLabel}>
-            🔥 โปรโมชั่น
-          </Text>
-          <View style={styles.featuredGrid}>
-            {featured.map((p) => (
-              <ProductTile
-                key={p.id}
-                product={p}
-                onPress={() => navigation.navigate('ProductDetail', { productId: p.id })}
-              />
-            ))}
-          </View>
-        </>
-      )}
+        {/* Promotion */}
+        {!activeCategory && featured.length > 0 && (
+          <Section title="โปรโมชั่น">
+            <Grid data={featured} onPress={goToProduct} />
+          </Section>
+        )}
 
-      {/* Recommended for your pets */}
-      {!activeCategory && (
-        <>
-          <Text variant="overline" color={semantic.textSecondary} style={styles.sectionLabel}>
-            ✨ แนะนำสำหรับสัตว์ของคุณ
-          </Text>
-          <View style={styles.petChipRow}>
-            {mockPets.map((p) => (
-              <View key={p.id} style={styles.petChip}>
-                <Text style={{ fontSize: 18 }}>{p.emoji}</Text>
-                <Text variant="caption" color={semantic.textSecondary}>{p.name}</Text>
-              </View>
-            ))}
-          </View>
-          <View style={styles.grid}>
-            {recommended.slice(0, 4).map((p) => (
-              <ProductTile
-                key={p.id}
-                product={p}
-                onPress={() => navigation.navigate('ProductDetail', { productId: p.id })}
-              />
-            ))}
-          </View>
-        </>
-      )}
+        {/* Recommend for your pets */}
+        {!activeCategory && recommended.length > 0 && (
+          <Section title="แนะนำสำหรับสัตว์ของคุณ">
+            <Grid data={recommended.slice(0, 4)} onPress={goToProduct} />
+          </Section>
+        )}
 
-      {/* All / filtered */}
-      <Text variant="overline" color={semantic.textSecondary} style={styles.sectionLabel}>
-        {activeCategory ? categoryMeta[activeCategory].label : 'สินค้าทั้งหมด'} ({filtered.length})
-      </Text>
-      <View style={styles.grid}>
-        {filtered.map((p) => (
-          <ProductTile
-            key={p.id}
-            product={p}
-            onPress={() => navigation.navigate('ProductDetail', { productId: p.id })}
+        {/* All products / filtered */}
+        <Section
+          title={
+            activeCategory
+              ? `${categoryMeta[activeCategory].label} (${allProducts.length})`
+              : `สินค้าทั้งหมด (${allProducts.length})`
+          }
+        >
+          <Grid data={allProducts} onPress={goToProduct} />
+        </Section>
+
+        {/* Bottom space for tab bar */}
+        <View style={{ height: 110 }} />
+      </Animated.ScrollView>
+
+      {/* Sticky AppBar — same pattern as ProductDetailScreen */}
+      <View
+        pointerEvents="box-none"
+        style={[
+          styles.appbar,
+          { paddingTop: insets.top, height: insets.top + 56 },
+        ]}
+      >
+        {/* Backing bar — fades in on scroll */}
+        <Animated.View
+          pointerEvents="none"
+          style={[StyleSheet.absoluteFill, barBgStyle]}
+        >
+          <BlurView
+            intensity={80}
+            tint="systemChromeMaterialLight"
+            style={StyleSheet.absoluteFill}
           />
-        ))}
-      </View>
+          <View style={[StyleSheet.absoluteFill, styles.barTint]} />
+          <View style={styles.barHairline} />
+        </Animated.View>
 
-      <View style={{ height: spacing.xl }} />
-    </Screen>
+        {/* Foreground — title + actions */}
+        <View style={styles.appbarContent}>
+          <View style={styles.appbarPlaceholder} />
+
+          <Animated.View
+            pointerEvents="none"
+            style={[styles.appbarTitleWrap, titleStyle]}
+          >
+            <Text variant="bodyStrong" style={styles.appbarTitle} numberOfLines={1}>
+              ร้านค้า
+            </Text>
+          </Animated.View>
+
+          <View style={styles.appbarActions}>
+            <IconButton
+              icon="Search"
+              size="md"
+              onPress={() => {}}
+              accessibilityLabel="ค้นหา"
+            />
+            <View>
+              <IconButton
+                icon="ShoppingCart"
+                size="md"
+                onPress={() => rootNav.navigate('Cart')}
+                accessibilityLabel="ตะกร้า"
+              />
+              {count > 0 && (
+                <View style={styles.cartBadge} pointerEvents="none">
+                  <Text weight="700" style={styles.cartBadgeText}>
+                    {count > 99 ? '99+' : count}
+                  </Text>
+                </View>
+              )}
+            </View>
+          </View>
+        </View>
+      </View>
+    </View>
   );
 }
+
+/* ---------- Sections ---------- */
+
+function Section({ title, children }: { title: string; children: ReactNode }) {
+  return (
+    <View style={styles.section}>
+      <View style={styles.sectionHeader}>
+        <Icon
+          name="ChevronRight"
+          size={14}
+          color={semantic.textSecondary}
+          strokeWidth={2.6}
+        />
+        <Text weight="600" style={styles.sectionTitle}>
+          {title}
+        </Text>
+      </View>
+      {children}
+    </View>
+  );
+}
+
+function Grid({
+  data,
+  onPress,
+}: {
+  data: Product[];
+  onPress: (id: string) => void;
+}) {
+  return (
+    <View style={styles.grid}>
+      {data.map((p) => (
+        <ProductCard key={p.id} product={p} onPress={() => onPress(p.id)} />
+      ))}
+    </View>
+  );
+}
+
+/* ---------- Product card ---------- */
+
+function ProductCard({
+  product,
+  onPress,
+}: {
+  product: Product;
+  onPress: () => void;
+}) {
+  const cat = categoryMeta[product.category];
+  const [imgFailed, setImgFailed] = useState(false);
+  const isOnSale = !!product.originalPriceBaht;
+  const priceColor = isOnSale ? '#C25450' : '#4FB36C';
+
+  return (
+    <Pressable
+      onPress={onPress}
+      style={({ pressed }) => [
+        styles.card,
+        pressed && { opacity: 0.92, transform: [{ scale: 0.98 }] },
+      ]}
+    >
+      <View style={[styles.cardImage, { backgroundColor: cat.bg }]}>
+        {product.imageUrl && !imgFailed ? (
+          <Image
+            source={{ uri: product.imageUrl }}
+            style={StyleSheet.absoluteFill}
+            resizeMode="cover"
+            onError={() => setImgFailed(true)}
+          />
+        ) : (
+          <Text style={styles.cardEmoji}>{product.emoji}</Text>
+        )}
+        {isOnSale && (
+          <View style={styles.saleBadge}>
+            <Text weight="700" style={styles.saleBadgeText}>
+              SALE
+            </Text>
+          </View>
+        )}
+      </View>
+      <View style={styles.cardBody}>
+        <Text weight="600" style={styles.cardBrand} numberOfLines={1}>
+          {product.brand}
+        </Text>
+        <Text weight="600" style={styles.cardName} numberOfLines={2}>
+          {product.name}
+        </Text>
+        <Text weight="700" style={[styles.cardPrice, { color: priceColor }]}>
+          {fmtBaht(product.priceBaht)}
+        </Text>
+      </View>
+    </Pressable>
+  );
+}
+
+/* ---------- Category chip ---------- */
 
 function CategoryChip({
   icon,
@@ -152,181 +356,212 @@ function CategoryChip({
         pressed && { opacity: 0.7 },
       ]}
     >
-      <Icon name={icon as any} size={14} color={active ? semantic.onPrimary : semantic.textSecondary} />
-      <Text
-        variant="bodyStrong"
-        style={{ fontSize: 12 }}
-        color={active ? semantic.onPrimary : semantic.textSecondary}
-      >
+      <Icon
+        name={icon as any}
+        size={12}
+        color={active ? '#FFFFFF' : '#3C3C43'}
+        strokeWidth={2.4}
+      />
+      <Text style={[styles.chipText, active && styles.chipTextActive]}>
         {label}
       </Text>
     </Pressable>
   );
 }
 
-function ProductTile({ product, onPress }: { product: Product; onPress: () => void }) {
-  const cat = categoryMeta[product.category];
-  const [imgFailed, setImgFailed] = useState(false);
-  const showImage = !!product.imageUrl && !imgFailed;
-  return (
-    <Card variant="elevated" padding={0} onPress={onPress} style={styles.tile}>
-      <View style={[styles.tileImage, { backgroundColor: cat.bg }]}>
-        {showImage ? (
-          <Image
-            source={{ uri: product.imageUrl }}
-            style={StyleSheet.absoluteFill}
-            resizeMode="cover"
-            onError={() => setImgFailed(true)}
-          />
-        ) : (
-          <Text style={{ fontSize: 56 }}>{product.emoji}</Text>
-        )}
-        {product.originalPriceBaht && (
-          <View style={styles.saleBadge}>
-            <Text variant="caption" color={semantic.onPrimary} weight="600" style={{ fontSize: 10 }}>
-              SALE
-            </Text>
-          </View>
-        )}
-      </View>
-      <View style={styles.tileBody}>
-        <Text variant="caption" color={semantic.textMuted} style={{ fontSize: 11 }}>
-          {product.brand}
-        </Text>
-        <Text variant="bodyStrong" numberOfLines={2} style={{ fontSize: 13, lineHeight: 18 }}>
-          {product.name}
-        </Text>
-        <View style={styles.tileFooter}>
-          <View>
-            {product.originalPriceBaht && (
-              <Text variant="caption" color={semantic.textMuted} style={styles.strike}>
-                {fmtBaht(product.originalPriceBaht)}
-              </Text>
-            )}
-            <Text variant="bodyStrong" color={semantic.primary}>{fmtBaht(product.priceBaht)}</Text>
-          </View>
-          <Text variant="caption" color={semantic.textMuted} style={{ fontSize: 11 }}>
-            ⭐ {product.rating}
-          </Text>
-        </View>
-      </View>
-    </Card>
-  );
-}
+/* ---------- Styles ---------- */
 
 const styles = StyleSheet.create({
-  header: {
+  root: {
+    flex: 1,
+  },
+  scroll: {
+    paddingBottom: 0,
+  },
+
+  // Sticky AppBar — same as ProductDetail
+  appbar: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    zIndex: 10,
+  },
+  appbarContent: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.md,
-    marginTop: spacing.sm,
-    marginBottom: spacing.lg,
+    justifyContent: 'space-between',
+    paddingHorizontal: SECTION_PAD,
+    height: 56,
   },
-  cartBtn: {
+  appbarPlaceholder: {
     width: 44,
     height: 44,
-    borderRadius: 22,
-    backgroundColor: semantic.primaryMuted,
+  },
+  appbarTitleWrap: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    top: 0,
+    bottom: 0,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  appbarTitle: {
+    fontSize: 16,
+    color: '#1A1A1A',
+    maxWidth: '60%',
+    textAlign: 'center',
+  },
+  appbarActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  barTint: {
+    backgroundColor: 'rgba(255,255,255,0.4)',
+  },
+  barHairline: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: StyleSheet.hairlineWidth,
+    backgroundColor: 'rgba(0,0,0,0.08)',
   },
   cartBadge: {
     position: 'absolute',
-    top: -2,
-    right: -2,
-    minWidth: 18,
-    height: 18,
-    borderRadius: 9,
-    backgroundColor: semantic.primary,
+    top: -4,
+    right: -4,
+    minWidth: 20,
+    height: 20,
+    borderRadius: 10,
+    paddingHorizontal: 5,
+    backgroundColor: '#C25450',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 4,
     borderWidth: 2,
-    borderColor: semantic.surface,
+    borderColor: '#FFFFFF',
   },
-  catRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: spacing.sm,
-    marginBottom: spacing.xl,
+  cartBadgeText: {
+    color: '#FFFFFF',
+    fontSize: 10,
+    lineHeight: 12,
+  },
+
+  // Hero title (large title in content area)
+  heroTitleWrap: {
+    paddingHorizontal: SECTION_PAD,
+    paddingBottom: spacing.sm,
+  },
+  heroTitle: {
+    fontSize: 34,
+    lineHeight: 41,
+    color: '#1A1A1A',
+    letterSpacing: -0.4,
+  },
+
+  // Category chips
+  chipsScroll: {
+    paddingHorizontal: SECTION_PAD,
+    paddingVertical: spacing.sm,
+    gap: 8,
   },
   chip: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    borderRadius: radii.pill,
-    backgroundColor: semantic.surfaceMuted,
-    borderWidth: 1,
-    borderColor: semantic.border,
+    gap: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 1000,
+    backgroundColor: 'rgba(118,118,128,0.12)',
   },
   chipActive: {
     backgroundColor: semantic.primary,
-    borderColor: semantic.primary,
   },
-  sectionLabel: {
-    marginBottom: spacing.sm,
-    marginLeft: spacing.sm,
+  chipText: {
+    fontSize: 13,
+    color: '#3C3C43',
+    letterSpacing: -0.2,
   },
-  featuredGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: spacing.md,
-    marginBottom: spacing.xl,
+  chipTextActive: {
+    color: '#FFFFFF',
   },
-  petChipRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: spacing.sm,
-    marginBottom: spacing.md,
+
+  // Section
+  section: {
+    paddingHorizontal: SECTION_PAD,
+    paddingVertical: spacing.sm,
+    gap: 10,
   },
-  petChip: {
+  sectionHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    paddingHorizontal: spacing.md,
     paddingVertical: 4,
-    borderRadius: radii.pill,
-    backgroundColor: semantic.primaryMuted,
   },
+  sectionTitle: {
+    fontSize: 14,
+    color: '#1A1A1A',
+  },
+
+  // Grid
   grid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: spacing.md,
-    marginBottom: spacing.xl,
+    gap: CARD_GAP,
   },
-  tile: {
-    flexBasis: '47%',
-    flexGrow: 1,
+
+  // Card
+  card: {
+    width: CARD_W,
+  },
+  cardImage: {
+    width: CARD_W,
+    height: CARD_W,
+    borderRadius: 24,
     overflow: 'hidden',
-  },
-  tileImage: {
-    height: 120,
     alignItems: 'center',
     justifyContent: 'center',
   },
+  cardEmoji: {
+    fontSize: 56,
+  },
   saleBadge: {
     position: 'absolute',
-    top: 8,
-    left: 8,
+    top: 10,
+    left: 10,
     paddingHorizontal: 8,
     paddingVertical: 3,
-    borderRadius: 999,
-    backgroundColor: semantic.primary,
+    borderRadius: 100,
+    backgroundColor: '#C25450',
   },
-  tileBody: {
-    padding: spacing.md,
-    gap: 4,
+  saleBadgeText: {
+    fontSize: 10,
+    lineHeight: 13,
+    color: '#FFFFFF',
+    letterSpacing: 0.6,
   },
-  tileFooter: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-end',
-    marginTop: spacing.sm,
+  cardBody: {
+    paddingTop: 8,
+    paddingHorizontal: 4,
+    gap: 2,
   },
-  strike: {
-    textDecorationLine: 'line-through',
-    fontSize: 11,
+  cardBrand: {
+    fontSize: 10,
+    lineHeight: 13,
+    color: '#9A9AA0',
+    letterSpacing: 0.6,
+    textTransform: 'uppercase',
+  },
+  cardName: {
+    fontSize: 13,
+    lineHeight: 17,
+    color: '#1A1A1A',
+  },
+  cardPrice: {
+    fontSize: 15,
+    lineHeight: 20,
+    marginTop: 2,
   },
 });

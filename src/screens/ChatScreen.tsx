@@ -3,12 +3,14 @@ import {
   KeyboardAvoidingView,
   Platform,
   Pressable,
+  RefreshControl,
   ScrollView,
   StyleSheet,
   TextInput,
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import * as Haptics from 'expo-haptics';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../App';
 import { Icon, Text } from '../components';
@@ -16,6 +18,17 @@ import { radii, semantic, spacing } from '../theme';
 import { mockConversations, mockMessages, mockVets, statusMeta, thTime, Message } from '../data/televet';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Chat'>;
+
+// Mock older messages prepended to the conversation when the user pulls to
+// refresh. Reads as a previous chat thread now in history.
+const HISTORY_TEMPLATES = [
+  'สวัสดีค่ะ มีอะไรให้คุณหมอช่วยไหมคะ',
+  'น้องแมวอ้วก 2 ครั้งตั้งแต่เช้าค่ะ ทำยังไงดี',
+  'ลองสังเกตอาการก่อน ถ้ายังอ้วกหรือซึม ขับถ่ายผิดปกติ ให้พามาคลินิกนะครับ',
+  'ตอนนี้ทานอาหารน้อยลงด้วยค่ะ',
+  'ลองเปลี่ยนเป็นอาหารเปียกชั่วคราว และให้น้ำเยอะ ๆ ครับ',
+  'ขอบคุณค่ะ จะลองดูก่อนนะคะ',
+];
 
 export default function ChatScreen({ route, navigation }: Props) {
   const { conversationId, vetId } = route.params;
@@ -30,6 +43,8 @@ export default function ChatScreen({ route, navigation }: Props) {
   );
   const [messages, setMessages] = useState<Message[]>(initialMessages);
   const [input, setInput] = useState('');
+  const [refreshing, setRefreshing] = useState(false);
+  const [historyExhausted, setHistoryExhausted] = useState(false);
   const scrollRef = useRef<ScrollView>(null);
 
   useEffect(() => {
@@ -60,6 +75,39 @@ export default function ChatScreen({ route, navigation }: Props) {
     ]);
     setInput('');
     setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 50);
+  };
+
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+
+    if (historyExhausted) {
+      // Brief spin so the gesture acknowledges, then stop with status text
+      await new Promise((r) => setTimeout(r, 500));
+      setRefreshing(false);
+      return;
+    }
+
+    // Simulate network latency loading history
+    await new Promise((r) => setTimeout(r, 800));
+
+    setMessages((prev) => {
+      const earliestMs =
+        prev.length > 0 ? new Date(prev[0].sentAtISO).getTime() : Date.now();
+      const oldMessages: Message[] = HISTORY_TEMPLATES.map((text, i) => ({
+        id: `history-${i}`,
+        conversationId,
+        fromVet: i % 2 === 0,
+        text,
+        sentAtISO: new Date(
+          earliestMs - (HISTORY_TEMPLATES.length - i) * 60_000,
+        ).toISOString(),
+      }));
+      return [...oldMessages, ...prev];
+    });
+    setHistoryExhausted(true);
+    await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    setRefreshing(false);
   };
 
   return (
@@ -104,7 +152,24 @@ export default function ChatScreen({ route, navigation }: Props) {
           ref={scrollRef}
           style={styles.flex}
           contentContainerStyle={styles.messages}
-          onContentSizeChange={() => scrollRef.current?.scrollToEnd({ animated: true })}
+          maintainVisibleContentPosition={{
+            minIndexForVisible: 0,
+            autoscrollToTopThreshold: 0,
+          }}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              tintColor={semantic.primary}
+              colors={[semantic.primary]}
+              title={
+                historyExhausted
+                  ? 'แสดงครบทั้งหมดแล้ว'
+                  : 'ดึงเพื่อโหลดประวัติ'
+              }
+              titleColor={semantic.primary}
+            />
+          }
         >
           {messages.length === 0 ? (
             <View style={styles.emptyState}>
