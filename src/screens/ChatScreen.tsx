@@ -1,5 +1,7 @@
-import { useMemo, useRef, useState, useEffect } from 'react';
+import { useCallback, useMemo, useRef, useState, useEffect } from 'react';
 import {
+  Alert,
+  Image,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -9,8 +11,19 @@ import {
   TextInput,
   View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import Animated, {
+  Easing,
+  useAnimatedStyle,
+  useSharedValue,
+  withRepeat,
+  withSequence,
+  withTiming,
+  withDelay,
+  cancelAnimation,
+} from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
+import * as ImagePicker from 'expo-image-picker';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../App';
 import { Icon, Text } from '../components';
@@ -19,15 +32,23 @@ import { mockConversations, mockMessages, mockVets, statusMeta, thTime, Message 
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Chat'>;
 
-// Mock older messages prepended to the conversation when the user pulls to
-// refresh. Reads as a previous chat thread now in history.
-const HISTORY_TEMPLATES = [
-  'สวัสดีค่ะ มีอะไรให้คุณหมอช่วยไหมคะ',
-  'น้องแมวอ้วก 2 ครั้งตั้งแต่เช้าค่ะ ทำยังไงดี',
-  'ลองสังเกตอาการก่อน ถ้ายังอ้วกหรือซึม ขับถ่ายผิดปกติ ให้พามาคลินิกนะครับ',
-  'ตอนนี้ทานอาหารน้อยลงด้วยค่ะ',
-  'ลองเปลี่ยนเป็นอาหารเปียกชั่วคราว และให้น้ำเยอะ ๆ ครับ',
-  'ขอบคุณค่ะ จะลองดูก่อนนะคะ',
+// Stub vet replies cycled randomly when user sends a message (demo only).
+const VET_REPLIES: string[] = [
+  'รับทราบค่ะ ขออนุญาตดูประวัติก่อนนะคะ',
+  'ขอบคุณข้อมูลค่ะ จะแจ้งกลับเร็วๆ นี้นะคะ',
+  'อาการแบบนี้ลองสังเกตอีก 1-2 วันก่อนได้ค่ะ',
+  'แนะนำพาน้องมาตรวจที่คลินิกจะดีกว่านะคะ',
+  'รบกวนส่งรูปเพิ่มเติมได้มั้ยคะ?',
+];
+
+// Fake older messages prepended on pull-to-refresh.
+const HISTORY_TEMPLATES: { fromVet: boolean; text: string }[] = [
+  { fromVet: false, text: 'สวัสดีค่ะคุณหมอ ขอสอบถามเพิ่มเติมหน่อยค่ะ' },
+  { fromVet: true, text: 'สวัสดีค่ะ ยินดีให้คำปรึกษานะคะ' },
+  { fromVet: false, text: 'น้องกินอาหารน้อยลงเล็กน้อยค่ะ' },
+  { fromVet: true, text: 'มีอาการอื่นๆ ร่วมด้วยมั้ยคะ?' },
+  { fromVet: false, text: 'ไม่มีค่ะ ยังเล่นปกติ' },
+  { fromVet: true, text: 'ลองสังเกตอีก 1-2 วันนะคะ ถ้าไม่ดีขึ้นพามาตรวจ' },
 ];
 
 export default function ChatScreen({ route, navigation }: Props) {
@@ -44,12 +65,48 @@ export default function ChatScreen({ route, navigation }: Props) {
   const [messages, setMessages] = useState<Message[]>(initialMessages);
   const [input, setInput] = useState('');
   const [refreshing, setRefreshing] = useState(false);
-  const [historyExhausted, setHistoryExhausted] = useState(false);
+  const [hasMoreHistory, setHasMoreHistory] = useState(true);
+  const [vetTyping, setVetTyping] = useState(false);
   const scrollRef = useRef<ScrollView>(null);
+  const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+    };
+  }, []);
 
   useEffect(() => {
     setTimeout(() => scrollRef.current?.scrollToEnd({ animated: false }), 50);
   }, []);
+
+  const onRefresh = useCallback(() => {
+    if (refreshing || !hasMoreHistory) return;
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    setRefreshing(true);
+
+    setTimeout(() => {
+      setMessages((prev) => {
+        if (prev.length === 0) {
+          setHasMoreHistory(false);
+          return prev;
+        }
+        const earliest = new Date(prev[0].sentAtISO).getTime();
+        const olderHistory: Message[] = HISTORY_TEMPLATES.map((tpl, i) => ({
+          id: `hist-${earliest}-${i}`,
+          conversationId,
+          fromVet: tpl.fromVet,
+          text: tpl.text,
+          sentAtISO: new Date(earliest - (HISTORY_TEMPLATES.length - i) * 60_000).toISOString(),
+        }));
+        // Stop after one round so we don't load infinitely.
+        setHasMoreHistory(false);
+        return [...olderHistory, ...prev];
+      });
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      setRefreshing(false);
+    }, 900);
+  }, [refreshing, hasMoreHistory, conversationId]);
 
   if (!vet) {
     return (
@@ -58,6 +115,68 @@ export default function ChatScreen({ route, navigation }: Props) {
       </SafeAreaView>
     );
   }
+
+  const sendImage = (uri: string) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    setMessages((prev) => [
+      ...prev,
+      {
+        id: `img-${Date.now()}`,
+        conversationId,
+        fromVet: false,
+        image: uri,
+        sentAtISO: new Date().toISOString(),
+      },
+    ]);
+    setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 80);
+
+    // Trigger vet typing reply same as text send.
+    if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+    setVetTyping(true);
+    typingTimeoutRef.current = setTimeout(() => {
+      setVetTyping(false);
+      const reply = VET_REPLIES[Math.floor(Math.random() * VET_REPLIES.length)];
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: `vet-${prev.length}`,
+          conversationId,
+          fromVet: true,
+          text: reply,
+          sentAtISO: new Date().toISOString(),
+        },
+      ]);
+      setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 50);
+    }, 2200 + Math.random() * 1200);
+  };
+
+  const pickFromCamera = async () => {
+    const perm = await ImagePicker.requestCameraPermissionsAsync();
+    if (!perm.granted) {
+      Alert.alert('ไม่ได้รับสิทธิ์ใช้กล้อง', 'กรุณาเปิดสิทธิ์ใช้กล้องในการตั้งค่า');
+      return;
+    }
+    const result = await ImagePicker.launchCameraAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      quality: 0.7,
+      allowsEditing: false,
+    });
+    if (!result.canceled && result.assets[0]) sendImage(result.assets[0].uri);
+  };
+
+  const pickFromLibrary = async () => {
+    const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!perm.granted) {
+      Alert.alert('ไม่ได้รับสิทธิ์เข้าถึงรูปภาพ', 'กรุณาเปิดสิทธิ์ในการตั้งค่า');
+      return;
+    }
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      quality: 0.7,
+      allowsEditing: false,
+    });
+    if (!result.canceled && result.assets[0]) sendImage(result.assets[0].uri);
+  };
 
   const send = () => {
     const text = input.trim();
@@ -75,39 +194,26 @@ export default function ChatScreen({ route, navigation }: Props) {
     ]);
     setInput('');
     setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 50);
-  };
 
-  const onRefresh = async () => {
-    setRefreshing(true);
-    await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-
-    if (historyExhausted) {
-      // Brief spin so the gesture acknowledges, then stop with status text
-      await new Promise((r) => setTimeout(r, 500));
-      setRefreshing(false);
-      return;
-    }
-
-    // Simulate network latency loading history
-    await new Promise((r) => setTimeout(r, 800));
-
-    setMessages((prev) => {
-      const earliestMs =
-        prev.length > 0 ? new Date(prev[0].sentAtISO).getTime() : Date.now();
-      const oldMessages: Message[] = HISTORY_TEMPLATES.map((text, i) => ({
-        id: `history-${i}`,
-        conversationId,
-        fromVet: i % 2 === 0,
-        text,
-        sentAtISO: new Date(
-          earliestMs - (HISTORY_TEMPLATES.length - i) * 60_000,
-        ).toISOString(),
-      }));
-      return [...oldMessages, ...prev];
-    });
-    setHistoryExhausted(true);
-    await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    setRefreshing(false);
+    // Show vet typing indicator, then auto-reply after a short delay.
+    if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+    setVetTyping(true);
+    setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 100);
+    typingTimeoutRef.current = setTimeout(() => {
+      setVetTyping(false);
+      const reply = VET_REPLIES[Math.floor(Math.random() * VET_REPLIES.length)];
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: `vet-${prev.length}`,
+          conversationId,
+          fromVet: true,
+          text: reply,
+          sentAtISO: new Date().toISOString(),
+        },
+      ]);
+      setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 50);
+    }, 2200 + Math.random() * 1200);
   };
 
   return (
@@ -120,12 +226,6 @@ export default function ChatScreen({ route, navigation }: Props) {
         <View style={styles.headerVet}>
           <View style={styles.vetAvatar}>
             <Icon name="UserCircle" size={28} color={semantic.primary} strokeWidth={1.5} />
-            <View
-              style={[
-                styles.statusDot,
-                { backgroundColor: statusMeta[vet.status].color },
-              ]}
-            />
           </View>
           <View style={{ flex: 1 }}>
             <Text variant="bodyStrong" numberOfLines={1}>{vet.name}</Text>
@@ -152,22 +252,14 @@ export default function ChatScreen({ route, navigation }: Props) {
           ref={scrollRef}
           style={styles.flex}
           contentContainerStyle={styles.messages}
-          maintainVisibleContentPosition={{
-            minIndexForVisible: 0,
-            autoscrollToTopThreshold: 0,
-          }}
           refreshControl={
             <RefreshControl
               refreshing={refreshing}
               onRefresh={onRefresh}
               tintColor={semantic.primary}
               colors={[semantic.primary]}
-              title={
-                historyExhausted
-                  ? 'แสดงครบทั้งหมดแล้ว'
-                  : 'ดึงเพื่อโหลดประวัติ'
-              }
-              titleColor={semantic.primary}
+              title={hasMoreHistory ? 'ดึงเพื่อโหลดประวัติ' : 'แสดงครบทั้งหมดแล้ว'}
+              titleColor={semantic.textSecondary}
             />
           }
         >
@@ -182,12 +274,16 @@ export default function ChatScreen({ route, navigation }: Props) {
           ) : (
             messages.map((m) => <MessageBubble key={m.id} msg={m} />)
           )}
+          {vetTyping && <TypingIndicator />}
         </ScrollView>
 
         {/* Composer */}
         <View style={styles.composer}>
-          <Pressable style={styles.composerIconBtn} hitSlop={8}>
-            <Icon name="Paperclip" size={22} color={semantic.textSecondary} />
+          <Pressable style={styles.composerIconBtn} hitSlop={8} onPress={pickFromCamera}>
+            <Icon name="Camera" size={22} color={semantic.textSecondary} />
+          </Pressable>
+          <Pressable style={styles.composerIconBtn} hitSlop={8} onPress={pickFromLibrary}>
+            <Icon name="ImagePlus" size={22} color={semantic.textSecondary} />
           </Pressable>
           <View style={styles.inputField}>
             <TextInput
@@ -212,20 +308,64 @@ export default function ChatScreen({ route, navigation }: Props) {
   );
 }
 
+function TypingDot({ delay }: { delay: number }) {
+  const v = useSharedValue(0);
+
+  useEffect(() => {
+    v.value = withDelay(
+      delay,
+      withRepeat(
+        withSequence(
+          withTiming(1, { duration: 350, easing: Easing.out(Easing.quad) }),
+          withTiming(0, { duration: 350, easing: Easing.in(Easing.quad) }),
+          withTiming(0, { duration: 400 }),
+        ),
+        -1,
+        false,
+      ),
+    );
+    return () => cancelAnimation(v);
+  }, [v, delay]);
+
+  const animStyle = useAnimatedStyle(() => ({
+    transform: [{ translateY: -6 * v.value }],
+    opacity: 0.4 + 0.6 * v.value,
+  }));
+
+  return <Animated.View style={[styles.typingDot, animStyle]} />;
+}
+
+function TypingIndicator() {
+  return (
+    <View style={[styles.msgRow, styles.msgTheirs]}>
+      <View style={[styles.bubble, styles.bubbleTheirs, styles.typingBubble]}>
+        <TypingDot delay={0} />
+        <TypingDot delay={150} />
+        <TypingDot delay={300} />
+      </View>
+    </View>
+  );
+}
+
 function MessageBubble({ msg }: { msg: Message }) {
   const fromMe = !msg.fromVet;
+  const isImage = !!msg.image;
   return (
     <View style={[styles.msgRow, fromMe ? styles.msgMine : styles.msgTheirs]}>
-      <View
-        style={[
-          styles.bubble,
-          fromMe ? styles.bubbleMine : styles.bubbleTheirs,
-        ]}
-      >
-        <Text variant="body" color={fromMe ? semantic.onPrimary : semantic.textPrimary}>
-          {msg.text}
-        </Text>
-      </View>
+      {isImage ? (
+        <Image source={{ uri: msg.image }} style={styles.imageBubble} resizeMode="cover" />
+      ) : (
+        <View
+          style={[
+            styles.bubble,
+            fromMe ? styles.bubbleMine : styles.bubbleTheirs,
+          ]}
+        >
+          <Text variant="body" color={fromMe ? semantic.onPrimary : semantic.textPrimary}>
+            {msg.text}
+          </Text>
+        </View>
+      )}
       <Text variant="caption" color={semantic.textMuted} style={styles.msgTime}>
         {thTime(msg.sentAtISO)}
       </Text>
@@ -319,6 +459,26 @@ const styles = StyleSheet.create({
     backgroundColor: semantic.surfaceMuted,
     borderBottomLeftRadius: 6,
   },
+  imageBubble: {
+    width: 220,
+    height: 220,
+    borderRadius: radii.xl,
+    backgroundColor: semantic.surfaceMuted,
+  },
+  typingBubble: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: 14,
+    minHeight: 36,
+  },
+  typingDot: {
+    width: 7,
+    height: 7,
+    borderRadius: 4,
+    backgroundColor: semantic.textMuted,
+  },
   msgTime: {
     fontSize: 10,
     marginHorizontal: spacing.sm,
@@ -329,7 +489,7 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.md,
-    paddingBottom: Platform.OS === 'ios' ? spacing.md : spacing.lg,
+    paddingBottom: Platform.OS === 'ios' ? spacing['3xl'] : spacing['4xl'],
     borderTopWidth: 1,
     borderTopColor: semantic.border,
     backgroundColor: semantic.surface,

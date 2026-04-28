@@ -1,11 +1,18 @@
 export type OnlineStatus = 'online' | 'busy' | 'offline';
 
+export type ExperienceEntry = {
+  years: string; // e.g. "2023-2026"
+  description: string;
+};
+
 export type TeleVet = {
   id: string;
   name: string;
   avatar: string;
   specialty: string;
   clinic: string;
+  experienceYears: number;
+  experiences: ExperienceEntry[];
   ratePerMin: number;
   rating: number;
   reviewCount: number;
@@ -34,9 +41,15 @@ export const mockVets: TeleVet[] = [
   {
     id: 'tv1',
     name: 'สพ.ญ. ปิยะพร วรรณศิลป์',
-    avatar: '👩‍⚕️',
+    avatar: 'https://images.unsplash.com/photo-1559839734-2b71ea197ec2?w=200&h=200&fit=crop&crop=face',
     specialty: 'อายุรกรรมทั่วไป',
     clinic: 'EHP VetCare สาขาสุขุมวิท',
+    experienceYears: 8,
+    experiences: [
+      { years: '2023-2026', description: 'ปฏิบัติงานในคลินิกสัตว์ โรงพยาบาลสัตว์สุขสวัสดิ์ และเรียนรู้การวินิจฉัย รักษา และดูแลสัตว์' },
+      { years: '2021-2022', description: 'ปฎิบัติฝึกงานที่โรงพยาบาลสัตว์ Happy Pet และเรียนรู้วิธีการ รักษา ดูแลสัตว์ และ การวินิจฉัย' },
+      { years: '2018-2022', description: 'จบคณะสัตวแพทยศาสตร์ ม.เกษตรศาสตร์ ปีการศึกษา 2563 เอกสัตวแพทยศาสตร์ทั่วไป' },
+    ],
     ratePerMin: 15,
     rating: 4.9,
     reviewCount: 342,
@@ -45,9 +58,15 @@ export const mockVets: TeleVet[] = [
   {
     id: 'tv2',
     name: 'สพ. อนุพงษ์ ทองใจ',
-    avatar: '👨‍⚕️',
+    avatar: 'https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?w=200&h=200&fit=crop&crop=face',
     specialty: 'ศัลยกรรมและกระดูก',
     clinic: 'EHP VetCare สาขาสุขุมวิท',
+    experienceYears: 12,
+    experiences: [
+      { years: '2019-2026', description: 'หัวหน้าทีมศัลยกรรมและกระดูก โรงพยาบาลสัตว์สุขสวัสดิ์ ผ่าตัดสุนัขและแมวมากกว่า 1,000 เคส' },
+      { years: '2016-2019', description: 'แพทย์ประจำคลินิกศัลยกรรม Animal Hospital ดูแลผ่าตัดและฟื้นฟูสัตว์เลี้ยง' },
+      { years: '2014-2016', description: 'จบคณะสัตวแพทยศาสตร์ จุฬาลงกรณ์มหาวิทยาลัย เอกศัลยกรรมและกระดูก' },
+    ],
     ratePerMin: 20,
     rating: 4.8,
     reviewCount: 218,
@@ -56,9 +75,15 @@ export const mockVets: TeleVet[] = [
   {
     id: 'tv3',
     name: 'สพ.ญ. ณัฐา กิตติคุณ',
-    avatar: '👩‍⚕️',
+    avatar: 'https://images.unsplash.com/photo-1594824476967-48c8b964273f?w=200&h=200&fit=crop&crop=face',
     specialty: 'ผิวหนังและภูมิแพ้',
     clinic: 'EHP VetCare สาขาทองหล่อ',
+    experienceYears: 6,
+    experiences: [
+      { years: '2022-2026', description: 'ผู้เชี่ยวชาญด้านผิวหนังและภูมิแพ้ EHP VetCare สาขาทองหล่อ' },
+      { years: '2020-2022', description: 'ฝึกอบรมเฉพาะทางโรคผิวหนังสัตว์เลี้ยง ที่ Asia Veterinary Dermatology Center' },
+      { years: '2015-2020', description: 'จบคณะสัตวแพทยศาสตร์ ม.มหิดล ปีการศึกษา 2562' },
+    ],
     ratePerMin: 18,
     rating: 4.95,
     reviewCount: 512,
@@ -67,9 +92,15 @@ export const mockVets: TeleVet[] = [
   {
     id: 'tv4',
     name: 'สพ. กิตติพงศ์ ใจดี',
-    avatar: '👨‍⚕️',
+    avatar: 'https://images.unsplash.com/photo-1582750433449-648ed127bb54?w=200&h=200&fit=crop&crop=face',
     specialty: 'สัตว์เลี้ยงเล็กเฉพาะทาง',
     clinic: 'EHP VetCare สาขาอารีย์',
+    experienceYears: 10,
+    experiences: [
+      { years: '2020-2026', description: 'ดูแลสัตว์เลี้ยงเล็กเฉพาะทาง EHP VetCare สาขาอารีย์ ทั้งกระต่าย แฮมสเตอร์ และนก' },
+      { years: '2017-2020', description: 'แพทย์ประจำคลินิกสัตว์เลี้ยงพิเศษ Exotic Pet Clinic' },
+      { years: '2012-2016', description: 'จบคณะสัตวแพทยศาสตร์ ม.เชียงใหม่ เอกสัตว์เลี้ยงเล็กพิเศษ' },
+    ],
     ratePerMin: 20,
     rating: 4.7,
     reviewCount: 96,
@@ -133,3 +164,79 @@ export const statusMeta: Record<OnlineStatus, { label: string; color: string }> 
   busy: { label: 'ไม่ว่าง', color: '#E8A87C' },
   offline: { label: 'ออฟไลน์', color: '#9A9AA0' },
 };
+
+export type VetReview = {
+  id: string;
+  vetId: string;
+  userName: string;
+  userAvatar: string | null; // null = user has no photo, show fallback avatar
+  date: string;
+  comment: string;
+  rating: number;
+};
+
+const REVIEW_COMMENTS = [
+  'หมอใจดี อธิบายละเอียด แมวอาการดีขึ้นเร็ว',
+  'ตอบเร็ว ให้คำแนะนำชัดเจน',
+  'ประทับใจมาก จะกลับมาปรึกษาอีกแน่นอน',
+  'ผ่าตัดเรียบร้อย แผลหายดี',
+  'หมอเชี่ยวชาญ ดูแลดีมาก',
+  'แก้ปัญหาผื่นแมวได้ตรงจุด',
+  'ละเอียดอ่อน ใส่ใจคนไข้',
+  'หมอน่ารัก ให้คำปรึกษาดี',
+  'พูดคุยเป็นกันเอง สบายใจ',
+  'ราคาเหมาะสม คุ้มค่ามาก',
+  'แนะนำการดูแลครบถ้วน',
+  'หมอสุภาพ ตอบทุกคำถาม',
+  'นัดง่าย ไม่ต้องรอนาน',
+  'วินิจฉัยแม่นยำ',
+  'ลูกแมวสบายดีหลังพบหมอ',
+  'หมอตรวจละเอียดมาก',
+  'ใจเย็น อธิบายดี',
+  'แนะนำอาหารและยาได้ดี',
+];
+
+const USERNAMES = [
+  'User123450', 'NongChomCham', 'PetLover99', 'KhunMaew', 'BowBow',
+  'MaliFamily', 'CatLover', 'DogDad', 'KikiMom', 'NimNim',
+  'SugarPet', 'PrincessCat', 'BunnyKing', 'MochaCare', 'MintFamily',
+  'PoppyDog', 'RoxyLove', 'LunaPet', 'OreoCat', 'ZoroDog',
+  'MingMing', 'BamBam', 'CookieCat', 'HappyPaw', 'SnowWhite',
+];
+
+// Real user photos. Some reviewers have null avatar → show pink fallback.
+const USER_AVATARS: (string | null)[] = [
+  'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=200&h=200&fit=crop&crop=face',
+  null,
+  'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=200&h=200&fit=crop&crop=face',
+  'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=200&h=200&fit=crop&crop=face',
+  null,
+  'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200&h=200&fit=crop&crop=face',
+  'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=200&h=200&fit=crop&crop=face',
+  null,
+  'https://images.unsplash.com/photo-1463453091185-61582044d556?w=200&h=200&fit=crop&crop=face',
+  'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&h=200&fit=crop&crop=face',
+  null,
+  'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=200&h=200&fit=crop&crop=face',
+  'https://images.unsplash.com/photo-1517841905240-472988babdf9?w=200&h=200&fit=crop&crop=face',
+  null,
+  'https://images.unsplash.com/photo-1488161628813-04466f872be2?w=200&h=200&fit=crop&crop=face',
+];
+
+const buildReviewsForVet = (vetId: string, count: number, baseRating: number): VetReview[] =>
+  Array.from({ length: count }, (_, i) => ({
+    id: `${vetId}-r${i + 1}`,
+    vetId,
+    userName: USERNAMES[i % USERNAMES.length],
+    userAvatar: USER_AVATARS[(i + vetId.length) % USER_AVATARS.length],
+    date: `${((i % 28) + 1).toString().padStart(2, '0')} มี.ค. 2026`,
+    comment: REVIEW_COMMENTS[i % REVIEW_COMMENTS.length],
+    rating: Math.max(4.0, Math.min(5.0, baseRating - ((i % 5) * 0.1))),
+  }));
+
+export const mockReviews: VetReview[] = [
+  ...buildReviewsForVet('tv1', 25, 5.0),
+  ...buildReviewsForVet('tv2', 18, 4.9),
+  ...buildReviewsForVet('tv3', 22, 5.0),
+  ...buildReviewsForVet('tv4', 12, 4.8),
+];

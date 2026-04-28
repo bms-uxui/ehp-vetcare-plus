@@ -1,6 +1,6 @@
 import { Pressable, StyleSheet, View, ViewStyle } from 'react-native';
 import { BlurView } from 'expo-blur';
-import { GlassView, isLiquidGlassAvailable } from 'expo-glass-effect';
+import { GlassView, isLiquidGlassAvailable } from '../lib/glass-effect';
 import * as LucideIcons from 'lucide-react-native';
 
 const LIQUID_GLASS = isLiquidGlassAvailable();

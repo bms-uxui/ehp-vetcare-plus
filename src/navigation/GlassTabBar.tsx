@@ -1,11 +1,14 @@
 import { useEffect, useState } from 'react';
-import { LayoutChangeEvent, Pressable, StyleSheet, View } from 'react-native';
+import { LayoutChangeEvent, Platform, Pressable, StyleSheet, View } from 'react-native';
+import { BlurView } from 'expo-blur';
 import Animated, {
+  interpolate,
   SharedValue,
   useAnimatedStyle,
   useSharedValue,
   withSpring,
 } from 'react-native-reanimated';
+import { tabBarCompact } from './tabBarVisibility';
 import { LinearGradient } from 'expo-linear-gradient';
 import { BottomTabBarProps } from '@react-navigation/bottom-tabs';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -121,6 +124,27 @@ export default function GlassTabBar({ state, descriptors, navigation }: BottomTa
 
   const fabFillStyle = useAnimatedStyle(() => ({ opacity: fabProgress.value }));
 
+  // Compact-on-scroll: shrink the bar (and FAB) toward the right side, fade slightly.
+  const compactBarStyle = useAnimatedStyle(() => {
+    const c = tabBarCompact.value;
+    return {
+      transform: [
+        { scale: interpolate(c, [0, 1], [1, 0.78]) },
+        { translateY: interpolate(c, [0, 1], [0, 6]) },
+      ],
+      opacity: interpolate(c, [0, 1], [1, 0.92]),
+    };
+  });
+  const compactFabStyle = useAnimatedStyle(() => {
+    const c = tabBarCompact.value;
+    return {
+      transform: [
+        { scale: interpolate(c, [0, 1], [1, 0.82]) },
+        { translateY: interpolate(c, [0, 1], [0, 4]) },
+      ],
+    };
+  });
+
   const onBarLayout = (e: LayoutChangeEvent) => {
     const w = e.nativeEvent.layout.width;
     if (w !== barWidth) setBarWidth(w);
@@ -175,8 +199,8 @@ export default function GlassTabBar({ state, descriptors, navigation }: BottomTa
             end={{ x: 1, y: 1 }}
             style={StyleSheet.absoluteFill}
           />
-          <View pointerEvents="none" style={styles.insetTop} />
-          <View pointerEvents="none" style={styles.insetBottom} />
+          <View pointerEvents="none" style={styles.pillTopBevel} />
+          <View pointerEvents="none" style={styles.pillBottomBevel} />
         </Animated.View>
 
         <View style={styles.tabContent}>
@@ -206,9 +230,28 @@ export default function GlassTabBar({ state, descriptors, navigation }: BottomTa
   return (
     <View
       pointerEvents="box-none"
-      style={[styles.wrap, { paddingBottom: Math.max(insets.bottom, spacing.md) }]}
+      style={[styles.wrap, { paddingBottom: Math.max(insets.bottom - spacing.sm, spacing.xs) }]}
     >
-      <View style={[styles.bar, shadows.lg]} onLayout={onBarLayout}>
+      <Animated.View style={[styles.bar, shadows.lg, compactBarStyle]} onLayout={onBarLayout}>
+        <View style={StyleSheet.absoluteFill} pointerEvents="none">
+          <BlurView
+            intensity={Platform.OS === 'ios' ? 50 : 70}
+            tint="light"
+            style={[StyleSheet.absoluteFill, styles.barBlur]}
+          />
+          <LinearGradient
+            colors={['rgba(255,255,255,0.72)', 'rgba(255,247,249,0.5)']}
+            start={{ x: 0.2, y: 0 }}
+            end={{ x: 0.85, y: 1 }}
+            style={[StyleSheet.absoluteFill, styles.barBlur]}
+          />
+          <LinearGradient
+            colors={['rgba(255,255,255,0.6)', 'rgba(255,255,255,0)']}
+            start={{ x: 0.5, y: 0 }}
+            end={{ x: 0.5, y: 1 }}
+            style={styles.barTopSheen}
+          />
+        </View>
         <View style={styles.half}>
           {renderTab(0)}
           {renderTab(1)}
@@ -218,18 +261,18 @@ export default function GlassTabBar({ state, descriptors, navigation }: BottomTa
           {renderTab(3)}
           {renderTab(4)}
         </View>
-      </View>
+      </Animated.View>
 
-      <View pointerEvents="none" style={styles.fabCutout}>
+      <Animated.View pointerEvents="none" style={[styles.fabCutout, compactFabStyle]}>
         <LinearGradient
           colors={['#FFFDFB', '#FBF3F4']}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
           style={StyleSheet.absoluteFill}
         />
-      </View>
+      </Animated.View>
 
-      <Pressable onPress={fabPress} style={[styles.fabWrap, shadows.lift]}>
+      <AnimatedPressable onPress={fabPress} style={[styles.fabWrap, shadows.lift, compactFabStyle]}>
         <View style={styles.fabRing}>
           <View style={[StyleSheet.absoluteFill, { backgroundColor: semantic.surface }]} />
           <Animated.View style={[StyleSheet.absoluteFill, fabFillStyle]}>
@@ -248,7 +291,7 @@ export default function GlassTabBar({ state, descriptors, navigation }: BottomTa
             strokeWidth={2.2}
           />
         </View>
-      </Pressable>
+      </AnimatedPressable>
     </View>
   );
 }
@@ -266,12 +309,25 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     borderRadius: radii.pill,
-    backgroundColor: semantic.surface,
-    borderWidth: 1,
-    borderColor: semantic.border,
+    backgroundColor: 'rgba(255,253,251,0.35)',
+    borderWidth: 1.25,
+    borderColor: 'rgba(255,255,255,0.85)',
     padding: BAR_PADDING,
     overflow: 'visible',
     alignSelf: 'stretch',
+  },
+  barBlur: {
+    borderRadius: radii.pill,
+    overflow: 'hidden',
+  },
+  barTopSheen: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: '55%',
+    borderTopLeftRadius: radii.pill,
+    borderTopRightRadius: radii.pill,
   },
   half: {
     flex: 1,
@@ -283,7 +339,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: radii.pill,
-    overflow: 'hidden',
   },
   activePill: {
     ...StyleSheet.absoluteFillObject,
@@ -308,21 +363,21 @@ const styles = StyleSheet.create({
     fontSize: 12,
     letterSpacing: 0,
   },
-  insetTop: {
+  pillTopBevel: {
     position: 'absolute',
     top: 0,
     left: 0,
     right: 0,
     height: 1.5,
-    backgroundColor: 'rgba(255,255,255,0.3)',
+    backgroundColor: 'rgba(255,255,255,0.35)',
   },
-  insetBottom: {
+  pillBottomBevel: {
     position: 'absolute',
     bottom: 0,
     left: 0,
     right: 0,
     height: 1.5,
-    backgroundColor: 'rgba(0,0,0,0.12)',
+    backgroundColor: 'rgba(0,0,0,0.16)',
   },
   fabCutout: {
     position: 'absolute',
