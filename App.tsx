@@ -136,7 +136,7 @@ export default function App() {
           <Stack.Screen
             name="PetDetail"
             component={PetDetailScreen}
-            options={transparentHeader}
+            options={{ headerShown: false }}
           />
           <Stack.Screen
             name="AddPet"

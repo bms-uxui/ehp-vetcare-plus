@@ -269,12 +269,12 @@ const styles = StyleSheet.create({
   },
   heroTitle: {
     fontSize: 16,
-    lineHeight: 20,
+    lineHeight: 28,
     color: '#1A1A1F',
   },
   heroSubtitle: {
     fontSize: 14,
-    lineHeight: 20,
+    lineHeight: 24,
     color: '#4A4A50',
   },
   sheet: {

@@ -152,6 +152,7 @@ export default function GlassTabBar({ state, descriptors, navigation }: BottomTa
 
   const fabRoute = state.routes[FAB_INDEX];
   const fabFocused = state.index === FAB_INDEX;
+  const fabIcon = (descriptors[fabRoute.key].options as any).tabIcon as string | undefined;
   const fabPress = () => {
     const event = navigation.emit({
       type: 'tabPress',
@@ -276,7 +277,7 @@ export default function GlassTabBar({ state, descriptors, navigation }: BottomTa
             />
           </Animated.View>
           <Icon
-            name="Stethoscope"
+            name={(fabIcon ?? 'Heart') as any}
             size={28}
             color={fabFocused ? semantic.onPrimary : semantic.primary}
             strokeWidth={2.2}
