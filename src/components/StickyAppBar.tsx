@@ -111,7 +111,9 @@ export default function StickyAppBar({
         { paddingTop: insets.top, height: insets.top + 56 },
       ]}
     >
-      {/* Apple-style nav bar — single glass blur with subtle white tint */}
+      {/* Apple-style nav bar — single continuous BlurView covering status bar
+          + 56pt content area. Fades in on scroll like Apple's apps where the
+          bar materializes once content scrolls under it. */}
       <Animated.View
         pointerEvents="none"
         style={[StyleSheet.absoluteFill, barBgStyle]}

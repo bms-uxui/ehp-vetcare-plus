@@ -102,7 +102,7 @@ export default function ProductDetailScreen({ route, navigation }: Props) {
     });
   };
 
-  // Bar fades in early as user starts scrolling — quick, snappy iOS 26 feel
+  // Bar + title fade in as user scrolls past the hero
   const FADE_START = HERO_HEIGHT * 0.3;
   const FADE_END = HERO_HEIGHT * 0.55;
 
@@ -518,29 +518,18 @@ export default function ProductDetailScreen({ route, navigation }: Props) {
         pointerEvents="box-none"
         style={[styles.appbar, { paddingTop: insets.top, height: insets.top + 56 }]}
       >
-        {/* Apple-style nav bar — progressive blur fading top→bottom.
-            Stacked BlurView layers + gradient white tint for iOS 26 look. */}
-        <Animated.View style={[StyleSheet.absoluteFill, barBgStyle]} pointerEvents="none">
+        {/* Apple-style nav bar — single continuous BlurView covering status
+            bar + 56pt content area. Fades in on scroll like Apple's apps. */}
+        <Animated.View
+          pointerEvents="none"
+          style={[StyleSheet.absoluteFill, barBgStyle]}
+        >
           <BlurView
-            intensity={40}
+            intensity={80}
             tint="systemChromeMaterialLight"
             style={StyleSheet.absoluteFill}
           />
-          <BlurView
-            intensity={60}
-            tint="systemChromeMaterialLight"
-            style={styles.blurMid}
-          />
-          <BlurView
-            intensity={100}
-            tint="systemChromeMaterialLight"
-            style={styles.blurTop}
-          />
-          <LinearGradient
-            colors={['rgba(255,255,255,0.55)', 'rgba(255,255,255,0)']}
-            locations={[0, 1]}
-            style={StyleSheet.absoluteFill}
-          />
+          <View style={[StyleSheet.absoluteFill, styles.barTint]} />
           <View style={styles.barHairline} />
         </Animated.View>
 
