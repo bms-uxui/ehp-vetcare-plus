@@ -23,7 +23,7 @@ import { Dimensions } from 'react-native';
 
 const SCREEN_W = Dimensions.get('window').width;
 import { BlurView } from 'expo-blur';
-import { GlassView, isLiquidGlassAvailable } from 'expo-glass-effect';
+import { GlassView, isLiquidGlassAvailable } from '../lib/glass-effect';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { RootStackParamList } from '../../App';
@@ -823,7 +823,7 @@ const styles = StyleSheet.create({
   // Swipe-to-reveal — outer container clips overflow, action buttons sit underneath
   swipeContainer: {
     height: 96,
-    borderRadius: 24,
+    borderRadius: 16,
     overflow: 'hidden',
     backgroundColor: 'transparent',
   },
@@ -872,7 +872,7 @@ const styles = StyleSheet.create({
   itemCard: {
     flexDirection: 'row',
     height: 96,
-    borderRadius: 24,
+    borderRadius: 16,
     backgroundColor: '#FFFFFF',
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: '#E6E6E8',
@@ -1005,6 +1005,6 @@ const styles = StyleSheet.create({
   checkoutBtn: {
     width: '100%',
     height: 48,
-    borderRadius: 24,
+    borderRadius: 16,
   },
 });

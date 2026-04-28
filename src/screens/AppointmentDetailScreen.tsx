@@ -1,7 +1,7 @@
 import { Alert, StyleSheet, View } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../App';
-import { Button, Card, Icon, Screen, Text } from '../components';
+import { Button, Card, Icon, PetAvatar, Screen, Text } from '../components';
 import { semantic, spacing } from '../theme';
 import { mockAppointments, typeMeta, thDate } from '../data/appointments';
 
@@ -62,9 +62,12 @@ export default function AppointmentDetailScreen({ route, navigation }: Props) {
 
       <Card variant="elevated" padding="lg" style={styles.card}>
         <View style={styles.petRow}>
-          <View style={styles.petAvatar}>
-            <Text style={{ fontSize: 28 }}>{appointment.petEmoji}</Text>
-          </View>
+          <PetAvatar
+            petId={appointment.petId}
+            fallbackEmoji={appointment.petEmoji}
+            size={56}
+            backgroundColor={semantic.primaryMuted}
+          />
           <View style={{ flex: 1 }}>
             <Text variant="caption" color={semantic.textSecondary}>สัตว์เลี้ยง</Text>
             <Text variant="bodyStrong">{appointment.petName}</Text>
