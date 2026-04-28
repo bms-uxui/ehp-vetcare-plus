@@ -4,6 +4,7 @@ export { default as Card } from './Card';
 export { default as Icon } from './Icon';
 export { default as IconButton } from './IconButton';
 export { default as Input } from './Input';
+export { default as ProductTile } from './ProductTile';
 export { default as Screen } from './Screen';
 export { default as StickyAppBar } from './StickyAppBar';
 export { default as Text } from './Text';

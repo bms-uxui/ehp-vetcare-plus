@@ -82,6 +82,7 @@ export const mockPets: Pet[] = [
     id: 'p3',
     name: 'ต้นข้าว',
     emoji: '🐰',
+    photo: require('../../assets/rabbit.jpg'),
     species: 'rabbit',
     speciesLabel: 'กระต่าย',
     breed: 'เนเธอร์แลนด์ ดวอร์ฟ',

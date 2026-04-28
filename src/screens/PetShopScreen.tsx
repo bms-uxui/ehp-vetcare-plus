@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import { Image, Pressable, StyleSheet, View } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../App';
-import { Card, Icon, Screen, Text } from '../components';
+import { Card, Icon, ProductTile, Screen, Text } from '../components';
 import { radii, semantic, spacing } from '../theme';
 import { mockProducts, categoryMeta, ProductCategory, fmtBaht, Product } from '../data/products';
 import { mockPets } from '../data/pets';
@@ -161,56 +161,6 @@ function CategoryChip({
         {label}
       </Text>
     </Pressable>
-  );
-}
-
-function ProductTile({ product, onPress }: { product: Product; onPress: () => void }) {
-  const cat = categoryMeta[product.category];
-  const [imgFailed, setImgFailed] = useState(false);
-  const showImage = !!product.imageUrl && !imgFailed;
-  return (
-    <Card variant="elevated" padding={0} onPress={onPress} style={styles.tile}>
-      <View style={[styles.tileImage, { backgroundColor: cat.bg }]}>
-        {showImage ? (
-          <Image
-            source={{ uri: product.imageUrl }}
-            style={StyleSheet.absoluteFill}
-            resizeMode="cover"
-            onError={() => setImgFailed(true)}
-          />
-        ) : (
-          <Text style={{ fontSize: 56 }}>{product.emoji}</Text>
-        )}
-        {product.originalPriceBaht && (
-          <View style={styles.saleBadge}>
-            <Text variant="caption" color={semantic.onPrimary} weight="600" style={{ fontSize: 10 }}>
-              SALE
-            </Text>
-          </View>
-        )}
-      </View>
-      <View style={styles.tileBody}>
-        <Text variant="caption" color={semantic.textMuted} style={{ fontSize: 11 }}>
-          {product.brand}
-        </Text>
-        <Text variant="bodyStrong" numberOfLines={2} style={{ fontSize: 13, lineHeight: 18 }}>
-          {product.name}
-        </Text>
-        <View style={styles.tileFooter}>
-          <View>
-            {product.originalPriceBaht && (
-              <Text variant="caption" color={semantic.textMuted} style={styles.strike}>
-                {fmtBaht(product.originalPriceBaht)}
-              </Text>
-            )}
-            <Text variant="bodyStrong" color={semantic.primary}>{fmtBaht(product.priceBaht)}</Text>
-          </View>
-          <Text variant="caption" color={semantic.textMuted} style={{ fontSize: 11 }}>
-            ⭐ {product.rating}
-          </Text>
-        </View>
-      </View>
-    </Card>
   );
 }
 

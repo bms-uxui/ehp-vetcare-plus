@@ -20,8 +20,9 @@ import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { RootStackParamList } from '../../App';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Button, Card, Icon, Screen, Text } from '../components';
+import { Button, Card, Icon, ProductTile, Screen, Text } from '../components';
 import VetCareLogo from '../../assets/vet-care-plus.svg';
+import VaccinationIllus from '../../assets/vaccination-appointment.svg';
 import { radii, semantic, shadows, spacing } from '../theme';
 import { mockPets } from '../data/pets';
 import { mockAppointments, typeMeta, thWeekday, thDateShort } from '../data/appointments';
@@ -35,6 +36,9 @@ import {
 import { mockSchedules, mockReminders } from '../data/reminders';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Home'>;
+
+const RIPPLE = { color: 'rgba(184,106,124,0.18)', borderless: false } as const;
+const RIPPLE_LIGHT = { color: 'rgba(255,255,255,0.25)', borderless: false } as const;
 
 const thFullDate = (iso: string) =>
   new Date(iso).toLocaleDateString('th-TH', {
@@ -83,6 +87,8 @@ export default function HomeScreen({ navigation }: Props) {
     onPress: () => void;
     /** Background illustration. Drop a PNG/SVG in assets/ and require() it here. */
     illustration?: ImageSourcePropType;
+    /** Right-side SVG illustration component (alternative to raster `illustration`). */
+    IllustrationSvg?: React.FC<{ width?: number; height?: number }>;
     /** Fallback tint while no illustration is provided. */
     accent: string;
   };
@@ -98,7 +104,7 @@ export default function HomeScreen({ navigation }: Props) {
       clinic: 'ปุกปุยสัตวแพทย์ PUKPUI Rabbit&Exotic Pet Clinic',
       cta: 'ดูรายละเอียด',
       accent: '#F5E4E7',
-      // illustration: require('../../assets/banner-vaccine.png'),
+      IllustrationSvg: VaccinationIllus,
       onPress: () =>
         nextAppt &&
         navigation.navigate('AppointmentDetail', { appointmentId: nextAppt.id }),
@@ -195,7 +201,7 @@ export default function HomeScreen({ navigation }: Props) {
     const id = setInterval(() => {
       if (isUserDragging.current) return;
       setBannerIndex((idx) => (idx + 1) % bannerItems.length);
-    }, 5000);
+    }, 8000);
     return () => clearInterval(id);
   }, [bannerItems.length]);
 
@@ -254,7 +260,11 @@ export default function HomeScreen({ navigation }: Props) {
           <VetCareLogo width={148} height={27} />
           <Pressable
             onPress={() => navigation.navigate('Notifications')}
-            style={styles.iconBtn}
+            android_ripple={RIPPLE}
+            style={({ pressed }) => [
+              styles.iconBtn,
+              pressed && { opacity: 0.85 },
+            ]}
             hitSlop={8}
           >
             <Icon name="Mail" size={22} color={semantic.textPrimary} />
@@ -269,6 +279,11 @@ export default function HomeScreen({ navigation }: Props) {
               pointerEvents="none"
               style={[styles.bannerPage, opacityStyles[i]]}
             >
+              {item.IllustrationSvg ? (
+                <View style={styles.bannerIllus} pointerEvents="none">
+                  <item.IllustrationSvg width={200} height={178} />
+                </View>
+              ) : null}
               <View style={styles.dateChip}>
                 <View style={styles.dateDot} />
                 <Text variant="caption" color={semantic.textPrimary} weight="500">
@@ -291,7 +306,11 @@ export default function HomeScreen({ navigation }: Props) {
                 {'\n'}
                 {item.actionBottom}
               </Text>
-              <Text variant="caption" color={semantic.textSecondary}>
+              <Text
+                variant="caption"
+                color={semantic.textSecondary}
+                style={styles.bannerClinic}
+              >
                 {item.clinic}
               </Text>
             </Animated.View>
@@ -327,16 +346,14 @@ export default function HomeScreen({ navigation }: Props) {
 
         {/* ── Action row (button + dots) — outside the carousel, updates per index ── */}
         <View style={styles.bannerActionRow}>
-          <Pressable onPress={currentBanner.onPress} style={[styles.detailBtn, shadows.lift]}>
-            <LinearGradient
-              colors={['#EFA5B8', '#DA8AA1', '#C87390']}
-              locations={[0, 0.4, 1]}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-              style={StyleSheet.absoluteFill}
-            />
-            <View pointerEvents="none" style={styles.detailBtnTopBevel} />
-            <View pointerEvents="none" style={styles.detailBtnBottomBevel} />
+          <Pressable
+            onPress={currentBanner.onPress}
+            android_ripple={RIPPLE_LIGHT}
+            style={({ pressed }) => [
+              styles.detailBtn,
+              pressed && { opacity: 0.85 },
+            ]}
+          >
             <Text variant="bodyStrong" color={semantic.onPrimary} style={{ fontSize: 13 }}>
               {currentBanner.cta}
             </Text>
@@ -358,7 +375,11 @@ export default function HomeScreen({ navigation }: Props) {
               <Pressable
                 key={pet.id}
                 onPress={() => navigation.navigate('PetDetail', { petId: pet.id })}
-                style={styles.petItem}
+                android_ripple={RIPPLE}
+                style={({ pressed }) => [
+                  styles.petItem,
+                  pressed && { opacity: 0.85 },
+                ]}
               >
                 <View style={styles.petAvatar}>
                   {pet.photo ? (
@@ -372,7 +393,14 @@ export default function HomeScreen({ navigation }: Props) {
                 </Text>
               </Pressable>
             ))}
-            <Pressable onPress={() => navigation.navigate('AddPet')} style={styles.petItem}>
+            <Pressable
+              onPress={() => navigation.navigate('AddPet')}
+              android_ripple={RIPPLE}
+              style={({ pressed }) => [
+                styles.petItem,
+                pressed && { opacity: 0.85 },
+              ]}
+            >
               <View style={styles.petAvatarAdd}>
                 <Icon name="Plus" size={22} color={semantic.textMuted} strokeWidth={2.4} />
               </View>
@@ -387,15 +415,32 @@ export default function HomeScreen({ navigation }: Props) {
         <View style={styles.bentoRow}>
           <Pressable
             onPress={() => navigation.navigate('Expenses')}
-            style={[styles.bentoTile, styles.bentoTileOverflow]}
+            android_ripple={RIPPLE}
+            style={({ pressed }) => [
+              styles.bentoTile,
+              pressed && { opacity: 0.9 },
+            ]}
           >
-            <Card variant="elevated" padding="md" style={{ flex: 1 }}>
+            <Card variant="elevated" padding="md" style={StyleSheet.flatten([{ flex: 1 }, styles.glassCard])}>
+              <LinearGradient
+                pointerEvents="none"
+                colors={['rgba(255,253,251,0)', 'rgba(244,201,210,0.7)']}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                locations={[0.25, 1]}
+                style={StyleSheet.absoluteFill}
+              />
+              <View pointerEvents="none" style={styles.budgetIllus}>
+                <Image
+                  source={require('../../assets/pet-budget.png')}
+                  style={{ width: '100%', height: '100%' }}
+                  resizeMode="contain"
+                />
+              </View>
               <View style={{ flex: 1 }}>
-                {/* Title spans full width — no image overlap up here */}
                 <Text variant="bodyStrong" style={{ fontSize: 13 }} numberOfLines={1}>
                   ค่าใช้จ่ายเดือนนี้
                 </Text>
-                {/* Amount section reserves right padding for the cat illustration */}
                 <View style={{ marginTop: spacing.sm, flex: 1, paddingRight: 60 }}>
                   <Text variant="caption" color={semantic.textMuted} style={{ fontSize: 11 }}>
                     คงเหลือ
@@ -403,7 +448,7 @@ export default function HomeScreen({ navigation }: Props) {
                   <Text
                     variant="h2"
                     color={remaining < 0 ? '#C25450' : semantic.primary}
-                    style={{ fontSize: 20 }}
+                    style={{ fontSize: 20, lineHeight: 30 }}
                     numberOfLines={1}
                   >
                     {fmtExpBaht(remaining)}
@@ -414,38 +459,51 @@ export default function HomeScreen({ navigation }: Props) {
                 </View>
               </View>
             </Card>
-            {/* Pet-budget illustration anchored to card's bottom-right, overflowing */}
-            <View pointerEvents="none" style={styles.budgetIllus}>
-              <Image
-                source={require('../../assets/pet-budget.png')}
-                style={{ width: '100%', height: '100%' }}
-                resizeMode="contain"
-              />
-            </View>
           </Pressable>
 
           <Pressable
             onPress={() => navigation.navigate('Notifications')}
-            style={styles.bentoTile}
+            android_ripple={RIPPLE}
+            style={({ pressed }) => [
+              styles.bentoTile,
+              pressed && { opacity: 0.9 },
+            ]}
           >
-            <Card variant="elevated" padding="md" style={{ flex: 1 }}>
+            <Card variant="elevated" padding="md" style={StyleSheet.flatten([{ flex: 1 }, styles.glassCard])}>
+              <LinearGradient
+                pointerEvents="none"
+                colors={['rgba(255,253,251,0)', 'rgba(244,201,210,0.7)']}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                locations={[0.25, 1]}
+                style={StyleSheet.absoluteFill}
+              />
+              <View pointerEvents="none" style={styles.mealIllus}>
+                <Image
+                  source={require('../../assets/pet-meal-time.png')}
+                  style={{ width: '100%', height: '100%' }}
+                  resizeMode="contain"
+                />
+              </View>
               <View style={{ flex: 1 }}>
-                <Text variant="caption" color={semantic.textSecondary} style={{ fontSize: 11 }}>
+                <Text variant="bodyStrong" style={{ fontSize: 13 }} numberOfLines={1}>
                   เวลาให้อาหาร
                 </Text>
-                <View style={{ marginTop: spacing.sm, flex: 1 }}>
-                  <Text variant="caption" color={semantic.textMuted} style={{ fontSize: 10 }}>
+                <View style={{ marginTop: spacing.sm, flex: 1, paddingRight: 60 }}>
+                  <Text variant="caption" color={semantic.textMuted} style={{ fontSize: 11 }}>
                     {nextFeeding ? thTimeOfDayLabel(nextFeeding.time) : 'มื้อถัดไป'}
                   </Text>
-                  <Text variant="h3" style={{ fontSize: 20 }}>
+                  <Text
+                    variant="h3"
+                    color={semantic.primary}
+                    style={{ fontSize: 20, lineHeight: 30 }}
+                    numberOfLines={1}
+                  >
                     {nextFeeding?.petName ?? '—'}
                   </Text>
                   <Text variant="caption" color={semantic.textSecondary} style={{ fontSize: 11 }}>
                     ตอน {nextFeeding?.time ?? '--:--'} น.
                   </Text>
-                </View>
-                <View style={styles.tileArrow}>
-                  <Icon name="ArrowUpRight" size={14} color={semantic.textPrimary} />
                 </View>
               </View>
             </Card>
@@ -453,36 +511,60 @@ export default function HomeScreen({ navigation }: Props) {
         </View>
 
         {/* ── VET SERVICE WIDE CARD ── */}
-        <Pressable onPress={() => navigation.navigate('Vet' as never)}>
-          <Card variant="elevated" padding="lg">
-            <View>
-              <Text variant="caption" color={semantic.textSecondary} style={{ fontSize: 11 }}>
+        <Pressable
+          onPress={() => navigation.navigate('Vet' as never)}
+          android_ripple={RIPPLE}
+          style={({ pressed }) => (pressed ? { opacity: 0.9 } : null)}
+        >
+          <Card variant="elevated" padding="lg" style={styles.glassCard}>
+            <LinearGradient
+              pointerEvents="none"
+              colors={['rgba(255,253,251,0)', 'rgba(244,201,210,0.7)']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              locations={[0.25, 1]}
+              style={StyleSheet.absoluteFill}
+            />
+            <View pointerEvents="none" style={styles.vetIllus}>
+              <Image
+                source={require('../../assets/vet-service.png')}
+                style={{ width: '100%', height: '100%' }}
+                resizeMode="contain"
+              />
+            </View>
+            <View style={{ paddingRight: 110 }}>
+              <Text variant="bodyStrong" style={{ fontSize: 13 }} numberOfLines={1}>
                 บริการสัตวแพทย์
               </Text>
               <View style={{ marginTop: spacing.sm }}>
-                <Text variant="h3" style={{ fontSize: 20, lineHeight: 26 }}>
+                <Text
+                  variant="h3"
+                  color={semantic.primary}
+                  style={{ fontSize: 20, lineHeight: 30 }}
+                >
                   ดูแลสัตว์ที่คุณรัก
                 </Text>
-                <Text variant="h3" style={{ fontSize: 20, lineHeight: 26 }}>
+                <Text
+                  variant="h3"
+                  color={semantic.primary}
+                  style={{ fontSize: 20, lineHeight: 30 }}
+                >
                   กับแพทย์ผู้เชี่ยวชาญ
                 </Text>
               </View>
               <View style={styles.bulletList}>
                 <View style={styles.bulletRow}>
-                  <View style={styles.bullet} />
+                  <Icon name="CalendarCheck" size={16} color={semantic.primary} strokeWidth={2.2} />
                   <Text variant="caption" color={semantic.textPrimary}>
                     จองนัดคลินิก
                   </Text>
                 </View>
                 <View style={styles.bulletRow}>
-                  <View style={styles.bullet} />
+                  <Icon name="MessageCircle" size={16} color={semantic.primary} strokeWidth={2.2} />
                   <Text variant="caption" color={semantic.textPrimary}>
                     ปรึกษาออนไลน์
                   </Text>
                 </View>
-              </View>
-              <View style={styles.cardArrowAbsolute}>
-                <Icon name="ArrowUpRight" size={14} color={semantic.textPrimary} />
               </View>
             </View>
           </Card>
@@ -493,57 +575,13 @@ export default function HomeScreen({ navigation }: Props) {
           สินค้าแนะนำ
         </Text>
         <View style={styles.productGrid}>
-          {recommendedProducts.map((p) => {
-            const cat = categoryMeta[p.category];
-            return (
-              <Pressable
-                key={p.id}
-                onPress={() => navigation.navigate('ProductDetail', { productId: p.id })}
-                style={styles.productTile}
-              >
-                <Card variant="elevated" padding={0} style={{ flex: 1 }}>
-                  <View style={[styles.productImage, { backgroundColor: cat.bg }]}>
-                    <Text style={{ fontSize: 56 }}>{p.emoji}</Text>
-                    {p.originalPriceBaht && (
-                      <View style={styles.saleBadge}>
-                        <Text
-                          variant="caption"
-                          color={semantic.onPrimary}
-                          weight="600"
-                          style={{ fontSize: 9 }}
-                        >
-                          SALE
-                        </Text>
-                      </View>
-                    )}
-                  </View>
-                  <View style={styles.productInfo}>
-                    <Text
-                      variant="caption"
-                      color={semantic.textMuted}
-                      style={{ fontSize: 10 }}
-                    >
-                      {p.brand}
-                    </Text>
-                    <Text
-                      variant="bodyStrong"
-                      numberOfLines={2}
-                      style={{ fontSize: 12, lineHeight: 16 }}
-                    >
-                      {p.name}
-                    </Text>
-                    <Text
-                      variant="bodyStrong"
-                      color={semantic.primary}
-                      style={{ marginTop: 4 }}
-                    >
-                      {fmtBaht(p.priceBaht)}
-                    </Text>
-                  </View>
-                </Card>
-              </Pressable>
-            );
-          })}
+          {recommendedProducts.map((p) => (
+            <ProductTile
+              key={p.id}
+              product={p}
+              onPress={() => navigation.navigate('ProductDetail', { productId: p.id })}
+            />
+          ))}
         </View>
 
         {/* ── EMPTY STATE FOOTER ── */}
@@ -564,7 +602,11 @@ export default function HomeScreen({ navigation }: Props) {
           </Text>
           <Pressable
             onPress={() => navigation.navigate('PetShop' as never)}
-            style={styles.emptyBtn}
+            android_ripple={RIPPLE_LIGHT}
+            style={({ pressed }) => [
+              styles.emptyBtn,
+              pressed && { opacity: 0.85 },
+            ]}
           >
             <Text variant="bodyStrong" color={semantic.onPrimary} style={{ fontSize: 13 }}>
               เข้าสู่ร้านค้า
@@ -580,8 +622,6 @@ const styles = StyleSheet.create({
   bannerSection: {
     paddingHorizontal: spacing.xl,
     paddingBottom: 76, // 16px gap below dots + 60px of overlap into pet card
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(184,106,124,0.15)',
   },
   bannerHeaderRow: {
     flexDirection: 'row',
@@ -597,6 +637,7 @@ const styles = StyleSheet.create({
     backgroundColor: semantic.surface,
     alignItems: 'center',
     justifyContent: 'center',
+    overflow: 'hidden',
   },
   content: {
     paddingHorizontal: spacing.xl,
@@ -617,7 +658,7 @@ const styles = StyleSheet.create({
   bannerStack: {
     position: 'relative',
     marginTop: spacing.xl,
-    minHeight: 120,
+    minHeight: 140,
   },
   swipeOverlay: {
     ...StyleSheet.absoluteFillObject,
@@ -641,7 +682,6 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
     borderRadius: radii.pill,
     backgroundColor: semantic.surface,
-    marginBottom: spacing.xs,
   },
   dateDot: {
     width: 8,
@@ -651,7 +691,18 @@ const styles = StyleSheet.create({
   },
   bannerHeadline: {
     fontSize: 16,
-    lineHeight: 20,
+    lineHeight: 24,
+    paddingRight: 140,
+  },
+  bannerClinic: {
+    paddingRight: 140,
+  },
+  bannerIllus: {
+    position: 'absolute',
+    right: -40,
+    bottom: -96,
+    width: 200,
+    height: 178,
   },
   bannerLogoFade: {
     position: 'absolute',
@@ -673,25 +724,8 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     alignItems: 'center',
     justifyContent: 'center',
+    backgroundColor: semantic.primary,
     overflow: 'hidden',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.18)',
-  },
-  detailBtnTopBevel: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    height: 1.5,
-    backgroundColor: 'rgba(255,255,255,0.35)',
-  },
-  detailBtnBottomBevel: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    height: 1.5,
-    backgroundColor: 'rgba(0,0,0,0.16)',
   },
   dotsRow: {
     position: 'absolute',
@@ -770,11 +804,31 @@ const styles = StyleSheet.create({
   },
   budgetIllus: {
     position: 'absolute',
-    right: -8,
-    bottom: -18,
-    width: 90,
-    height: 110,
-    zIndex: 1,
+    right: -22,
+    bottom: -24,
+    width: 100,
+    height: 115,
+  },
+  mealIllus: {
+    position: 'absolute',
+    right: -22,
+    bottom: -24,
+    width: 100,
+    height: 115,
+  },
+  vetIllus: {
+    position: 'absolute',
+    right: -18,
+    bottom: -36,
+    width: 170,
+    height: 188,
+  },
+  glassCard: {
+    shadowColor: '#7E3D4F',
+    shadowOpacity: 0.3,
+    shadowRadius: 32,
+    shadowOffset: { width: 0, height: 18 },
+    elevation: 16,
   },
   bulletList: {
     marginTop: spacing.md,
@@ -857,5 +911,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginTop: spacing.sm,
+    overflow: 'hidden',
   },
 });
