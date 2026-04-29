@@ -69,7 +69,15 @@ export default function PetsListScreen({ navigation }: Props) {
         scrollEventThrottle={16}
       >
       {/* ── HERO ── */}
-      <View style={[styles.hero, { height: HERO_HEIGHT + insets.top, paddingTop: insets.top }]}>
+      <View
+        style={[
+          styles.hero,
+          {
+            height: HERO_HEIGHT + insets.top,
+            paddingTop: insets.top,
+          },
+        ]}
+      >
         <LinearGradient
           pointerEvents="none"
           colors={['rgba(255,242,220,0)', '#FFF2DC']}
@@ -150,76 +158,78 @@ export default function PetsListScreen({ navigation }: Props) {
   );
 }
 
+function formatMicrochip(id: string): string {
+  const digits = id.replace(/\D/g, '');
+  return digits.match(/.{1,3}/g)?.join('-') ?? id;
+}
+
 function PetCard({ pet, onPress }: { pet: Pet; onPress: () => void }) {
   return (
     <View style={styles.cardShadow}>
-    <Pressable
-      onPress={onPress}
-      android_ripple={RIPPLE}
-      style={({ pressed }) => [styles.card, pressed && { opacity: 0.9 }]}
-    >
-      {/* Glass gradient — same recipe as HomeScreen cards */}
-      <LinearGradient
-        pointerEvents="none"
-        colors={['rgba(255,253,251,0)', 'rgba(244,201,210,0.7)']}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        locations={[0.25, 1]}
-        style={StyleSheet.absoluteFill}
-      />
+      <Pressable
+        onPress={onPress}
+        android_ripple={RIPPLE}
+        style={({ pressed }) => [styles.card, pressed && { opacity: 0.92 }]}
+      >
+        {/* Dark paw-print background fills the whole card */}
+        <Image
+          source={require('../../assets/pet-card-bg.png')}
+          style={StyleSheet.absoluteFillObject}
+          resizeMode="repeat"
+        />
 
-      {/* Top stripe — name + microchip pill */}
-      <View style={styles.cardTop}>
-        <Text variant="bodyStrong" style={styles.petName} numberOfLines={1}>
-          {pet.name}
-        </Text>
-        <View style={styles.chipPill}>
-          <Text
-            variant="caption"
-            color={semantic.textPrimary}
-            style={styles.chipText}
-            numberOfLines={1}
-          >
-            {pet.microchipId ?? 'ไม่พบเลขไมโครชิป'}
+        {/* White top strip — name */}
+        <View style={styles.cardTop}>
+          <Text variant="bodyStrong" style={styles.petName} numberOfLines={1}>
+            {pet.name}
           </Text>
         </View>
-      </View>
 
-      {/* Bottom stripe — stats */}
-      <View style={styles.cardBottom}>
-        <View style={styles.statsCol}>
+        {/* Bottom dark area — stats */}
+        <View style={styles.cardBottom}>
           <View style={styles.statsGrid}>
             <Stat label="สายพันธุ์" value={pet.breed} />
             <Stat label="น้ำหนัก" value={`${pet.weightKg} กก.`} />
           </View>
           <Stat label="อายุ" value={petAgeString(pet.birthDate)} />
         </View>
-      </View>
 
-      {/* Avatar — overlaps both stripes, absolute */}
-      <View style={styles.avatarWrap}>
-        <View style={styles.avatar}>
-          {pet.photo ? (
-            <Image source={pet.photo} style={styles.avatarImage} />
-          ) : (
-            <Text style={{ fontSize: 44 }}>{pet.emoji}</Text>
-          )}
+        {/* Avatar — overlaps both stripes, absolute */}
+        <View style={styles.avatarWrap}>
+          <View style={styles.avatar}>
+            {pet.photo ? (
+              <Image source={pet.photo} style={styles.avatarImage} />
+            ) : (
+              <Text style={{ fontSize: 44 }}>{pet.emoji}</Text>
+            )}
+          </View>
+          <View style={styles.genderBadge}>
+            <Icon
+              name={pet.gender === 'male' ? 'Mars' : 'Venus'}
+              size={16}
+              color={pet.gender === 'male' ? '#4A8FD6' : '#D6478D'}
+              strokeWidth={2.4}
+            />
+          </View>
         </View>
-        <View
-          style={[
-            styles.genderBadge,
-            { backgroundColor: pet.gender === 'male' ? '#4A8FD6' : '#D6478D' },
-          ]}
-        >
-          <Icon
-            name={pet.gender === 'male' ? 'Mars' : 'Venus'}
-            size={16}
-            color="#FFFFFF"
-            strokeWidth={2.4}
-          />
+
+        {/* Microchip pill — sits below the avatar */}
+        <View style={styles.chipPillWrap}>
+          <View style={styles.chipPill}>
+            <Text
+              variant="caption"
+              weight="500"
+              color={semantic.textPrimary}
+              style={styles.chipText}
+              numberOfLines={1}
+            >
+              {pet.microchipId
+                ? formatMicrochip(pet.microchipId)
+                : 'ไม่พบเลขไมโครชิป'}
+            </Text>
+          </View>
         </View>
-      </View>
-    </Pressable>
+      </Pressable>
     </View>
   );
 }
@@ -244,7 +254,7 @@ const styles = StyleSheet.create({
   hero: {
     position: 'relative',
     overflow: 'hidden',
-    paddingHorizontal: spacing.xl,
+    justifyContent: 'center',
   },
   heroBottomFade: {
     position: 'absolute',
@@ -256,15 +266,13 @@ const styles = StyleSheet.create({
   heroImage: {
     position: 'absolute',
     right: spacing.xl,
-    top: 70,
+    bottom: 60,
     width: 140,
     height: 140,
   },
   heroText: {
-    position: 'absolute',
-    left: spacing.xl,
-    top: 110,
-    width: 188,
+    paddingHorizontal: spacing.xl,
+    width: 220,
     gap: spacing.sm,
   },
   heroTitle: {
@@ -329,43 +337,53 @@ const styles = StyleSheet.create({
   },
   card: {
     position: 'relative',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#1F4151',
     borderRadius: radii.xl,
     overflow: 'hidden',
   },
   cardTop: {
-    backgroundColor: 'rgba(184,106,124,0.22)',
-    paddingLeft: 120, // leaves room for the overlapping avatar
+    backgroundColor: '#FFFFFF',
+    paddingLeft: 134,
     paddingRight: 12,
-    paddingVertical: 10,
+    paddingVertical: 8,
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
     gap: spacing.sm,
   },
   cardBottom: {
-    paddingLeft: 120,
-    paddingRight: 12,
+    paddingLeft: 134,
+    paddingRight: 16,
     paddingTop: 12,
-    paddingBottom: 16,
+    paddingBottom: 18,
+    gap: spacing.sm,
+  },
+  chipPillWrap: {
+    position: 'absolute',
+    left: 14,
+    width: 110,
+    top: 138,
+    alignItems: 'center',
   },
   petName: {
-    fontSize: 16,
+    fontSize: 20,
+    lineHeight: 28,
     flexShrink: 1,
-    color: '#000000',
+    color: '#1A1A1A',
+    fontWeight: '700',
   },
   chipPill: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#152F3B',
     borderRadius: 999,
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    maxWidth: 170,
+    paddingHorizontal: 14,
+    paddingVertical: 4,
+    alignSelf: 'stretch',
+    alignItems: 'center',
   },
   chipText: {
-    fontSize: 12,
-  },
-  statsCol: {
-    gap: spacing.sm,
+    fontSize: 9,
+    color: '#FFFFFF',
+    fontWeight: '500',
+    letterSpacing: 0.4,
   },
   statsGrid: {
     flexDirection: 'row',
@@ -376,28 +394,31 @@ const styles = StyleSheet.create({
     gap: 2,
   },
   statLabel: {
-    fontSize: 10,
-    color: '#000000',
+    fontSize: 11,
+    color: 'rgba(255,255,255,0.7)',
   },
   statValue: {
-    fontSize: 14,
-    color: '#000000',
+    fontSize: 15,
+    color: '#FFFFFF',
+    fontWeight: '700',
   },
   avatarWrap: {
     position: 'absolute',
-    left: 12,
-    top: 12,
-    width: 100,
-    height: 100,
+    left: 14,
+    top: 18,
+    width: 110,
+    height: 110,
   },
   avatar: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
+    width: 110,
+    height: 110,
+    borderRadius: 55,
     backgroundColor: '#FFFFFF',
     alignItems: 'center',
     justifyContent: 'center',
     overflow: 'hidden',
+    borderWidth: 3,
+    borderColor: '#FFFFFF',
   },
   avatarImage: {
     width: '100%',
@@ -405,14 +426,19 @@ const styles = StyleSheet.create({
   },
   genderBadge: {
     position: 'absolute',
-    left: 34,
-    bottom: -6,
-    width: 28,
-    height: 28,
-    borderRadius: 14,
+    left: 0,
+    top: 0,
+    width: 30,
+    height: 30,
+    borderRadius: 15,
     backgroundColor: '#FFFFFF',
     alignItems: 'center',
     justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOpacity: 0.15,
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 3,
   },
   genderText: {
     fontSize: 16,
