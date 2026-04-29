@@ -1,36 +1,145 @@
-import { useMemo, useState } from 'react';
-import { KeyboardAvoidingView, Platform, StyleSheet, View } from 'react-native';
+import { useEffect, useMemo, useState } from 'react';
+import { Alert, Image, KeyboardAvoidingView, Modal, Platform, Pressable, StyleSheet, View } from 'react-native';
+import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import Animated, { useAnimatedScrollHandler, useSharedValue } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../App';
-import { AppBackground, Button, Card, Icon, Input, StickyAppBar, Text } from '../components';
-import { semantic, spacing } from '../theme';
+import { AppBackground, Button, Card, Icon, Input, SubPageHeader, Text } from '../components';
+import { colors, semantic, spacing } from '../theme';
 import { mockPets } from '../data/pets';
 import { typeMeta, AppointmentType, MOCK_VETS } from '../data/appointments';
+import { mockVets } from '../data/televet';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'BookAppointment'>;
 
 const TIME_SLOTS = ['09:00', '10:00', '11:00', '13:00', '14:00', '15:00', '16:00'];
 
-export default function BookAppointmentScreen({ navigation }: Props) {
+const TH_WEEKDAY_SHORT = ['อา.', 'จ.', 'อ.', 'พ.', 'พฤ.', 'ศ.', 'ส.'];
+
+function formatVetSchedule(workingDays: number[], timeSlots: string[]): string {
+  if (!workingDays.length || !timeSlots.length) return '';
+  const sorted = [...workingDays].sort((a, b) => a - b);
+  let dayLabel = '';
+  if (sorted.length === 7) {
+    dayLabel = 'ทุกวัน';
+  } else {
+    const contiguous = sorted.every((d, i) => i === 0 || d === sorted[i - 1] + 1);
+    if (contiguous && sorted.length >= 3) {
+      dayLabel = `${TH_WEEKDAY_SHORT[sorted[0]]}-${TH_WEEKDAY_SHORT[sorted[sorted.length - 1]]}`;
+    } else {
+      dayLabel = sorted.map((d) => TH_WEEKDAY_SHORT[d]).join(' ');
+    }
+  }
+  const sortedSlots = [...timeSlots].sort();
+  return `${dayLabel} ${sortedSlots[0]} - ${sortedSlots[sortedSlots.length - 1]} น.`;
+}
+
+export default function BookAppointmentScreen({ navigation, route }: Props) {
   const insets = useSafeAreaInsets();
-  const [petId, setPetId] = useState<string | null>(mockPets[0]?.id ?? null);
-  const [type, setType] = useState<AppointmentType | null>('checkup');
-  const [date, setDate] = useState('');
+  const incomingVetId = route.params?.selectedVetId;
+  const [petId, setPetId] = useState<string | null>(null);
+  const [mode, setMode] = useState<'online' | 'clinic' | null>(null);
+  const [date, setDate] = useState<Date | null>(null);
+  const [datePickerOpen, setDatePickerOpen] = useState(false);
   const [time, setTime] = useState<string | null>(null);
-  const [vetId, setVetId] = useState<string | null>(MOCK_VETS[0]?.id ?? null);
+  const [vetId, setVetId] = useState<string | null>(incomingVetId ?? null);
   const [notes, setNotes] = useState('');
 
+  const isDirty =
+    petId !== null ||
+    mode !== null ||
+    date !== null ||
+    time !== null ||
+    vetId !== null ||
+    notes.trim() !== '';
+
+  // If user picks a vet on VetDetail and returns, sync the selection
+  useEffect(() => {
+    if (incomingVetId && incomingVetId !== vetId) {
+      setVetId(incomingVetId);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [incomingVetId]);
+
+  // Vets available on selected date (filtered by workingDays)
+  const availableVets = useMemo(() => {
+    if (!date) return mockVets;
+    const dow = date.getDay();
+    return mockVets.filter((v) => v.workingDays.includes(dow));
+  }, [date]);
+
+  // Time slots available — union of selected-date vets' slots
+  const availableSlots = useMemo(() => {
+    const set = new Set<string>();
+    availableVets.forEach((v) => v.timeSlots.forEach((s) => set.add(s)));
+    return Array.from(set).sort();
+  }, [availableVets]);
+
+  // Vets that match selected date AND time
+  const matchingVets = useMemo(() => {
+    if (!time) return availableVets;
+    return availableVets.filter((v) => v.timeSlots.includes(time));
+  }, [availableVets, time]);
+
+  // Clear stale selections when date/time changes
+  useEffect(() => {
+    if (time && !availableSlots.includes(time)) setTime(null);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [date]);
+  useEffect(() => {
+    if (vetId && !matchingVets.some((v) => v.id === vetId)) setVetId(null);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [date, time]);
+
+  const onDateChange = (_e: DateTimePickerEvent, picked?: Date) => {
+    if (Platform.OS !== 'ios') setDatePickerOpen(false);
+    if (picked) setDate(picked);
+  };
+
+  const dateLabel = date
+    ? `${TH_WEEKDAY_SHORT[date.getDay()]} ${date.toLocaleDateString('th-TH', {
+        day: 'numeric',
+        month: 'long',
+        year: 'numeric',
+      })}`
+    : 'แตะเพื่อเลือกวัน';
+
   const canSubmit = useMemo(
-    () => !!(petId && type && date && time && vetId),
-    [petId, type, date, time, vetId],
+    () => !!(petId && mode && date && time && vetId),
+    [petId, mode, date, time, vetId],
+  );
+
+  const selectedVet = useMemo(
+    () => mockVets.find((v) => v.id === vetId) ?? null,
+    [vetId],
   );
 
   const onSubmit = () => {
     if (!canSubmit) return;
     navigation.goBack();
   };
+
+  // Confirm before leaving if user has made any selection (intercepts back btn / gesture)
+  useEffect(() => {
+    const unsub = navigation.addListener('beforeRemove', (e) => {
+      if (!isDirty) return;
+      e.preventDefault();
+      Alert.alert(
+        'ออกจากการจองนัด?',
+        'ข้อมูลที่กรอกไว้จะไม่ถูกบันทึก',
+        [
+          { text: 'ทำต่อ', style: 'cancel', onPress: () => {} },
+          {
+            text: 'ออก',
+            style: 'destructive',
+            onPress: () => navigation.dispatch(e.data.action),
+          },
+        ],
+      );
+    });
+    return unsub;
+  }, [navigation, isDirty]);
 
   const scrollY = useSharedValue(0);
   const scrollHandler = useAnimatedScrollHandler((e) => {
@@ -40,106 +149,151 @@ export default function BookAppointmentScreen({ navigation }: Props) {
   return (
     <View style={styles.root}>
       <AppBackground />
+      <SubPageHeader
+        title="จองนัดหมาย"
+        onBack={() => navigation.goBack()}
+      />
       <KeyboardAvoidingView
         style={styles.flex}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
         <Animated.ScrollView
-          contentContainerStyle={[
-            styles.scrollContent,
-            { paddingTop: insets.top + 56 + spacing.md },
-          ]}
+          contentContainerStyle={[styles.scrollContent, { paddingTop: spacing.md }]}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
           onScroll={scrollHandler}
           scrollEventThrottle={16}
         >
-          <Text variant="h1" style={styles.title}>
-            จองนัดหมาย
-          </Text>
-          <Text variant="body" color={semantic.textSecondary} style={styles.subtitle}>
-            เลือกข้อมูลเพื่อจองคิวคลินิก
-          </Text>
-
           {/* Pet */}
           <Section label="สัตว์เลี้ยง">
-            <View style={styles.chipGrid}>
-              {mockPets.map((p) => (
-                <Card
-                  key={p.id}
-                  variant="elevated"
-                  selected={petId === p.id}
-                  padding="md"
-                  onPress={() => setPetId(p.id)}
-                  style={styles.petTile}
-                >
-                  <View style={styles.petTileInner}>
-                    <View style={styles.petAvatar}>
-                      <Text style={{ fontSize: 28 }}>{p.emoji}</Text>
+            <View style={styles.petsRow}>
+              {mockPets.map((p) => {
+                const selected = petId === p.id;
+                return (
+                  <Pressable
+                    key={p.id}
+                    onPress={() => setPetId(p.id)}
+                    style={({ pressed }) => [styles.petItem, pressed && { opacity: 0.85 }]}
+                  >
+                    <View style={styles.petAvatarWrap}>
+                      <View style={[styles.petAvatar, selected && styles.petAvatarSelected]}>
+                        {p.photo ? (
+                          <Image source={p.photo} style={styles.petAvatarImage} />
+                        ) : (
+                          <Text style={{ fontSize: 28 }}>{p.emoji}</Text>
+                        )}
+                      </View>
+                      {selected && (
+                        <View style={styles.petCheckBadge}>
+                          <Icon name="Check" size={12} color="#FFFFFF" strokeWidth={3} />
+                        </View>
+                      )}
                     </View>
-                    <Text variant="bodyStrong" style={{ fontSize: 13 }}>
+                    <Text
+                      variant="caption"
+                      color={semantic.textPrimary}
+                      weight="500"
+                      align="center"
+                    >
                       {p.name}
                     </Text>
-                    <Text variant="caption" color={semantic.textSecondary} style={{ fontSize: 11 }}>
-                      {p.speciesLabel}
-                    </Text>
-                  </View>
-                </Card>
-              ))}
-            </View>
-          </Section>
-
-          {/* Type */}
-          <Section label="ประเภทการนัด">
-            <View style={styles.chipGrid}>
-              {(Object.keys(typeMeta) as AppointmentType[]).map((t) => {
-                const m = typeMeta[t];
-                return (
-                  <Card
-                    key={t}
-                    variant="elevated"
-                    selected={type === t}
-                    padding="md"
-                    onPress={() => setType(t)}
-                    style={styles.typeTile}
-                  >
-                    <View style={styles.typeInner}>
-                      <View style={[styles.typeIconWrap, { backgroundColor: `${m.color}22` }]}>
-                        <Icon name={m.icon as any} size={22} color={m.color} strokeWidth={2.2} />
-                      </View>
-                      <Text
-                        variant="bodyStrong"
-                        style={{ fontSize: 13 }}
-                        numberOfLines={1}
-                      >
-                        {m.label}
-                      </Text>
-                    </View>
-                  </Card>
+                  </Pressable>
                 );
               })}
             </View>
           </Section>
 
+          {/* Mode — Online vs Clinic */}
+          <Section label="ประเภทการนัด">
+            <View style={styles.chipGrid}>
+              <Pressable
+                onPress={() => setMode('clinic')}
+                style={({ pressed }) => [
+                  styles.modeTile,
+                  mode === 'clinic' && styles.modeTileClinicSelected,
+                  pressed && { opacity: 0.9 },
+                ]}
+              >
+                <View style={styles.typeInner}>
+                  <View
+                    style={[
+                      styles.typeIconWrap,
+                      { backgroundColor: 'rgba(159,82,102,0.15)' },
+                    ]}
+                  >
+                    <Icon name="Hospital" size={22} color="#9F5266" strokeWidth={2.2} />
+                  </View>
+                  <Text variant="bodyStrong" style={{ fontSize: 13 }}>
+                    ที่คลินิก
+                  </Text>
+                </View>
+              </Pressable>
+              <Pressable
+                onPress={() => setMode('online')}
+                style={({ pressed }) => [
+                  styles.modeTile,
+                  mode === 'online' && styles.modeTileOnlineSelected,
+                  pressed && { opacity: 0.9 },
+                ]}
+              >
+                <View style={styles.typeInner}>
+                  <View
+                    style={[
+                      styles.typeIconWrap,
+                      { backgroundColor: 'rgba(27,90,119,0.15)' },
+                    ]}
+                  >
+                    <Icon name="Video" size={22} color="#1B5A77" strokeWidth={2.2} />
+                  </View>
+                  <Text variant="bodyStrong" style={{ fontSize: 13 }}>
+                    ปรึกษาออนไลน์
+                  </Text>
+                </View>
+              </Pressable>
+            </View>
+          </Section>
+
           {/* Date */}
           <Section label="วันที่">
-            <Input
-              placeholder="ปปปป-ดด-วว (เช่น 2026-05-15)"
-              value={date}
-              onChangeText={setDate}
-            />
+            <Pressable
+              onPress={() => setDatePickerOpen(true)}
+              style={({ pressed }) => [
+                styles.dateBtn,
+                pressed && { opacity: 0.85 },
+              ]}
+            >
+              <Icon name="CalendarDays" size={18} color={semantic.textPrimary} strokeWidth={2} />
+              <Text
+                variant="bodyStrong"
+                style={[styles.dateBtnText, !date && { color: semantic.textMuted }]}
+                numberOfLines={1}
+              >
+                {dateLabel}
+              </Text>
+            </Pressable>
           </Section>
 
           {/* Time */}
           <Section label="เวลา">
-            <View style={styles.timeGrid}>
-              {TIME_SLOTS.map((t) => (
+            {!date ? (
+              <Text variant="caption" color={semantic.textSecondary} style={styles.helperText}>
+                เลือกวันก่อนเพื่อดูเวลาที่ว่าง
+              </Text>
+            ) : availableSlots.length === 0 ? (
+              <Text variant="caption" color={semantic.textSecondary} style={styles.helperText}>
+                ไม่มีเวลาว่างในวันที่เลือก
+              </Text>
+            ) : null}
+            <View style={[styles.timeGrid, !date && styles.timeGridLocked]}>
+              {(date ? availableSlots : TIME_SLOTS).map((t) => (
                 <Card
                   key={t}
                   variant="elevated"
-                  selected={time === t}
+                  selected={!!date && time === t}
                   padding="sm"
-                  onPress={() => setTime(t)}
+                  onPress={
+                    date ? () => setTime(time === t ? null : t) : undefined
+                  }
                   style={styles.timeTile}
                 >
                   <View style={styles.timeInner}>
@@ -154,21 +308,80 @@ export default function BookAppointmentScreen({ navigation }: Props) {
 
           {/* Vet */}
           <Section label="สัตวแพทย์">
+            {!date ? (
+              <Text variant="caption" color={semantic.textSecondary} style={styles.helperText}>
+                เลือกวันและเวลาเพื่อดูแพทย์ที่ว่าง
+              </Text>
+            ) : matchingVets.length === 0 ? (
+              <Text variant="caption" color={semantic.textSecondary} style={styles.helperText}>
+                ไม่มีแพทย์ว่างในช่วงเวลานี้ ลองเปลี่ยนวันหรือเวลา
+              </Text>
+            ) : null}
             <View style={styles.vetList}>
-              {MOCK_VETS.map((v) => (
-                <Card
-                  key={v.id}
-                  variant="elevated"
-                  selected={vetId === v.id}
-                  padding="lg"
-                  onPress={() => setVetId(v.id)}
-                >
-                  <Text variant="bodyStrong">{v.name}</Text>
-                  <Text variant="caption" color={semantic.textSecondary}>
-                    {v.specialty} · {v.clinic}
-                  </Text>
-                </Card>
-              ))}
+              {matchingVets.map((v) => {
+                const isSelected = vetId === v.id;
+                const isOnline = v.status === 'online';
+                return (
+                  <Card
+                    key={v.id}
+                    variant="elevated"
+                    selected={isSelected}
+                    padding="md"
+                    onPress={() => setVetId(isSelected ? null : v.id)}
+                  >
+                    <Pressable
+                      onPress={() => navigation.navigate('VetDetail', { vetId: v.id })}
+                      hitSlop={8}
+                      accessibilityRole="button"
+                      accessibilityLabel="ดูข้อมูลและรีวิว"
+                      style={({ pressed }) => [
+                        styles.vetInfoBtn,
+                        pressed && { opacity: 0.6 },
+                      ]}
+                    >
+                      <Icon
+                        name="Info"
+                        size={18}
+                        color={semantic.textMuted}
+                        strokeWidth={2}
+                      />
+                    </Pressable>
+                    <View style={styles.vetTopRow}>
+                      <View style={styles.vetAvatar}>
+                        <Image source={{ uri: v.avatar }} style={styles.vetAvatarImg} />
+                        {isOnline && <View style={styles.statusDot} />}
+                      </View>
+                      <View style={{ flex: 1 }}>
+                        <Text variant="bodyStrong" numberOfLines={1} style={{ fontSize: 14 }}>
+                          {v.name}
+                        </Text>
+                        <View style={styles.vetChipRow}>
+                          <VetChip icon="Stethoscope" label={v.specialty} />
+                          <VetChip icon="Briefcase" label={`${v.experienceYears} ปี`} />
+                        </View>
+                        <View style={styles.vetChipRow}>
+                          <VetChip icon="MapPin" label={v.clinic} />
+                        </View>
+                      </View>
+                    </View>
+                    <View style={styles.vetDivider} />
+                    <View style={styles.vetBottomRow}>
+                      <View style={styles.vetBottomInfoLine}>
+                        <Icon name="Clock" size={11} color={semantic.textMuted} strokeWidth={2} />
+                        <Text variant="caption" color={semantic.textSecondary} numberOfLines={1}>
+                          {formatVetSchedule(v.workingDays, v.timeSlots)}
+                        </Text>
+                      </View>
+                      <View style={styles.vetBottomInfoLine}>
+                        <Icon name="Star" size={10} color="#D99A20" fill="#D99A20" />
+                        <Text variant="caption" color={semantic.textMuted}>
+                          {v.rating} ({v.reviewCount})
+                        </Text>
+                      </View>
+                    </View>
+                  </Card>
+                );
+              })}
             </View>
           </Section>
 
@@ -188,17 +401,45 @@ export default function BookAppointmentScreen({ navigation }: Props) {
         </Animated.ScrollView>
       </KeyboardAvoidingView>
 
-      <StickyAppBar
-        scrollY={scrollY}
-        fadeStartAt={20}
-        fadeEndAt={80}
-        title="จองนัดหมาย"
-        leading={{
-          icon: 'ChevronLeft',
-          onPress: () => navigation.goBack(),
-          accessibilityLabel: 'ย้อนกลับ',
-        }}
-      />
+      {/* Date picker — bottom sheet modal */}
+      {datePickerOpen && (
+        <Modal
+          visible
+          transparent
+          animationType="slide"
+          onRequestClose={() => setDatePickerOpen(false)}
+          statusBarTranslucent
+        >
+          <Pressable style={styles.dateBackdrop} onPress={() => setDatePickerOpen(false)}>
+            <Pressable
+              style={[styles.dateSheet, { paddingBottom: insets.bottom + 16 }]}
+              onPress={() => {}}
+            >
+              <View style={styles.dateSheetHandle} />
+              <View style={styles.dateSheetHeader}>
+                <Text weight="500" style={styles.dateSheetTitle}>
+                  เลือกวันที่
+                </Text>
+                <Pressable onPress={() => setDatePickerOpen(false)} hitSlop={8}>
+                  <Text weight="600" style={styles.dateSheetDone}>
+                    เสร็จ
+                  </Text>
+                </Pressable>
+              </View>
+              <DateTimePicker
+                value={date ?? new Date()}
+                mode="date"
+                display={Platform.OS === 'ios' ? 'inline' : 'default'}
+                onChange={onDateChange}
+                locale="th-TH"
+                themeVariant="light"
+                minimumDate={new Date()}
+                style={styles.dateSheetPicker}
+              />
+            </Pressable>
+          </Pressable>
+        </Modal>
+      )}
     </View>
   );
 }
@@ -210,6 +451,23 @@ function Section({ label, children }: { label: string; children: React.ReactNode
         {label}
       </Text>
       {children}
+    </View>
+  );
+}
+
+function VetChip({ icon, label }: { icon: string; label: string }) {
+  return (
+    <View style={styles.vetChipItem}>
+      <Icon name={icon as any} size={11} color={semantic.textMuted} strokeWidth={2} />
+      <Text
+        variant="caption"
+        color={semantic.textSecondary}
+        numberOfLines={1}
+        ellipsizeMode="tail"
+        style={styles.vetChipText}
+      >
+        {label}
+      </Text>
     </View>
   );
 }
@@ -240,26 +498,74 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     gap: spacing.sm,
   },
-  petTile: {
-    flexBasis: '31%',
-    flexGrow: 1,
+  petsRow: {
+    flexDirection: 'row',
+    gap: spacing.lg,
+    flexWrap: 'wrap',
   },
-  petTileInner: {
+  petItem: {
     alignItems: 'center',
-    gap: 2,
+    gap: spacing.sm,
+    width: 64,
+  },
+  petAvatarWrap: {
+    position: 'relative',
   },
   petAvatar: {
-    width: 48,
-    height: 48,
-    borderRadius: 16,
+    width: 64,
+    height: 64,
+    borderRadius: 32,
     backgroundColor: semantic.primaryMuted,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: spacing.xs,
+    overflow: 'hidden',
+  },
+  petAvatarSelected: {
+    borderWidth: 2.5,
+    borderColor: semantic.primary,
+  },
+  petAvatarImage: {
+    width: '100%',
+    height: '100%',
+  },
+  petCheckBadge: {
+    position: 'absolute',
+    bottom: -2,
+    right: -2,
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    backgroundColor: semantic.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 2,
+    borderColor: '#FFFFFF',
   },
   typeTile: {
     flexBasis: '47%',
     flexGrow: 1,
+  },
+  modeTile: {
+    flexBasis: '47%',
+    flexGrow: 1,
+    padding: spacing.md,
+    borderRadius: 20,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 2,
+    borderColor: 'transparent',
+    shadowColor: '#000',
+    shadowOpacity: 0.06,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 2,
+  },
+  modeTileClinicSelected: {
+    borderColor: colors.rose[500],
+    backgroundColor: colors.rose[50],
+  },
+  modeTileOnlineSelected: {
+    borderColor: colors.ocean[600],
+    backgroundColor: colors.ocean[50],
   },
   typeInner: {
     alignItems: 'center',
@@ -277,6 +583,9 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     gap: spacing.sm,
   },
+  timeGridLocked: {
+    opacity: 0.45,
+  },
   timeTile: {
     flexBasis: '22%',
     flexGrow: 1,
@@ -286,6 +595,142 @@ const styles = StyleSheet.create({
   },
   vetList: {
     gap: spacing.sm,
+  },
+  helperText: {
+    fontSize: 12,
+    marginLeft: spacing.xs,
+    marginTop: -spacing.xs,
+    marginBottom: 0,
+  },
+  dateBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    height: 52,
+    borderRadius: 14,
+    paddingHorizontal: spacing.md,
+    backgroundColor: semantic.surface,
+    borderWidth: 1,
+    borderColor: semantic.border,
+  },
+  dateBtnText: {
+    flex: 1,
+    fontSize: 14,
+    color: semantic.textPrimary,
+  },
+  dateBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.4)',
+    justifyContent: 'flex-end',
+  },
+  dateSheet: {
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
+    paddingHorizontal: 16,
+    paddingTop: 8,
+  },
+  dateSheetHandle: {
+    alignSelf: 'center',
+    width: 36,
+    height: 5,
+    borderRadius: 100,
+    backgroundColor: '#D0D0D4',
+    marginTop: 4,
+    marginBottom: 12,
+  },
+  dateSheetHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 4,
+    paddingBottom: 8,
+  },
+  dateSheetTitle: {
+    fontSize: 16,
+    color: '#1A1A1A',
+  },
+  dateSheetDone: {
+    fontSize: 16,
+    color: semantic.primary,
+  },
+  dateSheetPicker: {
+    minHeight: 380,
+    width: '100%',
+  },
+  vetTopRow: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+    alignItems: 'center',
+  },
+  vetAvatar: {
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    backgroundColor: semantic.primaryMuted,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  vetAvatarImg: {
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+  },
+  statusDot: {
+    position: 'absolute',
+    bottom: 0,
+    right: 0,
+    width: 14,
+    height: 14,
+    borderRadius: 7,
+    borderWidth: 2,
+    borderColor: '#FFFFFF',
+    backgroundColor: '#4FB36C',
+  },
+  vetChipRow: {
+    flexDirection: 'row',
+    flexWrap: 'nowrap',
+    alignItems: 'center',
+    gap: spacing.sm,
+    marginTop: 4,
+    overflow: 'hidden',
+  },
+  vetChipItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    flexShrink: 1,
+  },
+  vetChipText: {
+    fontSize: 10,
+    flexShrink: 1,
+  },
+  vetDivider: {
+    height: StyleSheet.hairlineWidth,
+    backgroundColor: 'rgba(0,0,0,0.08)',
+    marginVertical: spacing.sm,
+  },
+  vetBottomRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: spacing.sm,
+  },
+  vetBottomInfoLine: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  vetInfoBtn: {
+    position: 'absolute',
+    top: 6,
+    right: 6,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 5,
   },
   submit: {
     marginTop: spacing.sm,

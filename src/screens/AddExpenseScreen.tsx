@@ -23,7 +23,7 @@ import {
   Button,
   Icon,
   PetAvatar,
-  StickyAppBar,
+  SubPageHeader,
   Text,
 } from '../components';
 import { semantic, spacing } from '../theme';
@@ -90,37 +90,22 @@ export default function AddExpenseScreen({ navigation }: Props) {
     <View style={styles.root}>
       <AppBackground />
 
-      <StickyAppBar
-        scrollY={scrollY}
-        fadeStartAt={60}
-        fadeEndAt={120}
+      <SubPageHeader
         title="บันทึกค่าใช้จ่าย"
-        leading={{
-          icon: 'ChevronLeft',
-          onPress: () => navigation.goBack(),
-          accessibilityLabel: 'ย้อนกลับ',
-        }}
+        onBack={() => navigation.goBack()}
       />
 
       <Animated.ScrollView
+        style={styles.flex}
         contentContainerStyle={[
           styles.scroll,
-          { paddingTop: insets.top + 56, paddingBottom: insets.bottom + 100 },
+          { paddingTop: spacing.md, paddingBottom: insets.bottom + 100 },
         ]}
         showsVerticalScrollIndicator={false}
         onScroll={scrollHandler}
         scrollEventThrottle={16}
         keyboardShouldPersistTaps="handled"
       >
-        {/* Hero */}
-        <View style={styles.hero}>
-          <Text variant="h1" style={styles.heroTitle}>
-            บันทึกค่าใช้จ่าย
-          </Text>
-          <Text weight="500" style={styles.heroDescription}>
-            เพิ่มรายการเพื่อติดตามงบประมาณรายเดือน
-          </Text>
-        </View>
 
         {/* Category — wrap chips into 2 rows (no horizontal scroll) */}
         <View style={styles.chipsSection}>
@@ -394,6 +379,7 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: semantic.background,
   },
+  flex: { flex: 1 },
   scroll: {
     paddingBottom: 0,
   },

@@ -45,8 +45,8 @@ export type Pet = {
   id: string;
   name: string;
   emoji: string;
-  /** Optional photo. require() a local asset; falls back to emoji avatar. */
-  photo?: number;
+  /** Optional photo. require() a local asset or runtime { uri }; falls back to emoji avatar. */
+  photo?: number | { uri: string };
   species: 'dog' | 'cat' | 'rabbit' | 'other';
   speciesLabel: string;
   breed: string;

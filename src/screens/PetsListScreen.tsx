@@ -29,7 +29,7 @@ const BTN_WIDTH_GUESS = 320;
 
 export default function PetsListScreen({ navigation }: Props) {
   const insets = useSafeAreaInsets();
-  const { height: windowHeight } = useWindowDimensions();
+  const { height: windowHeight, width: windowWidth } = useWindowDimensions();
 
   // ── Shimmer (sweeps left → right, repeats with delay) ──
   const shimmer = useSharedValue(0);
@@ -100,10 +100,29 @@ export default function PetsListScreen({ navigation }: Props) {
         />
 
         <View style={styles.heroText}>
-          <Text variant="bodyStrong" style={styles.heroTitle}>
+          <Text
+            variant="bodyStrong"
+            style={[
+              styles.heroTitle,
+              {
+                fontSize: Math.max(22, Math.min(32, windowWidth * 0.07)),
+                lineHeight: Math.max(34, Math.min(46, windowWidth * 0.1)),
+              },
+            ]}
+          >
             ข้อมูลสัตว์เลี้ยง
           </Text>
-          <Text variant="caption" color={semantic.textSecondary} style={styles.heroSubtitle}>
+          <Text
+            variant="caption"
+            color={semantic.textSecondary}
+            style={[
+              styles.heroSubtitle,
+              {
+                fontSize: Math.max(13, Math.min(17, windowWidth * 0.04)),
+                lineHeight: Math.max(24, Math.min(30, windowWidth * 0.07)),
+              },
+            ]}
+          >
             ตรวจสอบข้อมูลหรือเพิ่มข้อมูล{'\n'}สมาชิกสัตว์เลี้ยงของคุณ
           </Text>
         </View>
@@ -276,13 +295,10 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   heroTitle: {
-    fontSize: 16,
-    lineHeight: 28,
     color: '#1A1A1F',
+    fontWeight: '700',
   },
   heroSubtitle: {
-    fontSize: 14,
-    lineHeight: 24,
     color: '#4A4A50',
   },
   sheet: {
