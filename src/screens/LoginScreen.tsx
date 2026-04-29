@@ -184,7 +184,7 @@ export default function LoginScreen({ navigation }: Props) {
               </View>
 
               <View style={styles.socialRow}>
-                <SocialButton brand="google" onPress={() => {}} />
+                <SocialButton brand="google" onPress={() => navigation.replace('Main')} />
                 <SocialButton brand="facebook" onPress={() => {}} />
                 <SocialButton brand="line" onPress={() => {}} />
               </View>
