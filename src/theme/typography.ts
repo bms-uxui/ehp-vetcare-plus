@@ -15,19 +15,19 @@ export const typography = {
   display: {
     fontFamily: fontFamily.bold,
     fontSize: 34,
-    lineHeight: 42,
+    lineHeight: 48,
     letterSpacing: -0.5,
   },
   h1: {
     fontFamily: fontFamily.bold,
     fontSize: 28,
-    lineHeight: 36,
+    lineHeight: 40,
     letterSpacing: -0.3,
   },
   h2: {
     fontFamily: fontFamily.semibold,
     fontSize: 22,
-    lineHeight: 30,
+    lineHeight: 32,
   },
   h3: {
     fontFamily: fontFamily.semibold,

@@ -1,4 +1,11 @@
-export type ReminderType = 'vaccine' | 'appointment' | 'feeding' | 'medication';
+export type ReminderType =
+  | 'vaccine'
+  | 'appointment'
+  | 'feeding'
+  | 'medication'
+  | 'chat'
+  | 'call'
+  | 'order';
 
 export type Reminder = {
   id: string;
@@ -18,6 +25,9 @@ export const reminderMeta: Record<ReminderType, { label: string; icon: string; b
   appointment: { label: 'นัดหมาย', icon: 'Calendar', bg: '#F5E4E7', fg: '#B86A7C' },
   feeding: { label: 'ให้อาหาร', icon: 'UtensilsCrossed', bg: '#FFF6D9', fg: '#D99A20' },
   medication: { label: 'ยา', icon: 'Pill', bg: '#EEF0FF', fg: '#5A6BD8' },
+  chat: { label: 'แชท', icon: 'MessageCircle', bg: '#E0F0FB', fg: '#4A8FD1' },
+  call: { label: 'โทร', icon: 'Phone', bg: '#E8F8F0', fg: '#3DA67A' },
+  order: { label: 'คำสั่งซื้อ', icon: 'Package', bg: '#FBEFE6', fg: '#D17A4A' },
 };
 
 export const mockReminders: Reminder[] = [
@@ -88,6 +98,53 @@ export const mockReminders: Reminder[] = [
     petEmoji: '🐈',
     dueISO: '2026-05-11T10:00:00',
     leadTimeLabel: 'ล่วงหน้า 1 วัน',
+    read: false,
+  },
+  {
+    id: 'r7',
+    type: 'chat',
+    title: 'หมอ ปิยะพร ตอบข้อความแล้ว',
+    description: 'อาการคันลดลงไหม ลองทาครีมที่ให้ไป 3 วันก่อน',
+    petId: 'p1',
+    petName: 'ข้าวปั้น',
+    petEmoji: '🐕',
+    dueISO: '2026-04-23T14:32:00',
+    read: false,
+  },
+  {
+    id: 'r8',
+    type: 'call',
+    title: 'นัดปรึกษาทางโทรศัพท์',
+    description: 'หมอ สมหญิง โทรกลับเวลา 16:30',
+    petId: 'p2',
+    petName: 'มะลิ',
+    petEmoji: '🐈',
+    dueISO: '2026-04-25T16:30:00',
+    leadTimeLabel: 'ล่วงหน้า 30 นาที',
+    read: false,
+  },
+  {
+    id: 'r9',
+    type: 'order',
+    title: 'คำสั่งซื้อ #ORD-2025 จัดส่งแล้ว',
+    description: 'Prescription Diet 7kg · ถึงภายใน 2 วัน',
+    dueISO: '2026-04-24T09:15:00',
+    read: false,
+  },
+  {
+    id: 'r10',
+    type: 'order',
+    title: 'สินค้าถึงปลายทางแล้ว',
+    description: 'Royal Canin 4kg ส่งสำเร็จ — ขอบคุณที่ใช้บริการ',
+    dueISO: '2026-04-22T13:40:00',
+    read: true,
+  },
+  {
+    id: 'r11',
+    type: 'order',
+    title: 'สินค้าโปรดของคุณกลับมาแล้ว',
+    description: 'Memory Foam Pet Bed M ลด 20% — เหลือ 1,290฿',
+    dueISO: '2026-04-23T10:00:00',
     read: false,
   },
 ];
