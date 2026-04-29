@@ -62,6 +62,9 @@ export type RootStackParamList = {
           birthDate?: string;
           microchipId?: string;
           speciesLabel?: string;
+          neutered?: boolean;
+          neuteredDate?: string;
+          neuteredClinic?: string;
         };
       }
     | undefined;
@@ -154,7 +157,7 @@ export default function App() {
           <Stack.Screen
             name="AddPetScan"
             component={AddPetScanScreen}
-            options={transparentHeader}
+            options={{ headerShown: false }}
           />
           <Stack.Screen
             name="AddPetMicrochip"
@@ -164,7 +167,7 @@ export default function App() {
           <Stack.Screen
             name="AddPetManual"
             component={AddPetManualScreen}
-            options={transparentHeader}
+            options={{ headerShown: false }}
           />
           <Stack.Screen
             name="AppointmentDetail"

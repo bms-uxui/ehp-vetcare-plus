@@ -11,6 +11,7 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 import {
+  Image,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -18,6 +19,7 @@ import {
   TextInput,
   View,
 } from 'react-native';
+import * as ImagePicker from 'expo-image-picker';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../App';
@@ -76,6 +78,20 @@ export default function PetEditScreen({ route, navigation }: Props) {
 
   const update = <K extends keyof Pet>(key: K, value: Pet[K]) =>
     setDraft((d) => (d ? { ...d, [key]: value } : d));
+
+  const pickAvatar = async () => {
+    const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!perm.granted) return;
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.8,
+    });
+    if (!result.canceled && result.assets[0]) {
+      update('photo', { uri: result.assets[0].uri });
+    }
+  };
 
   const neuterProgress = useSharedValue(draft.neutered ? 1 : 0);
   useEffect(() => {
@@ -148,6 +164,32 @@ export default function PetEditScreen({ route, navigation }: Props) {
         contentContainerStyle={styles.body}
         showsVerticalScrollIndicator={false}
       >
+        <Pressable
+          onPress={pickAvatar}
+          style={({ pressed }) => [
+            styles.avatarWrap,
+            pressed && { opacity: 0.9 },
+          ]}
+        >
+          <View style={styles.avatar}>
+            {draft.photo ? (
+              <Image
+                source={
+                  typeof draft.photo === 'number'
+                    ? draft.photo
+                    : draft.photo
+                }
+                style={styles.avatarImage}
+              />
+            ) : (
+              <Text style={{ fontSize: 56 }}>{draft.emoji}</Text>
+            )}
+          </View>
+          <View style={styles.avatarCameraBadge}>
+            <Icon name="Camera" size={14} color="#FFFFFF" strokeWidth={2.4} />
+          </View>
+        </Pressable>
+
         <EditField
           label="ชื่อ"
           value={draft.name}
@@ -373,6 +415,39 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   body: { paddingHorizontal: 16, paddingBottom: 32, gap: 12 },
+  avatarWrap: {
+    alignSelf: 'center',
+    marginTop: 8,
+    marginBottom: 12,
+    width: 120,
+    height: 120,
+  },
+  avatar: {
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    backgroundColor: '#F1ECEC',
+    overflow: 'hidden',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  avatarImage: {
+    width: '100%',
+    height: '100%',
+  },
+  avatarCameraBadge: {
+    position: 'absolute',
+    right: 0,
+    bottom: 0,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#9F5266',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 3,
+    borderColor: '#FFFFFF',
+  },
   fieldWrap: { gap: 4, paddingTop: 6 },
   fieldRow: { flexDirection: 'row', gap: 16 },
   fieldCol: { flex: 1 },

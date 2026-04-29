@@ -1692,10 +1692,10 @@ const styles = StyleSheet.create({
   },
   feedAddIllusSlot: {
     position: 'absolute',
-    right: 8,
-    top: 8,
-    bottom: 8,
-    width: 96,
+    right: -16,
+    top: 4,
+    bottom: 4,
+    width: 110,
   },
   feedAddCardBody: {
     padding: 14,
