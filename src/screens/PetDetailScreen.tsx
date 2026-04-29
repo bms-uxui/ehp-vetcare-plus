@@ -1,14 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
 import {
   Image,
-  Modal,
   NativeScrollEvent,
   NativeSyntheticEvent,
-  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
-  TextInput,
   useWindowDimensions,
   View,
 } from 'react-native';
@@ -28,9 +25,6 @@ import Animated, {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';
-import DateTimePicker, {
-  DateTimePickerEvent,
-} from '@react-native-community/datetimepicker';
 import { Sparkles, Stethoscope, Salad, ScanFace } from 'lucide-react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useFocusEffect } from '@react-navigation/native';
@@ -91,8 +85,10 @@ export default function PetDetailScreen({ route, navigation }: Props) {
     toastTimerRef.current = setTimeout(() => {
       setToast(null);
       lastFlashRef.current = undefined;
-      navigation.setParams({ flashMessage: undefined });
     }, 5000);
+    return () => {
+      if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+    };
   }, [flashMessage, navigation]);
   const initialPet = mockPets.find((p) => p.id === petId);
   const insets = useSafeAreaInsets();
@@ -511,7 +507,16 @@ export default function PetDetailScreen({ route, navigation }: Props) {
             entering={FadeIn.delay(120).duration(280)}
             style={styles.heroText}
           >
-            <Text variant="bodyStrong" style={styles.petName}>
+            <Text
+              variant="bodyStrong"
+              style={[
+                styles.petName,
+                {
+                  fontSize: Math.max(22, Math.min(32, windowWidth * 0.07)),
+                  lineHeight: Math.max(34, Math.min(46, windowWidth * 0.1)),
+                },
+              ]}
+            >
               น้อง{pet.name}
             </Text>
             <Text variant="caption" color={semantic.textSecondary} style={styles.petAge}>
@@ -1036,8 +1041,8 @@ const styles = StyleSheet.create({
     gap: spacing.xs,
   },
   petName: {
-    fontSize: 16,
     color: '#1A1A1F',
+    fontWeight: '700',
   },
   petAge: {
     fontSize: 14,

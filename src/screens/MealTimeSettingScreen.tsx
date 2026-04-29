@@ -91,7 +91,7 @@ export default function MealTimeSettingScreen({ route, navigation }: Props) {
       const idx = mockSchedules.findIndex((s) => s.id === draft.id);
       if (idx >= 0) mockSchedules[idx] = draft;
     }
-    navigation.navigate('PetDetail', {
+    navigation.popTo('PetDetail', {
       petId,
       flashMessage: 'บันทึกเรียบร้อยแล้ว',
     });

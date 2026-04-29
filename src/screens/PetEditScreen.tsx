@@ -104,7 +104,7 @@ export default function PetEditScreen({ route, navigation }: Props) {
     if (hasErrors || !draft) return;
     const idx = mockPets.findIndex((p) => p.id === draft.id);
     if (idx >= 0) mockPets[idx] = draft;
-    navigation.navigate('PetDetail', {
+    navigation.popTo('PetDetail', {
       petId: draft.id,
       flashMessage: 'บันทึกเรียบร้อยแล้ว',
     });
