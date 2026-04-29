@@ -32,7 +32,7 @@ import {
   Button,
   Icon,
   IconButton,
-  StickyAppBar,
+  SubPageHeader,
   Text,
 } from '../components';
 import { semantic, spacing } from '../theme';
@@ -179,15 +179,8 @@ export default function CartScreen({ navigation }: Props) {
     return (
       <View style={styles.emptyRoot}>
         <AppBackground />
-        <StickyAppBar
-          scrollY={scrollY}
-          leading={{
-            icon: 'ChevronLeft',
-            onPress: () => navigation.goBack(),
-            accessibilityLabel: 'ย้อนกลับ',
-          }}
-        />
-        <View style={[styles.empty, { paddingTop: insets.top + 80 }]}>
+        <SubPageHeader title="ตะกร้าสินค้า" onBack={() => navigation.goBack()} />
+        <View style={[styles.empty, { paddingTop: 80 }]}>
           <Icon
             name="ShoppingCart"
             size={72}
@@ -296,37 +289,24 @@ export default function CartScreen({ navigation }: Props) {
         </View>
       )}
 
-      {/* Sticky AppBar — same pattern as ProductDetail */}
-      <StickyAppBar
-        scrollY={scrollY}
-        fadeStartAt={60}
-        fadeEndAt={120}
-        title="ตะกร้าสินค้า"
-        leading={
-          searchOpen
-            ? undefined
-            : {
-                icon: 'ChevronLeft',
-                onPress: () => navigation.goBack(),
-                accessibilityLabel: 'ย้อนกลับ',
-              }
-        }
-        trailing={
-          searchOpen
-            ? undefined
-            : {
-                icon: 'Search',
-                onPress: openSearch,
-                accessibilityLabel: 'ค้นหาในตะกร้า',
-              }
-        }
-      />
+      {!searchOpen && (
+        <SubPageHeader
+          title="ตะกร้าสินค้า"
+          onBack={() => navigation.goBack()}
+          trailing={{
+            icon: 'Search',
+            onPress: openSearch,
+            accessibilityLabel: 'ค้นหาในตะกร้า',
+          }}
+        />
+      )}
 
       <Animated.ScrollView
+        style={styles.flex}
         contentContainerStyle={[
           styles.scroll,
           {
-            paddingTop: insets.top + 56,
+            paddingTop: searchOpen ? insets.top + 56 : spacing.md,
             paddingBottom: 220,
           },
         ]}
@@ -334,15 +314,6 @@ export default function CartScreen({ navigation }: Props) {
         onScroll={scrollHandler}
         scrollEventThrottle={16}
       >
-        {/* Hero header — title + count */}
-        <View style={styles.hero}>
-          <Text weight="700" style={styles.heroTitle}>
-            ตะกร้าสินค้า
-          </Text>
-          <Text weight="500" style={styles.heroSubtitle}>
-            {items.length} รายการ · เลือก {selectedCount}
-          </Text>
-        </View>
 
         {/* Cart items list */}
         <View style={styles.list}>
@@ -712,6 +683,7 @@ const styles = StyleSheet.create({
   root: {
     flex: 1,
   },
+  flex: { flex: 1 },
   emptyRoot: {
     flex: 1,
   },

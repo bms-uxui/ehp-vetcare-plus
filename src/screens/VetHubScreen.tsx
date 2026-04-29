@@ -1,5 +1,5 @@
 import { ComponentProps, useState } from 'react';
-import { Image, Pressable, StyleSheet, View } from 'react-native';
+import { Image, Pressable, StyleSheet, useWindowDimensions, View } from 'react-native';
 import Animated, {
   Extrapolation,
   interpolate,
@@ -9,12 +9,13 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 import { BlurView } from 'expo-blur';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { tabBarCompact } from '../navigation/tabBarVisibility';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../App';
-import { AppBackground, Card, Icon, Text } from '../components';
-import { radii, semantic, spacing } from '../theme';
+import { Card, Icon, Text } from '../components';
+import { colors, radii, semantic, spacing } from '../theme';
 import { mockAppointments, Appointment, typeMeta, MOCK_VETS } from '../data/appointments';
 import { mockPets } from '../data/pets';
 import { mockVets, mockConversations, TeleVet } from '../data/televet';
@@ -47,16 +48,21 @@ const thDateLong = (iso: string) =>
 
 const PET_BOOKING_IMG = require('../../assets/Pet-booking.png');
 const PET_COMING_SOON_IMG = require('../../assets/Pet-coming soon.png');
+const PET_DRIVE_IMG = require('../../assets/Pet-drive.png');
+const PET_VIDEOCALL_IMG = require('../../assets/Pet-videocall.png');
+const VET_HERO_IMG = require('../../assets/pet-profile-hero.png');
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Vet'>;
 
-type Tab = 'upcoming' | 'online' | 'history';
+type Tab = 'upcoming' | 'online';
 
 const FADE_START = 30;
 const FADE_END = 90;
+const HERO_HEIGHT = 220;
 
 export default function VetHubScreen({ navigation }: Props) {
   const insets = useSafeAreaInsets();
+  const { height: windowHeight } = useWindowDimensions();
   const [tab, setTab] = useState<Tab>('upcoming');
 
   const upcoming = mockAppointments
@@ -105,59 +111,97 @@ export default function VetHubScreen({ navigation }: Props) {
 
   return (
     <View style={styles.root}>
-      <AppBackground />
 
       <Animated.ScrollView
-        contentContainerStyle={[
-          styles.scroll,
-          { paddingTop: insets.top + 56 + 16, paddingBottom: 220 },
-        ]}
+        contentContainerStyle={{ paddingBottom: 0 }}
         showsVerticalScrollIndicator={false}
         onScroll={scrollHandler}
         scrollEventThrottle={16}
       >
-        {/* Hero title — scrolls away */}
-        <View style={styles.heroTitleWrap}>
-          <View style={styles.heroTitleRow}>
-            <Text variant="h1" style={styles.heroTitleFlex}>สัตวแพทย์</Text>
+        {/* HERO — bg gradient + illustration right + text left (PetsList pattern) */}
+        <View style={[styles.hero, { height: HERO_HEIGHT + insets.top, paddingTop: insets.top }]}>
+          <LinearGradient
+            pointerEvents="none"
+            colors={['rgba(225,236,245,0)', '#E1ECF5']}
+            start={{ x: 0.5, y: 0 }}
+            end={{ x: 0.5, y: 1 }}
+            style={StyleSheet.absoluteFill}
+          />
+          <LinearGradient
+            pointerEvents="none"
+            colors={['rgba(255,253,251,0)', '#FFFDFB']}
+            start={{ x: 0.5, y: 0 }}
+            end={{ x: 0.5, y: 1 }}
+            style={styles.heroBottomFade}
+          />
+          <Image source={VET_HERO_IMG} style={styles.heroImage} resizeMode="contain" />
+          <View style={styles.heroText}>
+            <Text variant="bodyStrong" style={styles.heroTitle}>
+              สัตวแพทย์
+            </Text>
+            <Text variant="caption" color={semantic.textSecondary} style={styles.heroSubtitle}>
+              นัดหมาย ปรึกษาออนไลน์{'\n'}และประวัติการรักษา
+            </Text>
+          </View>
+        </View>
+
+        {/* SHEET — rounded-top white surface for the rest of content */}
+        <View
+          style={[
+            styles.sheet,
+            { minHeight: windowHeight - HERO_HEIGHT - insets.top + 24 },
+          ]}
+        >
+          {/* CTA row — big pill + chat icon */}
+          <View style={styles.addWrap}>
+            <Pressable
+              onPress={() => navigation.navigate('BookAppointment')}
+              style={({ pressed }) => [styles.addBtn, pressed && { opacity: 0.9 }]}
+              accessibilityRole="button"
+              accessibilityLabel="จองนัดหมาย"
+            >
+              <Text variant="bodyStrong" color={semantic.onPrimary} style={styles.addBtnText}>
+                จองนัดหมาย
+              </Text>
+            </Pressable>
             <Pressable
               onPress={onChatPress}
               style={({ pressed }) => [styles.headerIconBtn, pressed && styles.iconBtnPressed]}
+              accessibilityRole="button"
+              accessibilityLabel="ประวัติแชท"
             >
               <Icon name="MessageCircle" size={20} color={semantic.textPrimary} />
             </Pressable>
           </View>
-          <Text variant="body" color={semantic.textSecondary}>
-            นัดหมาย ปรึกษาออนไลน์ และประวัติการรักษา
-          </Text>
-        </View>
 
       {/* Quick action bento — 2 cards per Figma */}
       <View style={styles.bentoRow}>
-        <Card
-          variant="elevated"
-          padding={0}
-          onPress={() => navigation.navigate('BookAppointment')}
-          style={styles.bentoTile}
-        >
-          <View style={styles.bentoCardInner}>
-            <View style={styles.bentoTextCol}>
-              <Text variant="bodyStrong" style={styles.bentoTitle} numberOfLines={1}>
-                จองนัดคลินิก
-              </Text>
-              <Text variant="caption" color={semantic.textSecondary} style={styles.bentoLabel}>
-                การบริการ
-              </Text>
-              <Text variant="bodyStrong" style={styles.bentoBody} color={semantic.primary} numberOfLines={1}>
-                ตรวจ
-              </Text>
-              <Text variant="bodyStrong" style={styles.bentoBody} numberOfLines={1}>
-                ฉีดวัคซีน อาบน้ำ
-              </Text>
+        {false && (
+          <Card
+            variant="elevated"
+            padding={0}
+            onPress={() => navigation.navigate('BookAppointment')}
+            style={styles.bentoTile}
+          >
+            <View style={styles.bentoCardInner}>
+              <View style={styles.bentoTextCol}>
+                <Text variant="bodyStrong" style={styles.bentoTitle} numberOfLines={1}>
+                  จองนัดคลินิก
+                </Text>
+                <Text variant="caption" color={semantic.textSecondary} style={styles.bentoLabel}>
+                  การบริการ
+                </Text>
+                <Text variant="bodyStrong" style={styles.bentoBody} color={semantic.primary} numberOfLines={1}>
+                  ตรวจ
+                </Text>
+                <Text variant="bodyStrong" style={styles.bentoBody} numberOfLines={1}>
+                  ฉีดวัคซีน อาบน้ำ
+                </Text>
+              </View>
+              <Image source={PET_BOOKING_IMG} style={styles.bentoMascotBooking} resizeMode="contain" />
             </View>
-            <Image source={PET_BOOKING_IMG} style={styles.bentoMascotBooking} resizeMode="contain" />
-          </View>
-        </Card>
+          </Card>
+        )}
 
         <Pressable
           onPress={() => {
@@ -171,40 +215,61 @@ export default function VetHubScreen({ navigation }: Props) {
             pressed && styles.bentoCardPressed,
           ]}
         >
+          <LinearGradient
+            colors={['#FFE9A0', '#F5C26B', '#E0A23C']}
+            locations={[0, 0.55, 1]}
+            start={{ x: 0.1, y: 0 }}
+            end={{ x: 0.9, y: 1 }}
+            style={StyleSheet.absoluteFill}
+            pointerEvents="none"
+          />
           <View style={styles.bentoCardInner}>
             <Svg
-              width={200}
-              height={200}
+              width={220}
+              height={220}
               viewBox="0 0 200 200"
               style={styles.bentoEllipseGlow}
               pointerEvents="none"
             >
               <Defs>
                 <RadialGradient id="glowRG" cx="50%" cy="50%" r="50%">
-                  <Stop offset="0%" stopColor="#9F1239" stopOpacity="0.35" />
-                  <Stop offset="100%" stopColor="#9F1239" stopOpacity="0" />
+                  <Stop offset="0%" stopColor="#FFFFFF" stopOpacity="0.55" />
+                  <Stop offset="60%" stopColor="#FFE7A0" stopOpacity="0.25" />
+                  <Stop offset="100%" stopColor="#FFE7A0" stopOpacity="0" />
                 </RadialGradient>
               </Defs>
               <Circle cx="100" cy="100" r="100" fill="url(#glowRG)" />
             </Svg>
             <View style={styles.bentoTextCol}>
-              <Text variant="bodyStrong" style={styles.bentoTitle} numberOfLines={1}>
+              <Text
+                variant="caption"
+                color="rgba(76,29,5,0.7)"
+                style={styles.bentoEyebrow}
+                numberOfLines={1}
+              >
                 นัดที่กำลังจะถึง
-              </Text>
-              <Text variant="caption" color={semantic.textSecondary} style={styles.bentoLabel}>
-                การบริการ
               </Text>
               {upcoming[0] ? (
                 <>
-                  <Text variant="bodyStrong" style={styles.bentoBody} color={semantic.primary} numberOfLines={1}>
+                  <Text
+                    variant="bodyStrong"
+                    style={styles.bentoHero}
+                    color="#5C2D05"
+                    numberOfLines={1}
+                  >
                     {upcoming[0].typeLabel}
                   </Text>
-                  <Text variant="bodyStrong" style={styles.bentoBody} numberOfLines={1}>
-                    {thDateLong(upcoming[0].dateISO)}
+                  <Text
+                    variant="bodyStrong"
+                    color="#7C2D12"
+                    style={styles.bentoSubtext}
+                    numberOfLines={1}
+                  >
+                    {thDateLong(upcoming[0].dateISO)} · {upcoming[0].time}
                   </Text>
                 </>
               ) : (
-                <Text variant="bodyStrong" style={styles.bentoBody} numberOfLines={1} color={semantic.textMuted}>
+                <Text variant="bodyStrong" style={styles.bentoHero} numberOfLines={1} color="rgba(76,29,5,0.5)">
                   ไม่มีนัด
                 </Text>
               )}
@@ -218,20 +283,11 @@ export default function VetHubScreen({ navigation }: Props) {
         </Pressable>
       </View>
 
-      {/* Tab switcher */}
-      <View style={styles.tabRow}>
-        <TabBtn label="นัดหมาย" active={tab === 'upcoming'} onPress={() => setTab('upcoming')} />
-        <TabBtn label="สัตวแพทย์" active={tab === 'online'} onPress={() => setTab('online')} />
-        <TabBtn label="ประวัติ" active={tab === 'history'} onPress={() => setTab('history')} />
-      </View>
-
-      {tab === 'upcoming' && (
-        <UpcomingTab appointments={upcoming} navigation={navigation} />
-      )}
-      {tab === 'online' && (
-        <OnlineTab vets={onlineVets} navigation={navigation} />
-      )}
-      {tab === 'history' && <HistoryTab appointments={past} navigation={navigation} />}
+      <UpcomingTab
+        appointments={[...upcoming, ...past]}
+        navigation={navigation}
+      />
+        </View>
       </Animated.ScrollView>
 
       {/* Sticky AppBar — fades in on scroll */}
@@ -326,14 +382,25 @@ function UpcomingTab({
           <View key={dateISO} style={styles.dateGroup}>
             <DateSectionHeader dateISO={dateISO} />
             <View style={styles.list}>
-              {items.map((a) => (
-                <View key={a.id} style={styles.apptItemRow}>
-                  <TimeBox time={a.time} />
-                  <View style={{ flex: 1 }}>
-                    <AppointmentCardNew appointment={a} navigation={navigation} />
+              {items.map((a) => {
+                const isHistory = a.status !== 'upcoming';
+                const theme = isHistory
+                  ? getMutedTheme()
+                  : getApptTheme(a.type === 'consultation');
+                return (
+                  <View key={a.id} style={styles.apptItemRow}>
+                    <TimeBox time={a.time} theme={theme} />
+                    <View style={{ flex: 1 }}>
+                      <AppointmentCardNew
+                        appointment={a}
+                        navigation={navigation}
+                        theme={theme}
+                        isHistory={isHistory}
+                      />
+                    </View>
                   </View>
-                </View>
-              ))}
+                );
+              })}
             </View>
           </View>
         ))
@@ -410,9 +477,66 @@ function DateSectionHeader({ dateISO }: { dateISO: string }) {
   );
 }
 
-function TimeBox({ time }: { time: string }) {
+type ApptTheme = {
+  darkBg: string;
+  darkText: string;
+  lightBg: string;
+  lightBorder: string;
+  tintBg: string;
+  glowAccent: string;
+  timeGlow: string;
+};
+
+const getApptTheme = (isOnline: boolean): ApptTheme =>
+  isOnline
+    ? {
+        darkBg: colors.ocean[900],
+        darkText: colors.ocean[700],
+        lightBg: colors.ocean[100],
+        lightBorder: colors.ocean[200],
+        tintBg: '#FFFFFF',
+        glowAccent: colors.ocean[700],
+        timeGlow: colors.ocean[50],
+      }
+    : {
+        darkBg: colors.rose[900],
+        darkText: colors.rose[700],
+        lightBg: colors.rose[100],
+        lightBorder: colors.rose[200],
+        tintBg: '#FFFFFF',
+        glowAccent: colors.rose[700],
+        timeGlow: colors.rose[50],
+      };
+
+const getMutedTheme = (): ApptTheme => ({
+  darkBg: colors.neutral[600],
+  darkText: colors.neutral[600],
+  lightBg: colors.neutral[100],
+  lightBorder: colors.neutral[200],
+  tintBg: '#FFFFFF',
+  glowAccent: colors.neutral[500],
+  timeGlow: colors.neutral[100],
+});
+
+function TimeBox({ time, theme }: { time: string; theme: ApptTheme }) {
+  const glowId = `timeGlow-${theme.timeGlow.replace('#', '')}`;
   return (
-    <View style={styles.timeBox}>
+    <View style={[styles.timeBox, { backgroundColor: theme.tintBg }]}>
+      <Svg
+        width={147}
+        height={147}
+        style={styles.timeBoxGlow}
+        pointerEvents="none"
+      >
+        <Defs>
+          <RadialGradient id={glowId} cx="50%" cy="50%" r="50%">
+            <Stop offset="0%" stopColor={theme.timeGlow} stopOpacity="0.7" />
+            <Stop offset="55%" stopColor={theme.timeGlow} stopOpacity="0.3" />
+            <Stop offset="100%" stopColor={theme.timeGlow} stopOpacity="0" />
+          </RadialGradient>
+        </Defs>
+        <Circle cx="73.5" cy="73.5" r="73.5" fill={`url(#${glowId})`} />
+      </Svg>
       <Icon name="Clock" size={16} color={semantic.textPrimary} strokeWidth={2} />
       <Text variant="bodyStrong" style={styles.timeBoxText}>
         {time}
@@ -424,10 +548,12 @@ function TimeBox({ time }: { time: string }) {
 function AppointmentCardNew({
   appointment,
   navigation,
+  theme,
   isHistory = false,
 }: {
   appointment: Appointment;
   navigation: Props['navigation'];
+  theme: ApptTheme;
   isHistory?: boolean;
 }) {
   const pet = mockPets.find((p) => p.id === appointment.petId);
@@ -453,82 +579,144 @@ function AppointmentCardNew({
     if (teleVet) navigation.navigate('VideoCall', { vetId: teleVet.id });
   };
 
+  const petImage = isOnline ? PET_VIDEOCALL_IMG : PET_DRIVE_IMG;
+
   return (
-    <Card variant="elevated" padding="md" onPress={onCardPress}>
-      {/* Top: clinic/online avatar + name + chips */}
-      <View style={styles.vetTopRow}>
-        <View style={styles.vetAvatar}>
-          <Icon
-            name={isOnline ? 'Video' : 'Hospital'}
-            size={26}
-            color={semantic.primary}
-            strokeWidth={1.8}
+    <Pressable
+      onPress={onCardPress}
+      style={({ pressed }) => [styles.apptCardOuter, pressed && styles.apptCardPressed]}
+    >
+      <View style={styles.apptCard}>
+      {/* Top: dark colored portion — clinic avatar + name + chips */}
+      <View style={styles.apptCardTopShadow}>
+      <View style={[styles.apptCardTop, { backgroundColor: theme.darkBg }]}>
+        <Image
+          source={petImage}
+          style={isOnline ? styles.apptPetImageOnline : styles.apptPetImage}
+          resizeMode="contain"
+        />
+        <Svg
+          width={147}
+          height={147}
+          style={styles.apptCardTopGlow}
+          pointerEvents="none"
+        >
+          <Defs>
+            <RadialGradient
+              id={`cardGlow-${theme.glowAccent.replace('#', '')}`}
+              cx="50%"
+              cy="50%"
+              r="50%"
+            >
+              <Stop offset="0%" stopColor={theme.glowAccent} stopOpacity="0.95" />
+              <Stop offset="55%" stopColor={theme.glowAccent} stopOpacity="0.4" />
+              <Stop offset="100%" stopColor={theme.glowAccent} stopOpacity="0" />
+            </RadialGradient>
+          </Defs>
+          <Circle
+            cx="73.5"
+            cy="73.5"
+            r="73.5"
+            fill={`url(#cardGlow-${theme.glowAccent.replace('#', '')})`}
           />
-        </View>
-        <View style={{ flex: 1 }}>
-          <Text variant="bodyStrong" numberOfLines={1} style={{ fontSize: 14 }}>
-            {appointment.clinicName}
-          </Text>
-          <View style={styles.chipRow}>
-            <ChipItem icon="UserRound" label={appointment.vetName} />
-            {vet?.specialty ? <ChipItem icon="Stethoscope" label={vet.specialty} /> : null}
-            <ChipItem icon={meta.icon as any} label={appointment.typeLabel} />
+        </Svg>
+        <View style={[styles.vetTopRow, styles.vetTopRowWithImage]}>
+          <View style={{ flex: 1 }}>
+            <Text
+              variant="bodyStrong"
+              numberOfLines={1}
+              style={styles.apptCardTitleInverse}
+            >
+              {appointment.clinicName}
+            </Text>
+            <View style={styles.chipRow}>
+              <ChipItem icon="UserRound" label={appointment.vetName} inverse />
+              <ChipItem icon={meta.icon as any} label={appointment.typeLabel} inverse />
+            </View>
           </View>
         </View>
       </View>
+      </View>
 
-      <View style={styles.divider} />
-
-      {/* Bottom: pet info (split into 2 lines) + pet avatar */}
-      <View style={styles.vetBottomRow}>
-        <View style={styles.vetBottomInfo}>
-          <View style={styles.chipRow}>
-            <ChipItem icon="PawPrint" label={`น้อง${appointment.petName}`} />
+      {/* Bottom: white portion — pet info chips + actions */}
+      <View style={styles.apptCardBottom}>
+        <View style={styles.vetBottomRow}>
+          <View style={styles.vetBottomInfo}>
+            <View style={styles.petInfoRow}>
+              <PetInfoItem
+                icon="PawPrint"
+                label="ชื่อ"
+                value={`น้อง${appointment.petName}`}
+              />
+              {pet?.speciesLabel ? (
+                <>
+                  <View style={styles.petInfoDivider} />
+                  <PetInfoItem icon={speciesIcon} label="ชนิด" value={pet.speciesLabel} />
+                </>
+              ) : null}
+              {sexLabel ? (
+                <>
+                  <View style={styles.petInfoDivider} />
+                  <PetInfoItem icon="User" label="เพศ" value={sexLabel} />
+                </>
+              ) : null}
+              {ageYears !== null ? (
+                <>
+                  <View style={styles.petInfoDivider} />
+                  <PetInfoItem icon="Cake" label="อายุ" value={`${ageYears} ปี`} />
+                </>
+              ) : null}
+            </View>
           </View>
-          <View style={styles.chipRow}>
-            {pet?.speciesLabel ? <ChipItem icon={speciesIcon} label={pet.speciesLabel} /> : null}
-            {sexLabel ? <ChipItem icon="User" label={sexLabel} /> : null}
-            {ageYears !== null ? <ChipItem icon="Cake" label={`${ageYears} ปี`} /> : null}
-          </View>
-        </View>
-        <View style={styles.iconBtnRow}>
-          {isOnline ? (
-            <>
-              <Pressable
-                onPress={onChat}
-                style={({ pressed }) => [styles.iconBtn, pressed && styles.iconBtnPressed]}
-              >
-                <Icon name="MessageCircle" size={20} color={semantic.primary} />
-              </Pressable>
-              {!isHistory && (
+          <View style={styles.iconBtnRow}>
+            {isOnline ? (
+              <>
                 <Pressable
-                  onPress={canVideoCall ? onVideoCall : undefined}
-                  disabled={!canVideoCall}
+                  onPress={onChat}
                   style={({ pressed }) => [
                     styles.iconBtn,
-                    !canVideoCall && styles.iconBtnDisabled,
-                    pressed && canVideoCall && styles.iconBtnPressed,
+                    { backgroundColor: theme.lightBg },
+                    pressed && styles.iconBtnPressed,
                   ]}
                 >
-                  <Icon
-                    name="Video"
-                    size={20}
-                    color={canVideoCall ? semantic.primary : semantic.textMuted}
-                  />
+                  <Icon name="MessageCircle" size={16} color={theme.darkBg} strokeWidth={2.5} />
                 </Pressable>
-              )}
-            </>
-          ) : (
-            <Pressable
-              onPress={() => {}}
-              style={({ pressed }) => [styles.iconBtn, pressed && styles.iconBtnPressed]}
-            >
-              <Icon name="MapPin" size={20} color={semantic.primary} />
-            </Pressable>
-          )}
+                {!isHistory && (
+                  <Pressable
+                    onPress={canVideoCall ? onVideoCall : undefined}
+                    disabled={!canVideoCall}
+                    style={({ pressed }) => [
+                      styles.iconBtn,
+                      { backgroundColor: theme.lightBg },
+                      !canVideoCall && styles.iconBtnDisabled,
+                      pressed && canVideoCall && styles.iconBtnPressed,
+                    ]}
+                  >
+                    <Icon
+                      name="Video"
+                      size={18}
+                      color={canVideoCall ? theme.darkBg : semantic.textMuted}
+                    />
+                  </Pressable>
+                )}
+              </>
+            ) : (
+              <Pressable
+                onPress={() => {}}
+                style={({ pressed }) => [
+                  styles.iconBtn,
+                  { backgroundColor: theme.lightBg },
+                  pressed && styles.iconBtnPressed,
+                ]}
+              >
+                <Icon name="MapPin" size={18} color={theme.darkBg} />
+              </Pressable>
+            )}
+          </View>
         </View>
       </View>
-    </Card>
+      </View>
+    </Pressable>
   );
 }
 
@@ -595,18 +783,22 @@ function HistoryTab({
           <View key={dateISO} style={styles.dateGroup}>
             <DateSectionHeader dateISO={dateISO} />
             <View style={styles.list}>
-              {items.map((a) => (
-                <View key={a.id} style={styles.apptItemRow}>
-                  <TimeBox time={a.time} />
-                  <View style={{ flex: 1 }}>
-                    <AppointmentCardNew
-                      appointment={a}
-                      navigation={navigation}
-                      isHistory
-                    />
+              {items.map((a) => {
+                const theme = getApptTheme(a.type === 'consultation');
+                return (
+                  <View key={a.id} style={styles.apptItemRow}>
+                    <TimeBox time={a.time} theme={theme} />
+                    <View style={{ flex: 1 }}>
+                      <AppointmentCardNew
+                        appointment={a}
+                        navigation={navigation}
+                        theme={theme}
+                        isHistory
+                      />
+                    </View>
                   </View>
-                </View>
-              ))}
+                );
+              })}
             </View>
           </View>
         ))
@@ -691,13 +883,13 @@ function OnlineTab({ vets, navigation }: { vets: TeleVet[]; navigation: Props['n
                   </View>
                   <View style={styles.iconBtnRow}>
                     <Pressable onPress={onChat} style={({ pressed }) => [styles.iconBtn, pressed && styles.iconBtnPressed]}>
-                      <Icon name="MessageCircle" size={20} color={semantic.primary} />
+                      <Icon name="MessageCircle" size={16} color={semantic.primary} strokeWidth={2.5} />
                     </Pressable>
                     <Pressable
                       onPress={() => navigation.navigate('BookTeleVet')}
                       style={({ pressed }) => [styles.iconBtn, pressed && styles.iconBtnPressed]}
                     >
-                      <Icon name="CalendarPlus" size={20} color={semantic.primary} />
+                      <Icon name="CalendarPlus" size={18} color={semantic.primary} />
                     </Pressable>
                   </View>
                 </View>
@@ -710,22 +902,47 @@ function OnlineTab({ vets, navigation }: { vets: TeleVet[]; navigation: Props['n
   );
 }
 
-function ChipItem({
+function PetInfoItem({
   icon,
   label,
+  value,
 }: {
   icon: ComponentProps<typeof Icon>['name'];
   label: string;
+  value: string;
 }) {
   return (
+    <View style={styles.petInfoItem}>
+      <View style={styles.petInfoLabelRow}>
+        <Icon name={icon} size={11} color={semantic.textMuted} strokeWidth={2} />
+        <Text style={styles.petInfoLabel}>{label}</Text>
+      </View>
+      <Text style={styles.petInfoValue} numberOfLines={1}>
+        {value}
+      </Text>
+    </View>
+  );
+}
+
+function ChipItem({
+  icon,
+  label,
+  inverse = false,
+}: {
+  icon: ComponentProps<typeof Icon>['name'];
+  label: string;
+  inverse?: boolean;
+}) {
+  const iconColor = inverse ? 'rgba(255,255,255,0.85)' : semantic.textMuted;
+  const textColor = inverse ? 'rgba(255,255,255,0.95)' : semantic.textSecondary;
+  return (
     <View style={styles.chipItem}>
-      <Icon name={icon} size={11} color={semantic.textMuted} strokeWidth={2} />
+      <Icon name={icon} size={11} color={iconColor} strokeWidth={2} />
       <Text
         variant="caption"
-        color={semantic.textSecondary}
         numberOfLines={1}
         ellipsizeMode="tail"
-        style={[styles.chipItemText, { fontSize: 10 }]}
+        style={[styles.chipItemText, { fontSize: 10, color: textColor }]}
       >
         {label}
       </Text>
@@ -734,7 +951,7 @@ function ChipItem({
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1 },
+  root: { flex: 1, backgroundColor: '#FFFFFF' },
   scroll: {
     paddingHorizontal: spacing.xl,
   },
@@ -749,6 +966,76 @@ const styles = StyleSheet.create({
   },
   heroTitleFlex: {
     flex: 1,
+  },
+  hero: {
+    position: 'relative',
+    overflow: 'hidden',
+    paddingHorizontal: spacing.xl,
+  },
+  heroBottomFade: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    height: 37,
+  },
+  heroImage: {
+    position: 'absolute',
+    right: spacing.xl,
+    top: 70,
+    width: 140,
+    height: 140,
+  },
+  heroText: {
+    position: 'absolute',
+    left: spacing.xl,
+    top: 110,
+    width: 188,
+    gap: spacing.sm,
+  },
+  heroTitle: {
+    fontSize: 28,
+    lineHeight: 36,
+    color: '#1A1A1F',
+  },
+  heroSubtitle: {
+    fontSize: 16,
+    lineHeight: 24,
+    color: '#4A4A50',
+  },
+  sheet: {
+    backgroundColor: semantic.background,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    marginTop: -24,
+    paddingHorizontal: spacing.xl,
+    paddingBottom: 220,
+    shadowColor: '#000',
+    shadowOpacity: 0.06,
+    shadowRadius: 16,
+    shadowOffset: { width: 0, height: -6 },
+    elevation: 6,
+  },
+  addWrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    marginTop: -24,
+    marginBottom: spacing.lg,
+  },
+  addBtn: {
+    flex: 1,
+    height: 48,
+    borderRadius: 999,
+    backgroundColor: semantic.primary,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.sm,
+    overflow: 'hidden',
+  },
+  addBtnText: {
+    fontSize: 15,
   },
   appbar: {
     position: 'absolute',
@@ -821,16 +1108,14 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   bentoCard: {
-    backgroundColor: '#FBF3F4',
-    borderWidth: 1,
-    borderColor: '#EBC9CF',
+    backgroundColor: '#F5C26B',
     borderRadius: 16,
     overflow: 'hidden',
-    shadowColor: '#5E303C',
-    shadowOpacity: 0.06,
-    shadowRadius: 4,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 2,
+    shadowColor: '#92400E',
+    shadowOpacity: 0.18,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 3,
   },
   bentoCardPressed: {
     opacity: 0.9,
@@ -866,6 +1151,23 @@ const styles = StyleSheet.create({
     fontSize: 13,
     lineHeight: 18,
   },
+  bentoEyebrow: {
+    fontSize: 13,
+    letterSpacing: 0.4,
+    marginBottom: 6,
+    textTransform: 'uppercase',
+  },
+  bentoHero: {
+    fontSize: 20,
+    lineHeight: 28,
+    marginBottom: 4,
+    includeFontPadding: false,
+    paddingVertical: 2,
+  },
+  bentoSubtext: {
+    fontSize: 14,
+    lineHeight: 18,
+  },
   bentoMascotBooking: {
     position: 'absolute',
     width: 118,
@@ -877,13 +1179,13 @@ const styles = StyleSheet.create({
     position: 'absolute',
     width: 107,
     height: 118,
-    right: -11,
-    bottom: -31,
+    right: -3,
+    bottom: -15,
   },
   tabRow: {
     flexDirection: 'row',
     alignSelf: 'stretch',
-    backgroundColor: semantic.surface,
+    backgroundColor: '#F2F2F3',
     borderRadius: radii.pill,
     padding: 4,
     marginBottom: spacing.xl,
@@ -917,6 +1219,116 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
     gap: spacing.sm,
   },
+  apptCardOuter: {
+    borderRadius: 16,
+    backgroundColor: 'transparent',
+    shadowColor: '#000',
+    shadowOpacity: 0.08,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 2,
+  },
+  apptCard: {
+    borderRadius: 16,
+    overflow: 'hidden',
+    backgroundColor: '#FFFFFF',
+  },
+  apptCardPressed: {
+    opacity: 0.95,
+    transform: [{ scale: 0.997 }],
+  },
+  apptPetImage: {
+    position: 'absolute',
+    right: 0,
+    bottom: -20,
+    width: 74,
+    height: 82,
+    zIndex: 5,
+  },
+  apptPetImageOnline: {
+    position: 'absolute',
+    right: -10,
+    bottom: -30,
+    width: 86,
+    height: 95,
+    zIndex: 5,
+  },
+  vetTopRowWithImage: {
+    paddingRight: 64,
+  },
+  apptCardTopShadow: {
+    borderBottomLeftRadius: 16,
+    borderBottomRightRadius: 16,
+    zIndex: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.12,
+    shadowRadius: 3,
+    elevation: 2,
+  },
+  apptCardTop: {
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.md,
+    borderBottomLeftRadius: 16,
+    borderBottomRightRadius: 16,
+    overflow: 'hidden',
+  },
+  apptCardTopGlow: {
+    position: 'absolute',
+    top: -42,
+    right: -80,
+  },
+  apptCardBottom: {
+    backgroundColor: '#FFFFFF',
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+  },
+  apptAvatarLight: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: '#FFFFFF',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  apptCardTitleInverse: {
+    fontSize: 14,
+    color: '#FFFFFF',
+  },
+  petInfoRow: {
+    flexDirection: 'row',
+    flexWrap: 'nowrap',
+    alignItems: 'flex-start',
+    gap: spacing.sm,
+    marginTop: 4,
+    overflow: 'hidden',
+  },
+  petInfoItem: {
+    flexDirection: 'column',
+    alignItems: 'flex-start',
+    gap: 0,
+  },
+  petInfoDivider: {
+    width: StyleSheet.hairlineWidth,
+    height: 24,
+    alignSelf: 'center',
+    backgroundColor: 'rgba(0,0,0,0.12)',
+  },
+  petInfoLabelRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  petInfoLabel: {
+    fontSize: 10,
+    color: semantic.textMuted,
+    fontFamily: 'GoogleSans_400Regular',
+  },
+  petInfoValue: {
+    fontSize: 10,
+    color: semantic.textPrimary,
+    fontFamily: 'GoogleSans_400Regular',
+  },
   timeBox: {
     width: 56,
     height: 56,
@@ -926,8 +1338,13 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     borderRadius: 24,
     borderWidth: 0.5,
-    borderColor: '#F5E4E7',
+    borderColor: '#E5E5E5',
     overflow: 'hidden',
+  },
+  timeBoxGlow: {
+    position: 'absolute',
+    top: -0.5,
+    right: -100.5,
   },
   timeBoxText: {
     fontSize: 14,
@@ -1076,15 +1493,18 @@ const styles = StyleSheet.create({
   },
   iconBtnRow: {
     flexDirection: 'row',
-    gap: spacing.xs,
+    gap: spacing.sm,
   },
   iconBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
+    width: 32,
+    height: 32,
+    borderRadius: 10,
     backgroundColor: semantic.primaryMuted,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  iconBtnGhost: {
+    backgroundColor: 'transparent',
   },
   iconBtnPressed: {
     opacity: 0.7,

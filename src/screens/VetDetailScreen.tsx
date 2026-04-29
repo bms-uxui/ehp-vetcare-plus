@@ -242,18 +242,13 @@ export default function VetDetailScreen({ navigation, route }: Props) {
 
             <View style={styles.actionRow}>
               <Pressable
-                onPress={onChat}
-                style={({ pressed }) => [styles.chatBtn, pressed && styles.btnPressed]}
-              >
-                <Icon name="MessageCircle" size={20} color="#1A1A1A" />
-              </Pressable>
-              <Pressable
-                onPress={() => navigation.navigate('BookTeleVet')}
+                onPress={() =>
+                  navigation.navigate('BookAppointment', { selectedVetId: vetId })
+                }
                 style={({ pressed }) => [styles.bookingBtn, pressed && styles.btnPressed]}
               >
-                <Icon name="CalendarPlus" size={20} color={semantic.onPrimary} />
-                <Text variant="bodyStrong" color={semantic.onPrimary} style={{ fontSize: 14 }}>
-                  จองปรึกษาออนไลน์
+                <Text variant="bodyStrong" color={semantic.onPrimary} style={{ fontSize: 15 }}>
+                  เลือกแพทย์คนนี้
                 </Text>
               </Pressable>
             </View>

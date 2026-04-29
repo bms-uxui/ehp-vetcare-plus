@@ -68,7 +68,7 @@ export type RootStackParamList = {
       }
     | undefined;
   AppointmentDetail: { appointmentId: string };
-  BookAppointment: undefined;
+  BookAppointment: { selectedVetId?: string } | undefined;
   HealthRecords: { petId: string };
   VisitDetail: { visitId: string };
   Notifications: undefined;

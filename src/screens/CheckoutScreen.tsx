@@ -21,7 +21,7 @@ import {
   AppBackground,
   Button,
   Icon,
-  StickyAppBar,
+  SubPageHeader,
   Text,
 } from '../components';
 import { semantic, spacing } from '../theme';
@@ -274,37 +274,18 @@ export default function CheckoutScreen({ route, navigation }: Props) {
     <View style={styles.root}>
       <AppBackground />
 
-      <StickyAppBar
-        scrollY={scrollY}
-        fadeStartAt={60}
-        fadeEndAt={120}
+      <SubPageHeader
         title="ชำระเงิน"
-        leading={{
-          icon: 'ChevronLeft',
-          onPress: () => navigation.goBack(),
-          accessibilityLabel: 'ย้อนกลับ',
-        }}
+        onBack={() => navigation.goBack()}
       />
 
       <Animated.ScrollView
-        contentContainerStyle={[
-          styles.scroll,
-          {
-            paddingTop: insets.top + 56,
-            paddingBottom: 220,
-          },
-        ]}
+        style={styles.flex}
+        contentContainerStyle={[styles.scroll, { paddingTop: spacing.md, paddingBottom: 220 }]}
         showsVerticalScrollIndicator={false}
         onScroll={scrollHandler}
         scrollEventThrottle={16}
       >
-        {/* Hero header */}
-        <View style={styles.hero}>
-          <Text weight="700" style={styles.heroTitle}>
-            ชำระเงิน
-          </Text>
-        </View>
-
         {/* Address card */}
         <Pressable
           style={({ pressed }) => [
@@ -971,6 +952,7 @@ const styles = StyleSheet.create({
   root: {
     flex: 1,
   },
+  flex: { flex: 1 },
   scroll: {
     paddingHorizontal: 0,
   },
