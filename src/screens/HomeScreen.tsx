@@ -421,15 +421,13 @@ export default function HomeScreen({ navigation }: Props) {
               pressed && { opacity: 0.9 },
             ]}
           >
-            <Card variant="elevated" padding="md" style={StyleSheet.flatten([{ flex: 1 }, styles.glassCard])}>
-              <LinearGradient
-                pointerEvents="none"
-                colors={['rgba(255,253,251,0)', 'rgba(244,201,210,0.7)']}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-                locations={[0.25, 1]}
-                style={StyleSheet.absoluteFill}
-              />
+            <LinearGradient
+              colors={['#FFFFFF', '#FFC5A8']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={[styles.strokeGradient, { flex: 1 }]}
+            >
+            <View style={styles.colorCard}>
               <View pointerEvents="none" style={styles.budgetIllus}>
                 <Image
                   source={require('../../assets/pet-budget.png')}
@@ -447,7 +445,7 @@ export default function HomeScreen({ navigation }: Props) {
                   </Text>
                   <Text
                     variant="h2"
-                    color={remaining < 0 ? '#C25450' : semantic.primary}
+                    color={remaining < 0 ? '#C25450' : '#B8552B'}
                     style={{ fontSize: 20, lineHeight: 30 }}
                     numberOfLines={1}
                   >
@@ -458,7 +456,8 @@ export default function HomeScreen({ navigation }: Props) {
                   </Text>
                 </View>
               </View>
-            </Card>
+            </View>
+            </LinearGradient>
           </Pressable>
 
           <Pressable
@@ -469,15 +468,13 @@ export default function HomeScreen({ navigation }: Props) {
               pressed && { opacity: 0.9 },
             ]}
           >
-            <Card variant="elevated" padding="md" style={StyleSheet.flatten([{ flex: 1 }, styles.glassCard])}>
-              <LinearGradient
-                pointerEvents="none"
-                colors={['rgba(255,253,251,0)', 'rgba(244,201,210,0.7)']}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-                locations={[0.25, 1]}
-                style={StyleSheet.absoluteFill}
-              />
+            <LinearGradient
+              colors={['#FFFFFF', '#B5DEBC']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={[styles.strokeGradient, { flex: 1 }]}
+            >
+            <View style={styles.colorCard}>
               <View pointerEvents="none" style={styles.mealIllus}>
                 <Image
                   source={require('../../assets/pet-meal-time.png')}
@@ -495,7 +492,7 @@ export default function HomeScreen({ navigation }: Props) {
                   </Text>
                   <Text
                     variant="h3"
-                    color={semantic.primary}
+                    color="#2E7D5B"
                     style={{ fontSize: 20, lineHeight: 30 }}
                     numberOfLines={1}
                   >
@@ -506,7 +503,8 @@ export default function HomeScreen({ navigation }: Props) {
                   </Text>
                 </View>
               </View>
-            </Card>
+            </View>
+            </LinearGradient>
           </Pressable>
         </View>
 
@@ -514,17 +512,15 @@ export default function HomeScreen({ navigation }: Props) {
         <Pressable
           onPress={() => navigation.navigate('Vet' as never)}
           android_ripple={RIPPLE}
-          style={({ pressed }) => (pressed ? { opacity: 0.9 } : null)}
+          style={({ pressed }) => [styles.cardShadow, pressed && { opacity: 0.9 }]}
         >
-          <Card variant="elevated" padding="lg" style={styles.glassCard}>
-            <LinearGradient
-              pointerEvents="none"
-              colors={['rgba(255,253,251,0)', 'rgba(244,201,210,0.7)']}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-              locations={[0.25, 1]}
-              style={StyleSheet.absoluteFill}
-            />
+          <LinearGradient
+            colors={['#FFFFFF', '#B7CCFF']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.strokeGradient}
+          >
+          <View style={styles.colorCardLg}>
             <View pointerEvents="none" style={styles.vetIllus}>
               <Image
                 source={require('../../assets/vet-service.png')}
@@ -539,14 +535,14 @@ export default function HomeScreen({ navigation }: Props) {
               <View style={{ marginTop: spacing.sm }}>
                 <Text
                   variant="h3"
-                  color={semantic.primary}
+                  color="#2E54B8"
                   style={{ fontSize: 20, lineHeight: 30 }}
                 >
                   ดูแลสัตว์ที่คุณรัก
                 </Text>
                 <Text
                   variant="h3"
-                  color={semantic.primary}
+                  color="#2E54B8"
                   style={{ fontSize: 20, lineHeight: 30 }}
                 >
                   กับแพทย์ผู้เชี่ยวชาญ
@@ -554,20 +550,21 @@ export default function HomeScreen({ navigation }: Props) {
               </View>
               <View style={styles.bulletList}>
                 <View style={styles.bulletRow}>
-                  <Icon name="CalendarCheck" size={16} color={semantic.primary} strokeWidth={2.2} />
+                  <Icon name="CalendarCheck" size={16} color="#2E54B8" strokeWidth={2.2} />
                   <Text variant="caption" color={semantic.textPrimary}>
                     จองนัดคลินิก
                   </Text>
                 </View>
                 <View style={styles.bulletRow}>
-                  <Icon name="MessageCircle" size={16} color={semantic.primary} strokeWidth={2.2} />
+                  <Icon name="MessageCircle" size={16} color="#2E54B8" strokeWidth={2.2} />
                   <Text variant="caption" color={semantic.textPrimary}>
                     ปรึกษาออนไลน์
                   </Text>
                 </View>
               </View>
             </View>
-          </Card>
+          </View>
+          </LinearGradient>
         </Pressable>
 
         {/* ── PRODUCTS ── */}
@@ -786,6 +783,20 @@ const styles = StyleSheet.create({
   bentoTile: {
     flex: 1,
     minHeight: 130,
+    borderRadius: 24,
+    shadowColor: '#1A1A2E',
+    shadowOpacity: 0.08,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 3,
+  },
+  cardShadow: {
+    borderRadius: 24,
+    shadowColor: '#1A1A2E',
+    shadowOpacity: 0.08,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 3,
   },
   bentoTileOverflow: {
     overflow: 'hidden',
@@ -824,11 +835,28 @@ const styles = StyleSheet.create({
     height: 188,
   },
   glassCard: {
-    shadowColor: '#7E3D4F',
-    shadowOpacity: 0.3,
-    shadowRadius: 32,
-    shadowOffset: { width: 0, height: 18 },
-    elevation: 16,
+    shadowColor: '#1A1A2E',
+    shadowOpacity: 0.32,
+    shadowRadius: 22,
+    shadowOffset: { width: 0, height: 14 },
+    elevation: 18,
+  },
+  strokeGradient: {
+    borderRadius: 24,
+    padding: 2,
+  },
+  colorCard: {
+    borderRadius: 22,
+    overflow: 'hidden',
+    padding: spacing.md,
+    flex: 1,
+    backgroundColor: '#FFFFFF',
+  },
+  colorCardLg: {
+    borderRadius: 22,
+    overflow: 'hidden',
+    padding: spacing.lg,
+    backgroundColor: '#FFFFFF',
   },
   bulletList: {
     marginTop: spacing.md,

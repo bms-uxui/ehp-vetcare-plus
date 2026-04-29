@@ -13,12 +13,40 @@ export type HealthCondition = {
   notes?: string;
 };
 
+export type Medication = {
+  name: string;
+  qty: string;
+  instructions: string;
+};
+
+export type LabResult = {
+  type: 'lab' | 'xray' | 'ultrasound' | 'other';
+  name: string;
+  result: string;
+};
+
+export type VisitRecord = {
+  id: string;
+  date: string;
+  vetName: string;
+  clinic: string;
+  vitals: {
+    weightKg: number;
+    heightCm?: number;
+    temperatureC: number;
+  };
+  symptoms: string;
+  diagnosis: string;
+  labResults?: LabResult[];
+  medications?: Medication[];
+};
+
 export type Pet = {
   id: string;
   name: string;
   emoji: string;
-  /** Optional photo. require() a local asset; falls back to emoji avatar. */
-  photo?: number;
+  /** Optional photo. require() a local asset or runtime { uri }; falls back to emoji avatar. */
+  photo?: number | { uri: string };
   species: 'dog' | 'cat' | 'rabbit' | 'other';
   speciesLabel: string;
   breed: string;
@@ -31,6 +59,7 @@ export type Pet = {
   neuteredDate?: string;
   vaccines: VaccineRecord[];
   conditions: HealthCondition[];
+  visits?: VisitRecord[];
 };
 
 export const mockPets: Pet[] = [
@@ -60,6 +89,61 @@ export const mockPets: Pet[] = [
     conditions: [
       { id: 'c1', name: 'ภูมิแพ้ผิวหนัง', since: '2024-05-10', notes: 'หลีกเลี่ยงอาหารเนื้อไก่' },
     ],
+    visits: [
+      {
+        id: 'vt1',
+        date: '2026-03-08',
+        vetName: 'สพ.ญ. ปรียา จันทรัตน์',
+        clinic: 'ปุกปุยสัตวแพทย์ PUKPUI Rabbit&Exotic Pet Clinic',
+        vitals: { weightKg: 9.4, heightCm: 41, temperatureC: 38.6 },
+        symptoms: 'คันบริเวณท้องและขาหลัง เกาบ่อย',
+        diagnosis: 'ภูมิแพ้ผิวหนังเรื้อรังกำเริบ ไม่พบเชื้อรา/ปรสิต',
+        labResults: [
+          { type: 'lab', name: 'CBC + Skin scraping', result: 'ปกติ ไม่พบไรขี้เรื้อน' },
+        ],
+        medications: [
+          { name: 'Apoquel 16 mg', qty: '14 เม็ด', instructions: 'ครึ่งเม็ด เช้า–เย็น 7 วัน' },
+          { name: 'Cetirizine 10 mg', qty: '7 เม็ด', instructions: '1 เม็ด หลังอาหารเช้า' },
+        ],
+      },
+      {
+        id: 'vt2',
+        date: '2025-12-04',
+        vetName: 'สพ.ช. สมชาย วงศ์เจริญ',
+        clinic: 'ปุกปุยสัตวแพทย์ PUKPUI Rabbit&Exotic Pet Clinic',
+        vitals: { weightKg: 9.1, heightCm: 41, temperatureC: 38.4 },
+        symptoms: 'ตรวจสุขภาพประจำปี + ฉีดเลปโตสไปโรซิส',
+        diagnosis: 'สุขภาพแข็งแรงดี ไม่พบความผิดปกติ',
+        medications: [],
+      },
+      {
+        id: 'vt3',
+        date: '2025-09-20',
+        vetName: 'สพ.ญ. ปรียา จันทรัตน์',
+        clinic: 'โรงพยาบาลสัตว์ทองหล่อ',
+        vitals: { weightKg: 8.7, heightCm: 40, temperatureC: 38.9 },
+        symptoms: 'ขาหลังขวาเดินกะเผลก หลังจากวิ่งเล่น',
+        diagnosis: 'ข้อต่อสะโพกอักเสบเล็กน้อย พักการออกกำลังกาย',
+        labResults: [
+          { type: 'xray', name: 'X-ray สะโพก', result: 'ไม่มีกระดูกหัก ข้อต่อปกติ' },
+        ],
+        medications: [
+          { name: 'Carprofen 50 mg', qty: '10 เม็ด', instructions: '1 เม็ด หลังอาหารเช้า 5 วัน' },
+        ],
+      },
+      {
+        id: 'vt4',
+        date: '2025-06-15',
+        vetName: 'สพ.ญ. ปรียา จันทรัตน์',
+        clinic: 'โรงพยาบาลสัตว์ทองหล่อ',
+        vitals: { weightKg: 8.3, heightCm: 39, temperatureC: 38.5 },
+        symptoms: 'ตรวจสุขภาพและถ่ายพยาธิ',
+        diagnosis: 'สุขภาพดี ตรวจอุจจาระไม่พบไข่พยาธิ',
+        medications: [
+          { name: 'Drontal Plus', qty: '1 เม็ด', instructions: 'รับประทานครั้งเดียว' },
+        ],
+      },
+    ],
   },
   {
     id: 'p2',
@@ -83,6 +167,47 @@ export const mockPets: Pet[] = [
       { id: 'v10', name: 'วัคซีน FIP', date: '2024-08-30', nextDue: '2025-08-30', clinic: 'คลินิกแมวมะลิ' },
     ],
     conditions: [],
+    visits: [
+      {
+        id: 'vt5',
+        date: '2026-02-14',
+        vetName: 'สพ.ญ. ณัฐกานต์ ศิริทรัพย์',
+        clinic: 'คลินิกแมวมะลิ',
+        vitals: { weightKg: 3.8, heightCm: 24, temperatureC: 38.7 },
+        symptoms: 'ตรวจสุขภาพประจำปี',
+        diagnosis: 'สุขภาพแข็งแรง น้ำหนักอยู่ในเกณฑ์เหมาะสม',
+        labResults: [
+          { type: 'lab', name: 'Blood chemistry', result: 'ค่าตับ ไต ปกติ' },
+        ],
+        medications: [],
+      },
+      {
+        id: 'vt6',
+        date: '2025-11-12',
+        vetName: 'สพ.ช. ธนพล อินทรา',
+        clinic: 'คลินิกแมวมะลิ',
+        vitals: { weightKg: 3.6, temperatureC: 39.1 },
+        symptoms: 'อาเจียน 2 วัน เบื่ออาหาร',
+        diagnosis: 'กระเพาะอาหารอักเสบเฉียบพลัน อาจกินขนหรือของแปลกปลอม',
+        labResults: [
+          { type: 'ultrasound', name: 'Ultrasound ช่องท้อง', result: 'ไม่พบสิ่งแปลกปลอม กระเพาะอักเสบเล็กน้อย' },
+        ],
+        medications: [
+          { name: 'Cerenia 16 mg', qty: '3 เม็ด', instructions: '1 เม็ด วันละครั้ง 3 วัน' },
+          { name: 'Probiotic FortiFlora', qty: '7 ซอง', instructions: 'โรยบนอาหาร วันละ 1 ซอง' },
+        ],
+      },
+      {
+        id: 'vt7',
+        date: '2025-05-08',
+        vetName: 'สพ.ญ. ณัฐกานต์ ศิริทรัพย์',
+        clinic: 'โรงพยาบาลสัตว์ทองหล่อ',
+        vitals: { weightKg: 3.5, temperatureC: 38.5 },
+        symptoms: 'ฉีดวัคซีนรวม + พิษสุนัขบ้า',
+        diagnosis: 'พร้อมรับวัคซีน ไม่มีอาการผิดปกติ',
+        medications: [],
+      },
+    ],
   },
   {
     id: 'p3',
@@ -103,6 +228,28 @@ export const mockPets: Pet[] = [
       { id: 'v13', name: 'วัคซีนรวม Pasteurella', date: '2025-02-18', nextDue: '2026-02-18', clinic: 'ปุกปุยสัตวแพทย์ PUKPUI Rabbit&Exotic Pet Clinic' },
     ],
     conditions: [],
+    visits: [
+      {
+        id: 'vt8',
+        date: '2026-02-18',
+        vetName: 'สพ.ญ. ปรียา จันทรัตน์',
+        clinic: 'ปุกปุยสัตวแพทย์ PUKPUI Rabbit&Exotic Pet Clinic',
+        vitals: { weightKg: 1.2, heightCm: 18, temperatureC: 39.0 },
+        symptoms: 'ตรวจสุขภาพและฉีดวัคซีน Pasteurella',
+        diagnosis: 'สุขภาพดี ฟันยาวเล็กน้อย แนะนำเสริมหญ้าและของขบเคี้ยว',
+        medications: [],
+      },
+      {
+        id: 'vt9',
+        date: '2025-12-10',
+        vetName: 'สพ.ญ. ปรียา จันทรัตน์',
+        clinic: 'ปุกปุยสัตวแพทย์ PUKPUI Rabbit&Exotic Pet Clinic',
+        vitals: { weightKg: 1.1, heightCm: 17, temperatureC: 38.8 },
+        symptoms: 'ฉีดวัคซีน RHDV + Myxomatosis',
+        diagnosis: 'พร้อมรับวัคซีน',
+        medications: [],
+      },
+    ],
   },
 ];
 

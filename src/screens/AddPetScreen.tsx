@@ -1,9 +1,8 @@
-import { StyleSheet, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { LinearGradient } from 'expo-linear-gradient';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { RootStackParamList } from '../../App';
-import { Card, Icon, Screen, Text } from '../components';
-import { radii, semantic, spacing } from '../theme';
+import { AppBackground, Icon, Text } from '../components';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'AddPet'>;
 
@@ -11,8 +10,6 @@ type PathOption = {
   key: 'scan' | 'manual';
   title: string;
   subtitle: string;
-  badge: string;
-  icon: 'Camera' | 'Sparkles';
   route: keyof RootStackParamList;
   recommended?: boolean;
 };
@@ -20,108 +17,148 @@ type PathOption = {
 const OPTIONS: PathOption[] = [
   {
     key: 'scan',
-    title: 'ถ่ายรูปบัตรประจำตัวน้อง',
-    subtitle:
-      'แค่เล็งกล้องไปที่บัตรสัตว์เลี้ยง หรือสมุดนัดใบเดิม ระบบจะช่วยกรอกข้อมูลให้ทันที สะดวกสุดๆ เลย!',
-    badge: 'เร็วและง่ายที่สุด',
-    icon: 'Camera',
+    title: 'สแกนบัตรประจำตัวสัตว์เลี้ยง',
+    subtitle: 'ถ่ายรูปบัตรเพื่อดึงข้อมูลอัตโนมัติ',
     route: 'AddPetScan',
     recommended: true,
   },
   {
     key: 'manual',
-    title: 'ค่อยๆ กรอกข้อมูลเอง',
-    subtitle:
-      'สำหรับน้องตัวใหม่ที่ยังไม่มีประวัติ มาสร้างโปรไฟล์น่ารักๆ และอัปโหลดรูปสวยๆ ของน้องด้วยตัวเองกันครับ',
-    badge: 'ทำเองได้สบายๆ',
-    icon: 'Sparkles',
+    title: 'กรอกข้อมูลเอง',
+    subtitle: 'กรอกข้อมูลเอง',
     route: 'AddPetManual',
   },
 ];
 
 export default function AddPetScreen({ navigation }: Props) {
+  const insets = useSafeAreaInsets();
   return (
-    <Screen scroll>
-      <Text variant="h1" style={styles.title}>
-        เริ่มต้นด้วยน้องคนไหนดีครับ?
-      </Text>
-      <Text variant="body" color={semantic.textSecondary} style={styles.subtitle}>
-        เลือกวิธีที่สะดวกที่สุด แล้วเรามาทำความรู้จักน้องไปด้วยกันนะ
-      </Text>
+    <View style={styles.root}>
+      <AppBackground />
+
+      <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
+        <Pressable
+          onPress={() => navigation.goBack()}
+          hitSlop={8}
+          style={({ pressed }) => [
+            styles.backBtn,
+            pressed && { opacity: 0.85 },
+          ]}
+          accessibilityLabel="ย้อนกลับ"
+        >
+          <Icon name="ChevronLeft" size={20} color="#1A1A1F" strokeWidth={2.4} />
+        </Pressable>
+        <Text variant="bodyStrong" style={styles.title}>
+          เพิ่มสัตว์เลี้ยง
+        </Text>
+      </View>
 
       <View style={styles.list}>
         {OPTIONS.map((opt) => (
-          <Card
+          <Pressable
             key={opt.key}
-            variant="elevated"
-            padding="xl"
-            onPress={() => {
-              // TODO: trigger Haptics.selectionAsync() when expo-haptics is wired
-              navigation.navigate(opt.route as any);
-            }}
+            onPress={() => navigation.navigate(opt.route as any)}
+            style={({ pressed }) => [
+              styles.card,
+              pressed && { opacity: 0.9 },
+            ]}
           >
-            <View style={styles.cardBody}>
-              <View style={styles.iconWrap}>
-                <LinearGradient
-                  colors={['#EFA5B8', '#DA8AA1', '#C87390']}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 1 }}
-                  style={StyleSheet.absoluteFill}
-                />
-                <Icon name={opt.icon} size={36} color={semantic.onPrimary} strokeWidth={2.2} />
-              </View>
-
-              <View style={styles.titleRow}>
-                <Text variant="h3" style={{ fontSize: 18 }}>
-                  {opt.title}
-                </Text>
-                {opt.recommended && (
-                  <View style={styles.recommendBadge}>
-                    <Text variant="caption" color={semantic.onPrimary} style={{ fontSize: 10 }} weight="700">
-                      แนะนำ
-                    </Text>
-                  </View>
-                )}
-              </View>
-
-              <Text variant="body" color={semantic.textSecondary} style={styles.subtitleLine}>
+            <View style={styles.cardImage}>
+              {opt.recommended && (
+                <View style={styles.recommendBadge}>
+                  <Text variant="bodyStrong" style={styles.recommendText}>
+                    แนะนำ
+                  </Text>
+                </View>
+              )}
+            </View>
+            <View style={styles.cardText}>
+              <Text variant="bodyStrong" style={styles.cardTitle}>
+                {opt.title}
+              </Text>
+              <Text variant="body" style={styles.cardSubtitle}>
                 {opt.subtitle}
               </Text>
-
-              <Text variant="caption" color={semantic.primary} weight="600" style={styles.badge}>
-                {opt.badge}
-              </Text>
             </View>
-          </Card>
+          </Pressable>
         ))}
       </View>
-    </Screen>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  title: { marginTop: spacing.sm },
-  subtitle: { marginTop: spacing.xs, marginBottom: spacing.xl },
-  list: { gap: spacing.lg },
-  cardBody: {
-    gap: spacing.sm,
+  root: { flex: 1 },
+  header: {
+    paddingHorizontal: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
   },
-  iconWrap: {
-    width: 72,
-    height: 72,
-    borderRadius: radii.xl,
-    overflow: 'hidden',
+  backBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 100,
+    backgroundColor: '#FFFFFF',
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: spacing.xs,
+    shadowColor: '#000',
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 2,
   },
-  titleRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  title: {
+    fontSize: 18,
+    lineHeight: 24,
+    color: '#1A1A1F',
+    fontWeight: '700',
+  },
+  list: {
+    paddingHorizontal: 16,
+    paddingTop: 24,
+    gap: 12,
+  },
+  card: {
+    height: 230,
+    borderRadius: 16,
+    backgroundColor: '#D9D9D9',
+    overflow: 'hidden',
+  },
+  cardImage: {
+    height: 158,
+    backgroundColor: '#B2B2B2',
+    position: 'relative',
+  },
   recommendBadge: {
-    backgroundColor: semantic.primary,
-    paddingHorizontal: spacing.sm,
+    position: 'absolute',
+    top: 12,
+    right: 12,
+    backgroundColor: '#FFFFFF',
+    paddingHorizontal: 8,
     paddingVertical: 2,
-    borderRadius: radii.pill,
+    borderRadius: 100,
   },
-  subtitleLine: { fontSize: 13, lineHeight: 19 },
-  badge: { fontSize: 12, marginTop: spacing.xs },
+  recommendText: {
+    fontSize: 12,
+    lineHeight: 20,
+    color: '#000000',
+    fontWeight: '500',
+  },
+  cardText: {
+    paddingHorizontal: 12,
+    paddingTop: 12,
+    gap: 8,
+  },
+  cardTitle: {
+    fontSize: 16,
+    lineHeight: 20,
+    color: '#1A1A1F',
+    fontWeight: '500',
+  },
+  cardSubtitle: {
+    fontSize: 14,
+    lineHeight: 20,
+    color: '#4A4A50',
+  },
 });
