@@ -10,34 +10,48 @@ import {
   View,
 } from 'react-native';
 import Animated, {
+  Easing,
   FadeIn,
+  SlideInDown,
+  SlideOutDown,
   useAnimatedScrollHandler,
+  useAnimatedStyle,
   useSharedValue,
+  withDelay,
+  withRepeat,
+  withSequence,
+  withTiming,
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
+import { BlurView } from 'expo-blur';
+import { Sparkles, Stethoscope, Salad, ScanFace } from 'lucide-react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
+import { useFocusEffect } from '@react-navigation/native';
+import { useCallback } from 'react';
 import { RootStackParamList } from '../../App';
-import { Screen, StickyAppBar, Text } from '../components';
+import { AppBackground, Icon, Screen, StickyAppBar, Text } from '../components';
 import { semantic, spacing } from '../theme';
-import { mockPets } from '../data/pets';
-import { mockSchedules } from '../data/reminders';
+import { mockPets, Pet, VisitRecord } from '../data/pets';
+import { FeedingSchedule, mockSchedules } from '../data/reminders';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'PetDetail'>;
 
-const TAB_KEYS = ['general', 'feeding', 'vaccines', 'health'] as const;
+const TAB_KEYS = ['general', 'health', 'vaccines', 'feeding'] as const;
 type TabKey = (typeof TAB_KEYS)[number];
 const TAB_LABELS: Record<TabKey, string> = {
   general: 'ข้อมูลทั่วไป',
-  feeding: 'เวลาให้อาหาร',
-  vaccines: 'ประวัติวัคซีน',
   health: 'ประวัติสุขภาพ',
+  vaccines: 'ประวัติวัคซีน',
+  feeding: 'เวลาให้อาหาร',
 };
 
 const RIPPLE = { color: 'rgba(184,106,124,0.18)', borderless: false } as const;
 
 const thDate = (iso: string) =>
   new Date(iso).toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: 'numeric' });
+const thDateShort = (iso: string) =>
+  new Date(iso).toLocaleDateString('th-TH', { day: 'numeric', month: 'short' });
 
 /** Full age string e.g. "3 ปี 2 เดือน 1 วัน". */
 const petAgeFull = (birthDate: string): string => {
@@ -59,16 +73,62 @@ const petAgeFull = (birthDate: string): string => {
 };
 
 export default function PetDetailScreen({ route, navigation }: Props) {
-  const { petId } = route.params;
-  const pet = mockPets.find((p) => p.id === petId);
+  const { petId, flashMessage } = route.params;
+  const [toast, setToast] = useState<string | null>(null);
+  const lastFlashRef = useRef<string | undefined>(undefined);
+  const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => {
+    if (!flashMessage || lastFlashRef.current === flashMessage) return;
+    lastFlashRef.current = flashMessage;
+    setToast(flashMessage);
+    if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+    toastTimerRef.current = setTimeout(() => {
+      setToast(null);
+      lastFlashRef.current = undefined;
+    }, 5000);
+    return () => {
+      if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+    };
+  }, [flashMessage, navigation]);
+  const initialPet = mockPets.find((p) => p.id === petId);
   const insets = useSafeAreaInsets();
   const { width: windowWidth } = useWindowDimensions();
   const [tab, setTab] = useState<TabKey>('general');
   const tabIndex = TAB_KEYS.indexOf(tab);
+  const [livePet, setLivePet] = useState<Pet | undefined>(initialPet);
+  const [schedules, setSchedules] = useState<FeedingSchedule[]>(() =>
+    mockSchedules.filter((s) => s.petId === petId),
+  );
+  const pet = livePet;
+  const startEdit = () => {
+    navigation.navigate('PetEdit', { petId });
+  };
+  const openMealEdit = (scheduleId?: string) => {
+    navigation.navigate('MealTimeSetting', { petId, scheduleId });
+  };
+  useFocusEffect(
+    useCallback(() => {
+      setSchedules(mockSchedules.filter((s) => s.petId === petId));
+      const refreshed = mockPets.find((p) => p.id === petId);
+      if (refreshed) setLivePet({ ...refreshed });
+    }, [petId]),
+  );
 
   const scrollY = useSharedValue(0);
   const scrollHandler = useAnimatedScrollHandler((e) => {
     scrollY.value = e.contentOffset.y;
+  });
+
+  // bgHero scrolls up with content (translateY=-y) and stretches on pull-down
+  // (anchored at top via transformOrigin so the image keeps filling the gap).
+  const HERO_HEIGHT = 280;
+  const heroStretchStyle = useAnimatedStyle(() => {
+    const y = scrollY.value;
+    if (y < 0) {
+      const factor = 1 - y / HERO_HEIGHT;
+      return { transform: [{ scaleX: factor }, { scaleY: factor }] };
+    }
+    return { transform: [{ translateY: -y }] };
   });
 
   // ── Horizontal pager sync ──
@@ -85,6 +145,14 @@ export default function PetDetailScreen({ route, navigation }: Props) {
     if (key && key !== tab) setTab(key);
   };
 
+  // Per-tab measured height — pager container resizes to active page.
+  const [pageHeights, setPageHeights] = useState<Partial<Record<TabKey, number>>>({});
+  const onPageLayout = (key: TabKey) => (e: { nativeEvent: { layout: { height: number } } }) => {
+    const h = Math.ceil(e.nativeEvent.layout.height);
+    setPageHeights((prev) => (prev[key] === h ? prev : { ...prev, [key]: h }));
+  };
+  const activeHeight = pageHeights[tab];
+
   if (!pet) {
     return (
       <Screen>
@@ -93,10 +161,322 @@ export default function PetDetailScreen({ route, navigation }: Props) {
     );
   }
 
+  const tabContent: Record<TabKey, React.ReactNode> = {
+    general: (
+      <View style={styles.content}>
+        <View style={styles.infoCard}>
+          <InfoRow label="วันเกิด" value={thDate(pet.birthDate)} />
+          <InfoRow label="สายพันธุ์" value={pet.breed} />
+          <InfoRow label="น้ำหนัก" value={`${pet.weightKg} กก.`} />
+          <InfoRow label="สี" value={pet.color} />
+          <InfoRow label="เพศ" value={pet.gender === 'male' ? 'ผู้' : 'เมีย'} />
+          {pet.microchipId && <InfoRow label="ไมโครชิป" value={pet.microchipId} />}
+        </View>
+
+        <View style={styles.neuterCard}>
+          <View style={styles.neuterBody}>
+            <Text variant="caption" style={styles.subtleLabel}>
+              ประวัติการทำหมัน
+            </Text>
+            <Text variant="bodyStrong" style={styles.neuterTitle}>
+              {pet.neutered ? 'ทำหมันแล้ว' : 'ยังไม่ได้ทำหมัน'}
+            </Text>
+            {pet.neutered && pet.neuteredDate && (
+              <Text variant="caption" style={styles.subtleLabel}>
+                เมื่อ {thDate(pet.neuteredDate)}
+              </Text>
+            )}
+          </View>
+          {pet.neutered && (
+            <View style={styles.neuterFooter}>
+              <Text variant="caption" style={styles.clinicText} numberOfLines={2}>
+                ปุกปุยสัตวแพทย์ PUKPUI Rabbit&Exotic Pet Clinic
+              </Text>
+            </View>
+          )}
+        </View>
+
+        <View style={styles.infoCard}>
+          <View style={styles.conditionWrap}>
+            <Text variant="caption" style={styles.subtleLabel}>
+              โรคประจำตัว
+            </Text>
+            <Text variant="bodyStrong" style={styles.conditionTitle}>
+              {pet.conditions.length === 0
+                ? 'ไม่มีโรคประจำตัว'
+                : pet.conditions.map((c) => c.name).join(', ')}
+            </Text>
+          </View>
+        </View>
+      </View>
+    ),
+
+    health: (
+      <View style={styles.content}>
+        <WeightTrendCard pet={pet} />
+
+        <View style={styles.infoCard}>
+          <View style={styles.conditionWrap}>
+            <Text variant="caption" style={styles.subtleLabel}>
+              โรคประจำตัว / ภูมิแพ้
+            </Text>
+            {pet.conditions.length === 0 ? (
+              <Text variant="bodyStrong" style={styles.conditionTitle}>
+                ไม่มีโรคประจำตัว
+              </Text>
+            ) : (
+              pet.conditions.map((c) => (
+                <View key={c.id} style={{ gap: 2 }}>
+                  <Text variant="bodyStrong" style={styles.conditionTitle}>
+                    {c.name}
+                  </Text>
+                  <Text variant="caption" style={styles.subtleLabel}>
+                    ตั้งแต่ {thDate(c.since)}
+                    {c.notes ? ` · ${c.notes}` : ''}
+                  </Text>
+                </View>
+              ))
+            )}
+          </View>
+        </View>
+
+        <Text variant="caption" style={[styles.subtleLabel, styles.sectionLabel]}>
+          ประวัติการเข้ารับบริการ
+        </Text>
+        {!pet.visits || pet.visits.length === 0 ? (
+          <View style={styles.infoCard}>
+            <View style={styles.conditionWrap}>
+              <Text variant="bodyStrong" style={styles.conditionTitle}>
+                ยังไม่มีประวัติการรักษา
+              </Text>
+            </View>
+          </View>
+        ) : (
+          [...pet.visits]
+            .sort((a, b) => b.date.localeCompare(a.date))
+            .map((v) => <VisitCard key={v.id} visit={v} />)
+        )}
+      </View>
+    ),
+
+    vaccines: (
+      <View style={styles.content}>
+        {pet.vaccines.length === 0 ? (
+          <View style={styles.infoCard}>
+            <View style={styles.conditionWrap}>
+              <Text variant="bodyStrong" style={styles.conditionTitle}>
+                ยังไม่มีประวัติวัคซีน
+              </Text>
+            </View>
+          </View>
+        ) : (
+          <View style={styles.infoCard}>
+            <View style={styles.timelineWrap}>
+              {[...pet.vaccines]
+                .sort((a, b) => b.date.localeCompare(a.date))
+                .map((v, i, arr) => {
+                  const isFirst = i === 0;
+                  const isLast = i === arr.length - 1;
+                  const upcoming =
+                    v.nextDue && v.nextDue >= new Date().toISOString().slice(0, 10);
+                  return (
+                    <View key={v.id} style={styles.timelineRow}>
+                      <View style={styles.timelineRail}>
+                        <View
+                          style={[
+                            styles.timelineLineTop,
+                            {
+                              backgroundColor: isFirst
+                                ? 'transparent'
+                                : upcoming
+                                  ? '#DDA8B2'
+                                  : '#F5E4E7',
+                            },
+                          ]}
+                        />
+                        {upcoming && <View style={styles.timelineHalo} />}
+                        <View
+                          style={[
+                            styles.timelineDot,
+                            upcoming
+                              ? { backgroundColor: '#9F5266' }
+                              : { backgroundColor: '#EBC9CF' },
+                          ]}
+                        />
+                        <View
+                          style={[
+                            styles.timelineLineBottom,
+                            {
+                              backgroundColor: isLast
+                                ? 'transparent'
+                                : upcoming
+                                  ? '#DDA8B2'
+                                  : '#F5E4E7',
+                            },
+                          ]}
+                        />
+                      </View>
+                      <View style={styles.timelineContent}>
+                        <Text
+                          variant="caption"
+                          style={[
+                            styles.timelineDate,
+                            upcoming && { color: '#9F5266', fontWeight: '700' },
+                          ]}
+                        >
+                          {thDate(v.date)}
+                        </Text>
+                        <Text
+                          variant="bodyStrong"
+                          style={[
+                            styles.timelineTitle,
+                            upcoming && { color: '#9F5266' },
+                          ]}
+                        >
+                          {v.name}
+                        </Text>
+                        {v.clinic && (
+                          <Text
+                            variant="caption"
+                            style={styles.timelineClinic}
+                            numberOfLines={2}
+                          >
+                            {v.clinic}
+                          </Text>
+                        )}
+                        {v.nextDue && (
+                          <View style={styles.timelineNextPill}>
+                            <Text
+                              variant="caption"
+                              style={[
+                                styles.timelineNext,
+                                upcoming
+                                  ? { color: '#9F5266', fontWeight: '700' }
+                                  : { color: '#6E6E74' },
+                              ]}
+                            >
+                              ครั้งถัดไป {thDate(v.nextDue)}
+                            </Text>
+                          </View>
+                        )}
+                      </View>
+                    </View>
+                  );
+                })}
+            </View>
+          </View>
+        )}
+      </View>
+    ),
+
+    feeding: (
+      <View style={styles.content}>
+        <Pressable
+          onPress={() => openMealEdit()}
+          style={({ pressed }) => [
+            styles.feedAddCard,
+            pressed && { opacity: 0.9 },
+          ]}
+        >
+          <LinearGradient
+            pointerEvents="none"
+            colors={['rgba(255,253,251,0)', 'rgba(244,201,210,0.7)']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            locations={[0.25, 1]}
+            style={StyleSheet.absoluteFill}
+          />
+          <View pointerEvents="none" style={styles.feedAddIllusSlot}>
+            <Image
+              source={require('../../assets/pet-meal-time.png')}
+              style={{ width: '100%', height: '100%' }}
+              resizeMode="contain"
+            />
+          </View>
+          <View style={styles.feedAddCardBody}>
+            <Text variant="bodyStrong" style={styles.feedAddCardTitle}>
+              ตั้งเวลาให้อาหารน้อง
+            </Text>
+            <Text variant="caption" style={styles.feedAddCardHint}>
+              ไม่พลาดทุกมื้อสำคัญ ตั้งเตือนรายวันได้เลย
+            </Text>
+            <View style={styles.feedAddCardCta}>
+              <Icon name="Plus" size={14} color="#FFFFFF" strokeWidth={2.6} />
+              <Text variant="bodyStrong" style={styles.feedAddCardCtaText}>
+                เพิ่ม
+              </Text>
+            </View>
+          </View>
+        </Pressable>
+
+        {schedules.length === 0 ? (
+          <View style={styles.infoCard}>
+            <View style={styles.conditionWrap}>
+              <Text variant="bodyStrong" style={styles.conditionTitle}>
+                ยังไม่มีตารางให้อาหาร
+              </Text>
+              <Text variant="caption" style={styles.subtleLabel}>
+                แตะการ์ดด้านบนเพื่อเพิ่มตารางใหม่
+              </Text>
+            </View>
+          </View>
+        ) : (
+          schedules.map((s) => (
+            <Pressable
+              key={s.id}
+              onPress={() => openMealEdit(s.id)}
+              android_ripple={RIPPLE}
+              style={({ pressed }) => [
+                styles.infoCard,
+                pressed && { opacity: 0.85 },
+              ]}
+            >
+              <View style={styles.feedRow}>
+                <View style={styles.feedTimeWrap}>
+                  <Text variant="bodyStrong" style={styles.feedTime}>
+                    {s.time} น.
+                  </Text>
+                  <Text variant="caption" style={styles.subtleLabel}>
+                    {s.type === 'food' ? 'อาหาร' : 'น้ำดื่ม'}
+                    {s.enabled ? '' : ' · ปิด'}
+                  </Text>
+                </View>
+                <View style={styles.feedDetail}>
+                  <Text variant="bodyStrong" style={styles.feedAmount}>
+                    {s.amount}
+                  </Text>
+                  {s.note && (
+                    <Text variant="caption" style={styles.subtleLabel}>
+                      {s.note}
+                    </Text>
+                  )}
+                </View>
+              </View>
+            </Pressable>
+          ))
+        )}
+      </View>
+    ),
+  };
+
   return (
     <View style={styles.root}>
+      <AppBackground />
+
+      {/* Fixed hero photo — sits behind the scroll. On overscroll the scroll
+          content rubber-bands down, exposing this layer instead of white. */}
+      {pet.photo && (
+        <Animated.View
+          pointerEvents="none"
+          style={[styles.bgHeroWrap, heroStretchStyle]}
+        >
+          <Image source={pet.photo} style={styles.bgHeroImg} resizeMode="cover" />
+        </Animated.View>
+      )}
+
       <Animated.ScrollView
-        contentContainerStyle={{ paddingBottom: insets.bottom + spacing.xl }}
+        style={styles.scroll}
+        contentContainerStyle={{ paddingBottom: insets.bottom + spacing['3xl'] }}
         showsVerticalScrollIndicator={false}
         onScroll={scrollHandler}
         scrollEventThrottle={16}
@@ -106,26 +486,18 @@ export default function PetDetailScreen({ route, navigation }: Props) {
           entering={FadeIn.duration(280)}
           style={[styles.hero, { paddingTop: insets.top + 64 }]}
         >
-          {pet.photo ? (
-            <Image source={pet.photo} style={styles.heroPhoto} resizeMode="cover" />
-          ) : (
-            <View style={[StyleSheet.absoluteFill, styles.heroFallback]}>
+          {!pet.photo && (
+            <Animated.View
+              style={[StyleSheet.absoluteFill, styles.heroFallback, heroStretchStyle]}
+            >
               <Text style={{ fontSize: 96 }}>{pet.emoji}</Text>
-            </View>
+            </Animated.View>
           )}
 
-          {/* Top dark gradient — small, just behind the status bar */}
+          {/* Bottom fade — blends into the AppBackground gradient at top */}
           <LinearGradient
             pointerEvents="none"
-            colors={['rgba(0,0,0,0.18)', 'rgba(0,0,0,0)']}
-            start={{ x: 0.5, y: 0 }}
-            end={{ x: 0.5, y: 1 }}
-            style={styles.heroTopFade}
-          />
-          {/* Bottom white fade — blends into the rest of the page */}
-          <LinearGradient
-            pointerEvents="none"
-            colors={['rgba(255,255,255,0)', '#FFFFFF']}
+            colors={['rgba(255,253,251,0)', '#FFFDFB']}
             start={{ x: 0.5, y: 0 }}
             end={{ x: 0.5, y: 1 }}
             style={styles.heroBottomFade}
@@ -135,7 +507,16 @@ export default function PetDetailScreen({ route, navigation }: Props) {
             entering={FadeIn.delay(120).duration(280)}
             style={styles.heroText}
           >
-            <Text variant="bodyStrong" style={styles.petName}>
+            <Text
+              variant="bodyStrong"
+              style={[
+                styles.petName,
+                {
+                  fontSize: Math.max(22, Math.min(32, windowWidth * 0.07)),
+                  lineHeight: Math.max(34, Math.min(46, windowWidth * 0.1)),
+                },
+              ]}
+            >
               น้อง{pet.name}
             </Text>
             <Text variant="caption" color={semantic.textSecondary} style={styles.petAge}>
@@ -176,7 +557,7 @@ export default function PetDetailScreen({ route, navigation }: Props) {
           })}
         </ScrollView>
 
-        {/* ── CONTENT (horizontal pager — swipe left/right to switch tab) ── */}
+        {/* ── CONTENT (horizontal pager — swipe to switch tab; height matches active tab) ── */}
         <ScrollView
           ref={pagerRef}
           horizontal
@@ -186,264 +567,13 @@ export default function PetDetailScreen({ route, navigation }: Props) {
             pagerDragging.current = true;
           }}
           onMomentumScrollEnd={onPagerEnd}
+          style={activeHeight ? { height: activeHeight } : undefined}
         >
-          <View style={{ width: windowWidth }}>
-          <View style={styles.content}>
-            <View style={styles.infoCard}>
-              <InfoRow label="วันเกิด" value={thDate(pet.birthDate)} />
-              <InfoRow label="สายพันธุ์" value={pet.breed} />
-              <InfoRow label="น้ำหนัก" value={`${pet.weightKg} กก.`} />
-              <InfoRow label="สี" value={pet.color} />
-              <InfoRow label="เพศ" value={pet.gender === 'male' ? 'ผู้' : 'เมีย'} />
-              {pet.microchipId && <InfoRow label="ไมโครชิป" value={pet.microchipId} />}
+          {TAB_KEYS.map((key) => (
+            <View key={key} style={{ width: windowWidth }}>
+              <View onLayout={onPageLayout(key)}>{tabContent[key]}</View>
             </View>
-
-            {/* Neutering card */}
-            <View style={styles.neuterCard}>
-              <View style={styles.neuterBody}>
-                <Text variant="caption" style={styles.subtleLabel}>
-                  ประวัติการทำหมัน
-                </Text>
-                <Text variant="bodyStrong" style={styles.neuterTitle}>
-                  {pet.neutered ? 'ทำหมันแล้ว' : 'ยังไม่ได้ทำหมัน'}
-                </Text>
-                {pet.neutered && pet.neuteredDate && (
-                  <Text variant="caption" style={styles.subtleLabel}>
-                    เมื่อ {thDate(pet.neuteredDate)}
-                  </Text>
-                )}
-              </View>
-              {pet.neutered && (
-                <View style={styles.neuterFooter}>
-                  <Text variant="caption" style={styles.clinicText} numberOfLines={2}>
-                    ปุกปุยสัตวแพทย์ PUKPUI Rabbit&Exotic Pet Clinic
-                  </Text>
-                </View>
-              )}
-            </View>
-
-            {/* Conditions card */}
-            <View style={styles.infoCard}>
-              <View style={styles.conditionWrap}>
-                <Text variant="caption" style={styles.subtleLabel}>
-                  โรคประจำตัว
-                </Text>
-                <Text variant="bodyStrong" style={styles.conditionTitle}>
-                  {pet.conditions.length === 0
-                    ? 'ไม่มีโรคประจำตัว'
-                    : pet.conditions.map((c) => c.name).join(', ')}
-                </Text>
-              </View>
-            </View>
-          </View>
-          </View>
-
-          <View style={{ width: windowWidth }}>
-          <View style={styles.content}>
-            {mockSchedules.filter((s) => s.petId === pet.id).length === 0 ? (
-              <View style={styles.infoCard}>
-                <View style={styles.conditionWrap}>
-                  <Text variant="bodyStrong" style={styles.conditionTitle}>
-                    ยังไม่มีตารางให้อาหาร
-                  </Text>
-                  <Text variant="caption" style={styles.subtleLabel}>
-                    เพิ่มตารางใหม่เพื่อรับการแจ้งเตือนรายวัน
-                  </Text>
-                </View>
-              </View>
-            ) : (
-              mockSchedules
-                .filter((s) => s.petId === pet.id)
-                .map((s) => (
-                  <View key={s.id} style={styles.infoCard}>
-                    <View style={styles.feedRow}>
-                      <View style={styles.feedTimeWrap}>
-                        <Text variant="bodyStrong" style={styles.feedTime}>
-                          {s.time} น.
-                        </Text>
-                        <Text variant="caption" style={styles.subtleLabel}>
-                          {s.type === 'food' ? 'อาหาร' : 'น้ำดื่ม'}
-                          {s.enabled ? '' : ' · ปิด'}
-                        </Text>
-                      </View>
-                      <View style={styles.feedDetail}>
-                        <Text variant="bodyStrong" style={styles.feedAmount}>
-                          {s.amount}
-                        </Text>
-                        {s.note && (
-                          <Text variant="caption" style={styles.subtleLabel}>
-                            {s.note}
-                          </Text>
-                        )}
-                      </View>
-                    </View>
-                  </View>
-                ))
-            )}
-          </View>
-          </View>
-
-          <View style={{ width: windowWidth }}>
-          <View style={styles.content}>
-            {pet.vaccines.length === 0 ? (
-              <View style={styles.infoCard}>
-                <View style={styles.conditionWrap}>
-                  <Text variant="bodyStrong" style={styles.conditionTitle}>
-                    ยังไม่มีประวัติวัคซีน
-                  </Text>
-                </View>
-              </View>
-            ) : (
-              <View style={styles.infoCard}>
-                <View style={styles.timelineWrap}>
-                  {[...pet.vaccines]
-                    .sort((a, b) => b.date.localeCompare(a.date))
-                    .map((v, i, arr) => {
-                      const isFirst = i === 0;
-                      const isLast = i === arr.length - 1;
-                      const upcoming = v.nextDue && v.nextDue >= new Date().toISOString().slice(0, 10);
-                      return (
-                        <View key={v.id} style={styles.timelineRow}>
-                          <View style={styles.timelineRail}>
-                            <View
-                              style={[
-                                styles.timelineLineTop,
-                                {
-                                  backgroundColor: isFirst
-                                    ? 'transparent'
-                                    : upcoming
-                                      ? '#DDA8B2'
-                                      : '#F5E4E7',
-                                },
-                              ]}
-                            />
-                            {upcoming && <View style={styles.timelineHalo} />}
-                            <View
-                              style={[
-                                styles.timelineDot,
-                                upcoming
-                                  ? { backgroundColor: '#9F5266' }
-                                  : { backgroundColor: '#EBC9CF' },
-                              ]}
-                            />
-                            <View
-                              style={[
-                                styles.timelineLineBottom,
-                                {
-                                  backgroundColor: isLast
-                                    ? 'transparent'
-                                    : upcoming
-                                      ? '#DDA8B2'
-                                      : '#F5E4E7',
-                                },
-                              ]}
-                            />
-                          </View>
-                          <View style={styles.timelineContent}>
-                            <Text
-                              variant="caption"
-                              style={[
-                                styles.timelineDate,
-                                upcoming && { color: '#9F5266', fontWeight: '700' },
-                              ]}
-                            >
-                              {thDate(v.date)}
-                            </Text>
-                            <Text
-                              variant="bodyStrong"
-                              style={[
-                                styles.timelineTitle,
-                                upcoming && { color: '#9F5266' },
-                              ]}
-                            >
-                              {v.name}
-                            </Text>
-                            {v.clinic && (
-                              <Text
-                                variant="caption"
-                                style={styles.timelineClinic}
-                                numberOfLines={2}
-                              >
-                                {v.clinic}
-                              </Text>
-                            )}
-                            {v.nextDue && (
-                              <View style={styles.timelineNextPill}>
-                                <Text
-                                  variant="caption"
-                                  style={[
-                                    styles.timelineNext,
-                                    upcoming
-                                      ? { color: '#9F5266', fontWeight: '700' }
-                                      : { color: '#6E6E74' },
-                                  ]}
-                                >
-                                  ครั้งถัดไป {thDate(v.nextDue)}
-                                </Text>
-                              </View>
-                            )}
-                          </View>
-                        </View>
-                      );
-                    })}
-                </View>
-              </View>
-            )}
-          </View>
-          </View>
-
-          <View style={{ width: windowWidth }}>
-          <View style={styles.content}>
-            {/* Recent checkup (mock) */}
-            <View style={styles.neuterCard}>
-              <View style={styles.neuterBody}>
-                <Text variant="caption" style={styles.subtleLabel}>
-                  ตรวจสุขภาพล่าสุด
-                </Text>
-                <Text variant="bodyStrong" style={styles.neuterTitle}>
-                  ปกติ · สุขภาพแข็งแรง
-                </Text>
-                <Text variant="caption" style={styles.subtleLabel}>
-                  เมื่อ {thDate('2025-09-12')}
-                </Text>
-              </View>
-              <View style={styles.neuterFooter}>
-                <Text variant="caption" style={styles.clinicText} numberOfLines={2}>
-                  ปุกปุยสัตวแพทย์ PUKPUI Rabbit&Exotic Pet Clinic
-                </Text>
-              </View>
-            </View>
-
-            {/* Weight trend chart */}
-            <WeightTrendCard currentKg={pet.weightKg} />
-
-            {/* Conditions */}
-            <View style={styles.infoCard}>
-              <View style={styles.conditionWrap}>
-                <Text variant="caption" style={styles.subtleLabel}>
-                  โรคประจำตัว / ภูมิแพ้
-                </Text>
-                {pet.conditions.length === 0 ? (
-                  <Text variant="bodyStrong" style={styles.conditionTitle}>
-                    ไม่มีโรคประจำตัว
-                  </Text>
-                ) : (
-                  pet.conditions.map((c) => (
-                    <View key={c.id} style={{ gap: 2 }}>
-                      <Text variant="bodyStrong" style={styles.conditionTitle}>
-                        {c.name}
-                      </Text>
-                      <Text variant="caption" style={styles.subtleLabel}>
-                        ตั้งแต่ {thDate(c.since)}
-                        {c.notes ? ` · ${c.notes}` : ''}
-                      </Text>
-                    </View>
-                  ))
-                )}
-              </View>
-            </View>
-          </View>
-          </View>
+          ))}
         </ScrollView>
       </Animated.ScrollView>
 
@@ -460,22 +590,301 @@ export default function PetDetailScreen({ route, navigation }: Props) {
         }}
         trailing={{
           icon: 'Pencil',
-          onPress: () => {},
+          onPress: startEdit,
           accessibilityLabel: 'แก้ไขข้อมูล',
         }}
       />
 
+      <AiFab bottom={insets.bottom + spacing.xl} />
+
+      {toast && (
+        <Animated.View
+          pointerEvents="none"
+          entering={SlideInDown.duration(280)}
+          exiting={SlideOutDown.duration(280)}
+          style={[styles.toast, { bottom: insets.bottom + 24 }]}
+        >
+          <Icon name="Check" size={16} color="#FFFFFF" strokeWidth={3} />
+          <Text variant="bodyStrong" style={styles.toastText}>
+            {toast}
+          </Text>
+        </Animated.View>
+      )}
     </View>
   );
 }
 
-function WeightTrendCard({ currentKg }: { currentKg: number }) {
-  const points = [
-    { label: '9 ด.', sub: '9 เดือนก่อน', kg: +(currentKg - 1.1).toFixed(1) },
-    { label: '6 ด.', sub: '6 เดือนก่อน', kg: +(currentKg - 0.7).toFixed(1) },
-    { label: '3 ด.', sub: '3 เดือนก่อน', kg: +(currentKg - 0.3).toFixed(1) },
-    { label: 'ปัจจุบัน', sub: 'ปัจจุบัน', kg: currentKg },
-  ];
+const AI_FEATURES = [
+  { Icon: Stethoscope, label: 'วิเคราะห์สุขภาพเบื้องต้นจากอาการ' },
+  { Icon: Salad, label: 'แนะนำอาหาร/กิจกรรมที่เหมาะสม' },
+  { Icon: ScanFace, label: 'จดจำใบหน้าสัตว์เลี้ยง' },
+] as const;
+
+function AiFab({ bottom }: { bottom: number }) {
+  const [open, setOpen] = useState(false);
+  const pulse = useSharedValue(0);
+  const shimmer = useSharedValue(0);
+  useEffect(() => {
+    pulse.value = withRepeat(
+      withTiming(1, { duration: 1800, easing: Easing.inOut(Easing.ease) }),
+      -1,
+      true,
+    );
+    shimmer.value = withRepeat(
+      withSequence(
+        withTiming(1, { duration: 1400, easing: Easing.inOut(Easing.ease) }),
+        withDelay(2200, withTiming(0, { duration: 0 })),
+      ),
+      -1,
+      false,
+    );
+  }, [pulse, shimmer]);
+  const auraStyle = useAnimatedStyle(() => ({
+    opacity: 0.85 + pulse.value * 0.15,
+    transform: [{ scale: 0.95 + pulse.value * 0.22 }],
+  }));
+  const shimmerStyle = useAnimatedStyle(() => ({
+    transform: [
+      { translateX: -160 + shimmer.value * 320 },
+      { skewX: '-20deg' },
+    ],
+  }));
+  return (
+    <View pointerEvents="box-none" style={[styles.fabWrap, { bottom }]}>
+      {open && (
+        <Animated.View entering={FadeIn.duration(160)} style={styles.fabMenu}>
+          {AI_FEATURES.map(({ Icon, label }, i) => (
+            <Pressable
+              key={i}
+              android_ripple={{ color: 'rgba(159,82,102,0.12)', borderless: false }}
+              onPress={() => setOpen(false)}
+              style={({ pressed }) => [styles.fabMenuRow, pressed && { opacity: 0.85 }]}
+            >
+              <View style={styles.fabMenuIcon}>
+                <Icon size={16} color="#9F5266" strokeWidth={2.2} />
+              </View>
+              <Text variant="bodyStrong" style={styles.fabMenuLabel} numberOfLines={2}>
+                {label}
+              </Text>
+            </Pressable>
+          ))}
+        </Animated.View>
+      )}
+      <View style={styles.fabPillWrap}>
+        <Animated.View pointerEvents="none" style={[styles.auraGlow, styles.auraGlowBlue, auraStyle]} />
+        <Animated.View pointerEvents="none" style={[styles.auraGlow, styles.auraGlowPink, auraStyle]} />
+        <View style={styles.fabStrokeWrap}>
+          <View style={styles.fabStrokeClip}>
+            <LinearGradient
+              colors={['#5B6BE0', '#8E6BFF', '#C77BFF', '#FF8FD4']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={StyleSheet.absoluteFill}
+            />
+          </View>
+          <Pressable
+            onPress={() => setOpen((v) => !v)}
+            android_ripple={{ color: 'rgba(120,140,200,0.18)', borderless: false }}
+            style={({ pressed }) => [
+              styles.fabPill,
+              pressed && { transform: [{ scale: 0.97 }] },
+            ]}
+            accessibilityLabel="AI ผู้ช่วยดูแลน้อง"
+          >
+            <BlurView
+              intensity={50}
+              tint="light"
+              style={[StyleSheet.absoluteFill, { borderRadius: 999 }]}
+            />
+            <LinearGradient
+              pointerEvents="none"
+              colors={['#FFFFFF', '#FFFFFF', '#EAEAF2']}
+              locations={[0, 0.5, 1]}
+              start={{ x: 0.5, y: 0 }}
+              end={{ x: 0.5, y: 1 }}
+              style={StyleSheet.absoluteFill}
+            />
+            <LinearGradient
+              pointerEvents="none"
+              colors={['rgba(255,255,255,0.9)', 'rgba(255,255,255,0)']}
+              start={{ x: 0.5, y: 0 }}
+              end={{ x: 0.5, y: 1 }}
+              style={styles.fabGloss}
+            />
+            <Animated.View
+              pointerEvents="none"
+              style={[styles.fabShimmer, shimmerStyle]}
+            >
+              <LinearGradient
+                colors={[
+                  'rgba(167,139,255,0)',
+                  'rgba(167,139,255,0.22)',
+                  'rgba(167,139,255,0)',
+                ]}
+                locations={[0, 0.5, 1]}
+                start={{ x: 0, y: 0.5 }}
+                end={{ x: 1, y: 0.5 }}
+                style={StyleSheet.absoluteFill}
+              />
+            </Animated.View>
+            <View style={styles.fabPillContent}>
+              <Sparkles size={16} color="#5B6BE0" strokeWidth={2.4} />
+              <Text variant="bodyStrong" style={styles.fabPillLabel}>
+                วิเคราะห์โดย AI
+              </Text>
+            </View>
+          </Pressable>
+        </View>
+      </View>
+    </View>
+  );
+}
+
+function VisitCard({ visit }: { visit: VisitRecord }) {
+  const v = visit;
+  return (
+    <View style={styles.visitCard}>
+      <View style={styles.visitHeader}>
+        <View style={{ flex: 1, gap: 2 }}>
+          <Text variant="bodyStrong" style={styles.visitDate}>
+            {thDate(v.date)}
+          </Text>
+          <Text variant="caption" style={styles.subtleLabel} numberOfLines={2}>
+            {v.clinic}
+          </Text>
+        </View>
+      </View>
+
+      {/* Vet */}
+      <View style={styles.visitRow}>
+        <Text variant="caption" style={styles.visitLabel}>
+          สัตวแพทย์
+        </Text>
+        <Text variant="bodyStrong" style={styles.visitValue}>
+          {v.vetName}
+        </Text>
+      </View>
+
+      {/* Vitals strip */}
+      <View style={styles.vitalsRow}>
+        <Vital label="น้ำหนัก" value={`${v.vitals.weightKg} กก.`} />
+        {v.vitals.heightCm !== undefined && (
+          <Vital label="ส่วนสูง" value={`${v.vitals.heightCm} ซม.`} />
+        )}
+        <Vital label="อุณหภูมิ" value={`${v.vitals.temperatureC.toFixed(1)} °C`} />
+      </View>
+
+      {/* Symptoms */}
+      <View style={styles.visitBlock}>
+        <Text variant="caption" style={styles.visitLabel}>
+          อาการเบื้องต้น
+        </Text>
+        <Text variant="bodyStrong" style={styles.visitParagraph}>
+          {v.symptoms}
+        </Text>
+      </View>
+
+      {/* Diagnosis */}
+      <View style={styles.visitBlock}>
+        <Text variant="caption" style={styles.visitLabel}>
+          การวินิจฉัย
+        </Text>
+        <Text variant="bodyStrong" style={styles.visitParagraph}>
+          {v.diagnosis}
+        </Text>
+      </View>
+
+      {/* Lab / X-ray */}
+      {v.labResults && v.labResults.length > 0 && (
+        <View style={styles.visitBlock}>
+          <Text variant="caption" style={styles.visitLabel}>
+            ผลตรวจ
+          </Text>
+          {v.labResults.map((l, i) => (
+            <View key={i} style={styles.labRow}>
+              <View style={styles.labTypePill}>
+                <Text variant="caption" style={styles.labTypeText}>
+                  {l.type === 'xray'
+                    ? 'X-ray'
+                    : l.type === 'ultrasound'
+                      ? 'Ultrasound'
+                      : l.type === 'lab'
+                        ? 'Lab'
+                        : 'Other'}
+                </Text>
+              </View>
+              <View style={{ flex: 1, gap: 2 }}>
+                <Text variant="bodyStrong" style={styles.visitValue}>
+                  {l.name}
+                </Text>
+                <Text variant="caption" style={styles.subtleLabel}>
+                  {l.result}
+                </Text>
+              </View>
+            </View>
+          ))}
+        </View>
+      )}
+
+      {/* Medications */}
+      {v.medications && v.medications.length > 0 && (
+        <View style={styles.visitBlock}>
+          <Text variant="caption" style={styles.visitLabel}>
+            รายการยา
+          </Text>
+          {v.medications.map((m, i) => (
+            <View key={i} style={styles.medRow}>
+              <Text variant="bodyStrong" style={styles.medName}>
+                {m.name}
+              </Text>
+              <View style={styles.medMeta}>
+                <Text variant="caption" style={styles.subtleLabel}>
+                  จำนวน {m.qty}
+                </Text>
+                <Text variant="caption" style={styles.subtleLabel}>
+                  {m.instructions}
+                </Text>
+              </View>
+            </View>
+          ))}
+        </View>
+      )}
+    </View>
+  );
+}
+
+function Vital({ label, value }: { label: string; value: string }) {
+  return (
+    <View style={styles.vitalCol}>
+      <Text variant="caption" style={styles.vitalLabel}>
+        {label}
+      </Text>
+      <Text variant="bodyStrong" style={styles.vitalValue}>
+        {value}
+      </Text>
+    </View>
+  );
+}
+
+function WeightTrendCard({ pet }: { pet: Pet }) {
+  // Prefer real visit vitals; fall back to synthetic points if no visits.
+  const visits = pet.visits ?? [];
+  const points =
+    visits.length >= 2
+      ? [...visits]
+          .sort((a, b) => a.date.localeCompare(b.date))
+          .slice(-4)
+          .map((v) => ({
+            label: thDateShort(v.date),
+            sub: thDate(v.date),
+            kg: v.vitals.weightKg,
+          }))
+      : [
+          { label: '9 ด.', sub: '9 เดือนก่อน', kg: +(pet.weightKg - 1.1).toFixed(1) },
+          { label: '6 ด.', sub: '6 เดือนก่อน', kg: +(pet.weightKg - 0.7).toFixed(1) },
+          { label: '3 ด.', sub: '3 เดือนก่อน', kg: +(pet.weightKg - 0.3).toFixed(1) },
+          { label: 'ปัจจุบัน', sub: 'ปัจจุบัน', kg: pet.weightKg },
+        ];
   const [selected, setSelected] = useState(points.length - 1);
   const max = Math.max(...points.map((p) => p.kg));
   const min = Math.min(...points.map((p) => p.kg));
@@ -577,20 +986,33 @@ function InfoRow({ label, value }: { label: string; value: string }) {
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#FBF3F4',
+  },
+  scroll: {
+    backgroundColor: 'transparent',
   },
   hero: {
     height: 280,
     overflow: 'hidden',
-    backgroundColor: semantic.primaryMuted,
+    // photo is rendered as a fixed bgHeroWrap behind the scroll
+    backgroundColor: 'transparent',
   },
-  heroPhoto: {
+  bgHeroWrap: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 280,
+    overflow: 'hidden',
+    transformOrigin: 'top',
+  },
+  bgHeroImg: {
     position: 'absolute',
     top: 0,
     left: 0,
     right: 0,
     width: '100%',
-    height: 520, // taller than hero so portrait photos show top (face) portion
+    height: 520, // taller than the visible hero so portrait crops favor the top (face)
   },
   heroFallback: {
     backgroundColor: semantic.primaryMuted,
@@ -619,8 +1041,8 @@ const styles = StyleSheet.create({
     gap: spacing.xs,
   },
   petName: {
-    fontSize: 16,
     color: '#1A1A1F',
+    fontWeight: '700',
   },
   petAge: {
     fontSize: 14,
@@ -652,6 +1074,7 @@ const styles = StyleSheet.create({
   },
   content: {
     paddingHorizontal: spacing.xl,
+    paddingBottom: 48,
     gap: spacing.md,
   },
   infoCard: {
@@ -872,6 +1295,120 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: 'rgba(0,0,0,0.6)',
   },
+  sectionLabel: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#1A1A1F',
+    marginTop: spacing.md,
+    marginBottom: 4,
+    paddingLeft: 4,
+  },
+  visitCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: spacing.md,
+    gap: spacing.sm,
+    borderWidth: 1,
+    borderColor: 'rgba(184,106,124,0.12)',
+    shadowColor: '#7E3D4F',
+    shadowOpacity: 0.12,
+    shadowRadius: 18,
+    shadowOffset: { width: 0, height: 8 },
+    elevation: 6,
+  },
+  visitHeader: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: spacing.md,
+    paddingBottom: spacing.sm,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(184,106,124,0.18)',
+  },
+  visitDate: {
+    fontSize: 16,
+    color: '#1A1A1F',
+  },
+  visitRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    gap: spacing.md,
+  },
+  visitLabel: {
+    fontSize: 12,
+    color: '#6E6E74',
+    fontWeight: '500',
+  },
+  visitValue: {
+    fontSize: 14,
+    color: '#1A1A1F',
+    flexShrink: 1,
+    textAlign: 'right',
+  },
+  vitalsRow: {
+    flexDirection: 'row',
+    backgroundColor: '#F5E4E7',
+    borderRadius: 12,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+    gap: spacing.md,
+  },
+  vitalCol: {
+    flex: 1,
+    alignItems: 'center',
+    gap: 2,
+  },
+  vitalLabel: {
+    fontSize: 11,
+    color: '#9F5266',
+  },
+  vitalValue: {
+    fontSize: 14,
+    color: '#1A1A1F',
+  },
+  visitBlock: {
+    gap: spacing.xs,
+  },
+  visitParagraph: {
+    fontSize: 14,
+    color: '#1A1A1F',
+    fontWeight: '500',
+    lineHeight: 20,
+  },
+  labRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: spacing.sm,
+    paddingVertical: 4,
+  },
+  labTypePill: {
+    backgroundColor: '#F5E4E7',
+    borderRadius: 999,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    minWidth: 64,
+    alignItems: 'center',
+  },
+  labTypeText: {
+    fontSize: 11,
+    color: '#9F5266',
+    fontWeight: '700',
+  },
+  medRow: {
+    paddingVertical: 6,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: 'rgba(0,0,0,0.06)',
+    gap: 2,
+  },
+  medName: {
+    fontSize: 14,
+    color: '#1A1A1F',
+  },
+  medMeta: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.sm,
+  },
   conditionTitle: {
     fontSize: 16,
     fontWeight: '700',
@@ -880,5 +1417,550 @@ const styles = StyleSheet.create({
   subtleLabel: {
     fontSize: 14,
     color: '#6E6E74',
+  },
+  fieldWrap: {
+    gap: 4,
+    paddingTop: 6,
+  },
+  fieldRow: {
+    flexDirection: 'row',
+    gap: 16,
+  },
+  fieldCol: {
+    flex: 1,
+  },
+  fieldLabel: {
+    fontSize: 12,
+    color: '#6E6E74',
+    fontWeight: '500',
+  },
+  fieldUnderline: {
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: '#D0D0D4',
+  },
+  fieldError: {
+    fontSize: 11,
+    color: '#C25450',
+    marginTop: 4,
+  },
+  timeInlineWrap: {
+    height: 40,
+    justifyContent: 'center',
+    alignItems: 'flex-start',
+    marginLeft: -8,
+  },
+  timeAndroidText: {
+    fontSize: 17,
+    color: '#1A1A1F',
+    fontWeight: '500',
+  },
+  timeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    height: 40,
+  },
+  timeValueText: {
+    fontSize: 17,
+    color: '#1A1A1F',
+    fontWeight: '500',
+  },
+  timeBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.45)',
+    justifyContent: 'flex-end',
+    paddingHorizontal: 12,
+    paddingBottom: 16,
+    gap: 10,
+  },
+  timeCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 14,
+    paddingTop: 12,
+    paddingHorizontal: 16,
+    alignItems: 'center',
+  },
+  timeCardTitle: {
+    fontSize: 13,
+    color: '#6E6E74',
+    fontWeight: '500',
+  },
+  timeSpinner: {
+    width: '100%',
+    height: 200,
+  },
+  timeConfirm: {
+    paddingVertical: 14,
+    width: '100%',
+    alignItems: 'center',
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: '#E6E6E8',
+  },
+  timeConfirmText: {
+    fontSize: 17,
+    color: '#1A75FF',
+    fontWeight: '600',
+  },
+  timeCancelCard: {
+    paddingVertical: 14,
+  },
+  timeCancelText: {
+    fontSize: 17,
+    color: '#1A75FF',
+    fontWeight: '600',
+  },
+  fieldInput: {
+    height: 40,
+    paddingHorizontal: 0,
+    fontSize: 17,
+    color: '#1A1A1F',
+    fontWeight: '500',
+  },
+  fieldInputMultiline: {
+    height: undefined,
+    minHeight: 40,
+    paddingTop: 10,
+    paddingBottom: 6,
+    textAlignVertical: 'top',
+  },
+  editToggleRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+    marginTop: 4,
+  },
+  genderChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    minWidth: 72,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 999,
+    borderWidth: 1.5,
+    backgroundColor: '#FFFFFF',
+  },
+  genderChipText: {
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  editToggleChip: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 999,
+    backgroundColor: '#F5E4E7',
+  },
+  editToggleChipActive: {
+    backgroundColor: '#9F5266',
+  },
+  editToggleChipText: {
+    fontSize: 13,
+    color: '#9F5266',
+    fontWeight: '700',
+  },
+  editToggleChipTextActive: {
+    color: '#FFFFFF',
+  },
+  editMultilineInput: {
+    fontSize: 14,
+    color: '#1A1A1F',
+    fontWeight: '700',
+    paddingVertical: 6,
+    minHeight: 40,
+  },
+  iosSheetRoot: {
+    flex: 1,
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 32,
+    borderTopRightRadius: 32,
+    overflow: 'hidden',
+  },
+  editTabBar: {
+    flexDirection: 'row',
+    paddingHorizontal: 16,
+    paddingBottom: 8,
+    gap: 8,
+  },
+  editTabBtn: {
+    flex: 1,
+    paddingVertical: 8,
+    borderRadius: 999,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#F5E4E7',
+  },
+  editTabBtnActive: {
+    backgroundColor: '#9F5266',
+  },
+  editTabText: {
+    fontSize: 13,
+    color: '#9F5266',
+    fontWeight: '700',
+  },
+  editTabTextActive: {
+    color: '#FFFFFF',
+  },
+  scheduleCard: {
+    backgroundColor: '#FAFAFA',
+    borderRadius: 16,
+    overflow: 'hidden',
+  },
+  scheduleSummary: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+  },
+  scheduleSummaryLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    flex: 1,
+  },
+  scheduleBody: {
+    paddingHorizontal: 14,
+    paddingBottom: 14,
+    gap: 8,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: '#E6E6E8',
+    paddingTop: 10,
+  },
+  typeTileRow: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  typeTile: {
+    flex: 1,
+    minHeight: 64,
+    borderRadius: 12,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#EBEBEF',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 4,
+    paddingVertical: 10,
+  },
+  typeTileActive: {
+    backgroundColor: '#9F5266',
+    borderColor: '#9F5266',
+  },
+  typeTileText: {
+    fontSize: 13,
+    color: '#9F5266',
+    fontWeight: '700',
+  },
+  typeTileTextActive: {
+    color: '#FFFFFF',
+  },
+  scheduleCardHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  feedAddBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: 14,
+    borderRadius: 14,
+    borderWidth: 1.5,
+    borderColor: '#9F5266',
+    borderStyle: 'dashed',
+    backgroundColor: 'rgba(159,82,102,0.04)',
+  },
+  feedAddText: {
+    fontSize: 14,
+    color: '#9F5266',
+    fontWeight: '700',
+  },
+  feedAddCard: {
+    minHeight: 110,
+    borderRadius: 16,
+    overflow: 'hidden',
+    backgroundColor: '#FFFDFB',
+    borderWidth: 1,
+    borderColor: 'rgba(184,106,124,0.12)',
+    shadowColor: '#7E3D4F',
+    shadowOpacity: 0.1,
+    shadowRadius: 14,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 4,
+  },
+  feedAddIllusSlot: {
+    position: 'absolute',
+    right: -16,
+    top: 4,
+    bottom: 4,
+    width: 110,
+  },
+  feedAddCardBody: {
+    padding: 14,
+    paddingRight: 110,
+    gap: 4,
+  },
+  feedAddCardTitle: {
+    fontSize: 14,
+    color: '#1A1A1F',
+    fontWeight: '700',
+  },
+  feedAddCardHint: {
+    fontSize: 11,
+    color: '#6E6E74',
+    lineHeight: 15,
+  },
+  feedAddCardCta: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    alignSelf: 'flex-start',
+    marginTop: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 999,
+    backgroundColor: '#9F5266',
+  },
+  feedAddCardCtaText: {
+    fontSize: 12,
+    color: '#FFFFFF',
+    fontWeight: '700',
+  },
+  feedDeleteBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: 12,
+    marginTop: 8,
+  },
+  feedDeleteText: {
+    fontSize: 14,
+    color: '#C25450',
+    fontWeight: '700',
+  },
+  sheetGrabber: {
+    alignSelf: 'center',
+    width: 40,
+    height: 5,
+    borderRadius: 100,
+    backgroundColor: '#D0D0D4',
+    marginTop: 8,
+  },
+  payHeader: {
+    height: 60,
+    paddingHorizontal: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    position: 'relative',
+  },
+  payHeaderTitle: {
+    fontSize: 16,
+    lineHeight: 20,
+    color: '#1A1A1A',
+    letterSpacing: -0.2,
+  },
+  payHeaderClose: {
+    position: 'absolute',
+    right: 16,
+    top: 8,
+  },
+  payHeaderCloseBtn: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: 'rgba(255,255,255,0.65)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: 'rgba(255,255,255,0.55)',
+    shadowColor: '#000',
+    shadowOpacity: 0.12,
+    shadowRadius: 20,
+    shadowOffset: { width: 0, height: 8 },
+    elevation: 6,
+  },
+  editSheetBody: {
+    paddingHorizontal: 16,
+    paddingBottom: 24,
+    gap: 12,
+  },
+  sheetActions: {
+    flexDirection: 'row',
+    gap: 10,
+    paddingTop: 8,
+    paddingHorizontal: 16,
+  },
+  sheetBtn: {
+    flex: 1,
+    height: 48,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  sheetBtnSecondary: {
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1.5,
+    borderColor: '#9F5266',
+  },
+  sheetBtnSecondaryText: {
+    fontSize: 16,
+    color: '#9F5266',
+  },
+  sheetBtnPrimary: {
+    backgroundColor: '#9F5266',
+  },
+  sheetBtnPrimaryText: {
+    fontSize: 16,
+    color: '#FFFFFF',
+  },
+  fabWrap: {
+    position: 'absolute',
+    right: spacing.xl,
+    alignItems: 'flex-end',
+    gap: spacing.sm,
+  },
+  fabMenu: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    paddingVertical: 6,
+    paddingHorizontal: 6,
+    minWidth: 240,
+    borderWidth: 1,
+    borderColor: 'rgba(184,106,124,0.12)',
+    shadowColor: '#7E3D4F',
+    shadowOpacity: 0.18,
+    shadowRadius: 18,
+    shadowOffset: { width: 0, height: 10 },
+    elevation: 8,
+    gap: 2,
+  },
+  fabMenuRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    paddingVertical: 10,
+    paddingHorizontal: 10,
+    borderRadius: 12,
+  },
+  fabMenuIcon: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#F5E4E7',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  fabMenuLabel: {
+    flex: 1,
+    fontSize: 13,
+    color: '#1A1A1F',
+    fontWeight: '600',
+  },
+  fabPillWrap: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  fabStrokeWrap: {
+    padding: 2,
+    borderRadius: 999,
+    shadowColor: '#1A1A2E',
+    shadowOpacity: 0.1,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 4,
+  },
+  fabGloss: {
+    position: 'absolute',
+    top: 2,
+    left: 10,
+    right: 10,
+    height: 16,
+    borderTopLeftRadius: 999,
+    borderTopRightRadius: 999,
+  },
+  fabStrokeClip: {
+    ...StyleSheet.absoluteFillObject,
+    borderRadius: 999,
+    overflow: 'hidden',
+  },
+  auraGlow: {
+    position: 'absolute',
+    top: 6,
+    bottom: 6,
+    width: 90,
+    borderRadius: 999,
+    shadowOpacity: 1,
+    shadowRadius: 56,
+    shadowOffset: { width: 0, height: 0 },
+    elevation: 18,
+  },
+  auraGlowBlue: {
+    left: 14,
+    backgroundColor: '#7AB8FF',
+    shadowColor: '#7AB8FF',
+  },
+  auraGlowPink: {
+    right: 14,
+    backgroundColor: '#FF9ED2',
+    shadowColor: '#FF9ED2',
+  },
+  fabStrokeSpin: {
+    position: 'absolute',
+    top: -40,
+    left: -40,
+    right: -40,
+    bottom: -40,
+  },
+  fabPill: {
+    paddingHorizontal: 18,
+    height: 44,
+    borderRadius: 999,
+    overflow: 'hidden',
+    backgroundColor: '#FFFFFF',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  fabShimmer: {
+    position: 'absolute',
+    top: -10,
+    bottom: -10,
+    width: 80,
+  },
+  fabPillContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  fabPillLabel: {
+    fontSize: 14,
+    color: '#1A1A1F',
+    fontWeight: '600',
+  },
+  toast: {
+    position: 'absolute',
+    left: 16,
+    right: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: '#1A1A1F',
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    zIndex: 9999,
+    shadowColor: '#000',
+    shadowOpacity: 0.25,
+    shadowRadius: 14,
+    shadowOffset: { width: 0, height: 8 },
+    elevation: 24,
+  },
+  toastText: {
+    fontSize: 14,
+    color: '#FFFFFF',
+    fontWeight: '500',
   },
 });

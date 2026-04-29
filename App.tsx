@@ -23,6 +23,8 @@ import HealthRecordsScreen from './src/screens/HealthRecordsScreen';
 import VisitDetailScreen from './src/screens/VisitDetailScreen';
 import NotificationsScreen from './src/screens/NotificationsScreen';
 import AddFeedingScheduleScreen from './src/screens/AddFeedingScheduleScreen';
+import MealTimeSettingScreen from './src/screens/MealTimeSettingScreen';
+import PetEditScreen from './src/screens/PetEditScreen';
 import TeleVetScreen from './src/screens/TeleVetScreen';
 import ChatScreen from './src/screens/ChatScreen';
 import ChatListScreen from './src/screens/ChatListScreen';
@@ -52,7 +54,7 @@ export type RootStackParamList = {
   Vet: undefined;
   Profile: undefined;
   // Stack-only routes above tabs
-  PetDetail: { petId: string };
+  PetDetail: { petId: string; flashMessage?: string };
   AddPet: undefined;
   AddPetScan: undefined;
   AddPetMicrochip: undefined;
@@ -64,6 +66,9 @@ export type RootStackParamList = {
           birthDate?: string;
           microchipId?: string;
           speciesLabel?: string;
+          neutered?: boolean;
+          neuteredDate?: string;
+          neuteredClinic?: string;
         };
       }
     | undefined;
@@ -73,6 +78,8 @@ export type RootStackParamList = {
   VisitDetail: { visitId: string };
   Notifications: undefined;
   AddFeedingSchedule: undefined;
+  MealTimeSetting: { petId: string; scheduleId?: string };
+  PetEdit: { petId: string };
   TeleVet: undefined;
   Chat: { conversationId: string; vetId?: string };
   ChatList: undefined;
@@ -154,12 +161,12 @@ export default function App() {
           <Stack.Screen
             name="AddPet"
             component={AddPetScreen}
-            options={transparentHeader}
+            options={{ headerShown: false }}
           />
           <Stack.Screen
             name="AddPetScan"
             component={AddPetScanScreen}
-            options={transparentHeader}
+            options={{ headerShown: false }}
           />
           <Stack.Screen
             name="AddPetMicrochip"
@@ -169,7 +176,7 @@ export default function App() {
           <Stack.Screen
             name="AddPetManual"
             component={AddPetManualScreen}
-            options={transparentHeader}
+            options={{ headerShown: false }}
           />
           <Stack.Screen
             name="AppointmentDetail"
@@ -200,6 +207,16 @@ export default function App() {
             name="AddFeedingSchedule"
             component={AddFeedingScheduleScreen}
             options={transparentHeader}
+          />
+          <Stack.Screen
+            name="MealTimeSetting"
+            component={MealTimeSettingScreen}
+            options={{ headerShown: false }}
+          />
+          <Stack.Screen
+            name="PetEdit"
+            component={PetEditScreen}
+            options={{ headerShown: false }}
           />
           <Stack.Screen
             name="TeleVet"
