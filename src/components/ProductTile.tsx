@@ -1,24 +1,39 @@
 import { useState } from 'react';
-import { Image, StyleSheet, View, ViewStyle } from 'react-native';
-import { Product, categoryMeta, fmtBaht } from '../data/products';
-import { radii, semantic, spacing } from '../theme';
-import Card from './Card';
+import { Image, Pressable, StyleSheet, View, ViewStyle } from 'react-native';
+import { Product, fmtBaht } from '../data/products';
 import Text from './Text';
 
 type Props = {
   product: Product;
   onPress: () => void;
+  /** When provided (e.g. responsive grid), card and square image use this width.
+   *  Otherwise the card stretches to its flex parent and image keeps a 1:1 ratio. */
+  cardWidth?: number;
   style?: ViewStyle;
 };
 
-export default function ProductTile({ product, onPress, style }: Props) {
-  const cat = categoryMeta[product.category];
+export default function ProductTile({ product, onPress, cardWidth, style }: Props) {
   const [imgFailed, setImgFailed] = useState(false);
+  const isOnSale = !!product.originalPriceBaht;
+  const priceColor = isOnSale ? '#C25450' : '#4FB36C';
   const showImage = !!product.imageUrl && !imgFailed;
 
   return (
-    <Card variant="elevated" padding={0} onPress={onPress} style={StyleSheet.flatten([styles.tile, style])}>
-      <View style={[styles.image, { backgroundColor: cat.bg }]}>
+    <Pressable
+      onPress={onPress}
+      style={({ pressed }) => [
+        styles.card,
+        cardWidth ? { width: cardWidth } : styles.cardFlex,
+        style,
+        pressed && { opacity: 0.92, transform: [{ scale: 0.98 }] },
+      ]}
+    >
+      <View
+        style={[
+          styles.image,
+          cardWidth ? { width: cardWidth, height: cardWidth } : styles.imageFlex,
+        ]}
+      >
         {showImage ? (
           <Image
             source={{ uri: product.imageUrl }}
@@ -27,75 +42,93 @@ export default function ProductTile({ product, onPress, style }: Props) {
             onError={() => setImgFailed(true)}
           />
         ) : (
-          <Text style={{ fontSize: 56 }}>{product.emoji}</Text>
+          <Text style={styles.emoji}>{product.emoji}</Text>
         )}
-        {product.originalPriceBaht && (
+        {isOnSale && (
           <View style={styles.saleBadge}>
-            <Text variant="caption" color={semantic.onPrimary} weight="600" style={{ fontSize: 10 }}>
+            <Text weight="700" style={styles.saleBadgeText}>
               SALE
             </Text>
           </View>
         )}
       </View>
       <View style={styles.body}>
-        <Text variant="caption" color={semantic.textMuted} style={{ fontSize: 11 }}>
+        <Text weight="600" style={styles.brand} numberOfLines={1}>
           {product.brand}
         </Text>
-        <Text variant="bodyStrong" numberOfLines={2} style={{ fontSize: 13, lineHeight: 18 }}>
+        <Text weight="600" style={styles.name} numberOfLines={1}>
           {product.name}
         </Text>
-        <View style={styles.footer}>
-          <View>
-            {product.originalPriceBaht && (
-              <Text variant="caption" color={semantic.textMuted} style={styles.strike}>
-                {fmtBaht(product.originalPriceBaht)}
-              </Text>
-            )}
-            <Text variant="bodyStrong" color={semantic.primary}>
-              {fmtBaht(product.priceBaht)}
-            </Text>
-          </View>
-          <Text variant="caption" color={semantic.textMuted} style={{ fontSize: 11 }}>
-            ⭐ {product.rating}
-          </Text>
-        </View>
+        <Text weight="700" style={[styles.price, { color: priceColor }]}>
+          {fmtBaht(product.priceBaht)}
+        </Text>
       </View>
-    </Card>
+    </Pressable>
   );
 }
 
 const styles = StyleSheet.create({
-  tile: {
+  card: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: '#EFE7E9',
+    shadowColor: '#5E303C',
+    shadowOpacity: 0.08,
+    shadowRadius: 16,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 4,
+  },
+  cardFlex: {
     flexBasis: '47%',
     flexGrow: 1,
-    overflow: 'hidden',
   },
   image: {
-    height: 120,
     alignItems: 'center',
     justifyContent: 'center',
   },
+  imageFlex: {
+    width: '100%',
+    aspectRatio: 1,
+  },
+  emoji: {
+    fontSize: 56,
+  },
   saleBadge: {
     position: 'absolute',
-    top: 8,
-    left: 8,
+    top: 10,
+    left: 10,
     paddingHorizontal: 8,
     paddingVertical: 3,
-    borderRadius: radii.pill,
-    backgroundColor: semantic.primary,
+    borderRadius: 100,
+    backgroundColor: '#C25450',
+  },
+  saleBadgeText: {
+    fontSize: 10,
+    lineHeight: 13,
+    color: '#FFFFFF',
+    letterSpacing: 0.6,
   },
   body: {
-    padding: spacing.md,
-    gap: 4,
+    padding: 12,
+    gap: 2,
   },
-  footer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-end',
-    marginTop: spacing.sm,
+  brand: {
+    fontSize: 10,
+    lineHeight: 13,
+    color: '#9A9AA0',
+    letterSpacing: 0.6,
+    textTransform: 'uppercase',
   },
-  strike: {
-    textDecorationLine: 'line-through',
-    fontSize: 11,
+  name: {
+    fontSize: 13,
+    lineHeight: 17,
+    color: '#1A1A1A',
+  },
+  price: {
+    fontSize: 15,
+    lineHeight: 20,
+    marginTop: 2,
   },
 });

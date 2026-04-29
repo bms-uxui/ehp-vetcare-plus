@@ -964,9 +964,9 @@ const styles = StyleSheet.create({
   },
   heroTitle: {
     fontSize: 34,
-    lineHeight: 42,
+    lineHeight: 48,
     color: '#1A1A1A',
-    letterSpacing: -0.5,
+    letterSpacing: 0,
   },
 
   cardLabel: {
