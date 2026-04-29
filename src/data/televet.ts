@@ -112,17 +112,52 @@ export const mockVets: TeleVet[] = [
 export const mockConversations: Conversation[] = [
   {
     id: 'c1',
+    vetId: 'tv3',
+    lastMessage: 'ส่งรูปผื่นบริเวณคอมาให้หมอดูได้เลยนะคะ',
+    lastSentAtISO: '2026-04-26T17:45:00',
+    unread: 3,
+  },
+  {
+    id: 'c2',
+    vetId: 'tv2',
+    lastMessage: 'นัดผ่าตัดสำเร็จเรียบร้อย พักให้แผลแห้งสนิทก่อนนะคะ',
+    lastSentAtISO: '2026-04-26T11:20:00',
+    unread: 1,
+  },
+  {
+    id: 'c3',
     vetId: 'tv1',
     lastMessage: 'อาหารสูตรเดิมได้เลยค่ะ ไม่ต้องเปลี่ยน',
     lastSentAtISO: '2026-04-24T10:12:00',
     unread: 0,
   },
   {
-    id: 'c2',
+    id: 'c4',
+    vetId: 'tv4',
+    lastMessage: 'กระต่ายควรมีหญ้า Timothy แห้งให้กินตลอดเวลาค่ะ',
+    lastSentAtISO: '2026-04-22T14:08:00',
+    unread: 5,
+  },
+  {
+    id: 'c5',
+    vetId: 'tv2',
+    lastMessage: 'สามารถนำมาเย็บแผลออกได้ในวันที่ 30 เม.ย. นะคะ',
+    lastSentAtISO: '2026-04-21T09:30:00',
+    unread: 0,
+  },
+  {
+    id: 'c6',
+    vetId: 'tv1',
+    lastMessage: 'ขอบคุณค่ะคุณหมอ ดีขึ้นมากแล้ว',
+    lastSentAtISO: '2026-04-19T20:15:00',
+    unread: 0,
+  },
+  {
+    id: 'c7',
     vetId: 'tv3',
-    lastMessage: 'ส่งรูปผื่นบริเวณคอมาให้หมอดูได้เลยนะคะ',
-    lastSentAtISO: '2026-04-23T17:45:00',
-    unread: 2,
+    lastMessage: 'ทาครีมแบบนี้สม่ำเสมอ 7 วันเห็นผลแน่นอนค่ะ',
+    lastSentAtISO: '2026-04-15T16:42:00',
+    unread: 0,
   },
 ];
 

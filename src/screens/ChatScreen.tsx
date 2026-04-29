@@ -29,6 +29,7 @@ import { RootStackParamList } from '../../App';
 import { Icon, Text } from '../components';
 import { radii, semantic, spacing } from '../theme';
 import { mockConversations, mockMessages, mockVets, statusMeta, thTime, Message } from '../data/televet';
+import { useCall } from '../data/callContext';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Chat'>;
 
@@ -57,6 +58,54 @@ export default function ChatScreen({ route, navigation }: Props) {
   const conversation = mockConversations.find((c) => c.id === conversationId);
   const resolvedVetId = conversation?.vetId ?? vetId;
   const vet = mockVets.find((v) => v.id === resolvedVetId);
+
+  // Active video call (minimized) for THIS vet → transform header
+  const callCtx = useCall();
+  const isCallMinimizedForVet =
+    callCtx.state.active &&
+    callCtx.state.minimized &&
+    callCtx.state.vetId === resolvedVetId;
+  const [callNow, setCallNow] = useState(Date.now());
+  useEffect(() => {
+    if (!isCallMinimizedForVet) return;
+    const id = setInterval(() => setCallNow(Date.now()), 1000);
+    return () => clearInterval(id);
+  }, [isCallMinimizedForVet]);
+  const callDuration = callCtx.state.startedAt
+    ? Math.floor((callNow - callCtx.state.startedAt) / 1000)
+    : 0;
+  const formatCallTime = (s: number) => {
+    const m = Math.floor(s / 60).toString().padStart(2, '0');
+    const sec = (s % 60).toString().padStart(2, '0');
+    return `${m}:${sec}`;
+  };
+
+  // Blinking dot animation for active-call state
+  const blinkOpacity = useSharedValue(1);
+  useEffect(() => {
+    if (isCallMinimizedForVet) {
+      blinkOpacity.value = withRepeat(
+        withSequence(
+          withTiming(0.25, { duration: 600 }),
+          withTiming(1, { duration: 600 }),
+        ),
+        -1,
+        false,
+      );
+    } else {
+      cancelAnimation(blinkOpacity);
+      blinkOpacity.value = 1;
+    }
+  }, [isCallMinimizedForVet, blinkOpacity]);
+  const blinkStyle = useAnimatedStyle(() => ({ opacity: blinkOpacity.value }));
+
+  const onMaximizeCall = () => {
+    if (!isCallMinimizedForVet) return;
+    callCtx.maximize();
+    if (callCtx.state.vetId) {
+      navigation.navigate('VideoCall', { vetId: callCtx.state.vetId });
+    }
+  };
 
   const initialMessages = useMemo(
     () => mockMessages.filter((m) => m.conversationId === conversationId),
@@ -219,27 +268,45 @@ export default function ChatScreen({ route, navigation }: Props) {
   return (
     <SafeAreaView style={styles.flex} edges={['top', 'left', 'right']}>
       {/* Header */}
-      <View style={styles.header}>
+      <View style={[styles.header, isCallMinimizedForVet && styles.headerCallActive]}>
         <Pressable onPress={() => navigation.goBack()} style={styles.backBtn} hitSlop={10}>
           <Icon name="ChevronLeft" size={24} color={semantic.primary} />
         </Pressable>
         <View style={styles.headerVet}>
           <View style={styles.vetAvatar}>
-            <Icon name="UserCircle" size={28} color={semantic.primary} strokeWidth={1.5} />
+            {vet.avatar ? (
+              <Image source={{ uri: vet.avatar }} style={styles.vetAvatarImg} />
+            ) : (
+              <Icon name="UserCircle" size={28} color={semantic.primary} strokeWidth={1.5} />
+            )}
           </View>
           <View style={{ flex: 1 }}>
             <Text variant="bodyStrong" numberOfLines={1}>{vet.name}</Text>
-            <Text variant="caption" color={statusMeta[vet.status].color}>
-              ● {statusMeta[vet.status].label}
-            </Text>
+            {isCallMinimizedForVet ? (
+              <Animated.View style={[styles.statusRow, blinkStyle]}>
+                <Text style={styles.statusDotInline}>●</Text>
+                <Text variant="caption" color={semantic.primary}>แตะเพื่อเปิดหน้าจอวิดีโอคอล</Text>
+              </Animated.View>
+            ) : (
+              <Text variant="caption" color={statusMeta[vet.status].color}>
+                ● {statusMeta[vet.status].label}
+              </Text>
+            )}
           </View>
         </View>
         <Pressable
-          onPress={() => {}}
-          style={[styles.callBtn, vet.status !== 'online' && { opacity: 0.3 }]}
-          disabled={vet.status !== 'online'}
+          onPress={isCallMinimizedForVet ? onMaximizeCall : () => {}}
+          style={[
+            styles.callBtn,
+            isCallMinimizedForVet && styles.callBtnActive,
+            !isCallMinimizedForVet && vet.status !== 'online' && { opacity: 0.3 },
+          ]}
+          disabled={!isCallMinimizedForVet && vet.status !== 'online'}
         >
           <Icon name="Video" size={20} color={semantic.primary} />
+          {isCallMinimizedForVet && (
+            <Text style={styles.callBtnTime}>{formatCallTime(callDuration)}</Text>
+          )}
         </Pressable>
       </View>
 
@@ -384,6 +451,19 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: semantic.border,
   },
+  headerCallActive: {
+    backgroundColor: '#FBF3F4',
+    borderBottomColor: '#F5E4E7',
+  },
+  statusRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  statusDotInline: {
+    color: semantic.primary,
+    fontSize: 12,
+  },
   backBtn: {
     width: 32,
     height: 32,
@@ -403,6 +483,12 @@ const styles = StyleSheet.create({
     backgroundColor: semantic.primaryMuted,
     alignItems: 'center',
     justifyContent: 'center',
+    overflow: 'hidden',
+  },
+  vetAvatarImg: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
   },
   statusDot: {
     position: 'absolute',
@@ -421,6 +507,18 @@ const styles = StyleSheet.create({
     backgroundColor: semantic.primaryMuted,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  callBtnActive: {
+    width: 'auto',
+    flexDirection: 'row',
+    paddingHorizontal: 10,
+    gap: 6,
+    backgroundColor: '#F5E4E7',
+  },
+  callBtnTime: {
+    color: semantic.primary,
+    fontSize: 13,
+    fontFamily: 'GoogleSans_500Medium',
   },
   messages: {
     padding: spacing.lg,
