@@ -99,7 +99,7 @@ export default function PetsListScreen({ navigation }: Props) {
           resizeMode="contain"
         />
 
-        <View style={styles.heroText}>
+        <View style={[styles.heroText, { paddingRight: 160 }]}>
           <Text
             variant="bodyStrong"
             style={[
@@ -290,8 +290,7 @@ const styles = StyleSheet.create({
     height: 140,
   },
   heroText: {
-    paddingHorizontal: spacing.xl,
-    width: 220,
+    paddingLeft: spacing.xl,
     gap: spacing.sm,
   },
   heroTitle: {
