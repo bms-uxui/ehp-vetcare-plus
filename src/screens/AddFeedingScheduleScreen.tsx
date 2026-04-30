@@ -17,6 +17,8 @@ import {
 import type { FeedingType } from '../components/FeedingTypeCard';
 import { semantic } from '../theme';
 import { mockPets } from '../data/pets';
+import { useSchedules } from '../data/schedulesContext';
+import { notifyNow } from '../lib/notifications';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'AddFeedingSchedule'>;
 
@@ -43,6 +45,7 @@ const TIME_OPTIONS = [
 
 export default function AddFeedingScheduleScreen({ navigation }: Props) {
   const insets = useSafeAreaInsets();
+  const { addSchedule } = useSchedules();
   const [type, setType] = useState<FeedingType>('food');
   const [selectedPetIds, setSelectedPetIds] = useState<Set<string>>(
     () => new Set(mockPets[0] ? [mockPets[0].id] : []),
@@ -71,7 +74,32 @@ export default function AddFeedingScheduleScreen({ navigation }: Props) {
   });
 
   const onSubmit = () => {
-    if (!canSubmit) return;
+    if (!canSubmit || !time) return;
+    const selectedPets = mockPets.filter((p) => selectedPetIds.has(p.id));
+    const allDays = days.size === 7;
+    const daysOfWeek = allDays ? [] : Array.from(days).sort((a, b) => a - b);
+    const trimmedNote = note.trim();
+    const trimmedAmount = amount.trim();
+
+    selectedPets.forEach((p) => {
+      addSchedule({
+        type,
+        petId: p.id,
+        petName: p.name,
+        petEmoji: p.emoji,
+        time,
+        amount: trimmedAmount,
+        note: trimmedNote || undefined,
+        enabled: true,
+        daysOfWeek,
+      });
+    });
+
+    const typeLabel = type === 'food' ? 'อาหาร' : 'น้ำ';
+    notifyNow({
+      title: 'บันทึกตารางเรียบร้อย',
+      body: `${typeLabel} · ${time} · ${trimmedAmount}`,
+    });
     navigation.goBack();
   };
 

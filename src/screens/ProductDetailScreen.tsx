@@ -30,9 +30,9 @@ import { GlassView, isLiquidGlassAvailable } from '../lib/glass-effect';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { RootStackParamList } from '../../App';
-import { AppBackground, Button, Icon, IconButton, Text } from '../components';
+import { AppBackground, Button, Icon, IconButton, ProductTile, Text } from '../components';
 import { radii, semantic, spacing } from '../theme';
-import { mockProducts, categoryMeta, fmtBaht, getProductImages, Product } from '../data/products';
+import { mockProducts, categoryMeta, fmtBaht, getProductImages } from '../data/products';
 import { cartStore, useCart } from '../data/cart';
 
 const LIQUID_GLASS = isLiquidGlassAvailable();
@@ -102,14 +102,25 @@ export default function ProductDetailScreen({ route, navigation }: Props) {
     });
   };
 
-  // Bar + title fade in as user scrolls past the hero
+  // Bar + title fade in as user scrolls past the hero. Two stacked blur
+  // layers (soft 30 then heavy 80) give a graduated frost matching the
+  // AddFeedingSchedule appbar pattern.
   const FADE_START = HERO_HEIGHT * 0.3;
   const FADE_END = HERO_HEIGHT * 0.55;
+  const FADE_MID = FADE_START + (FADE_END - FADE_START) * 0.6;
 
+  const barSoftStyle = useAnimatedStyle(() => ({
+    opacity: interpolate(
+      scrollY.value,
+      [FADE_START, FADE_MID],
+      [0, 1],
+      Extrapolation.CLAMP,
+    ),
+  }));
   const barBgStyle = useAnimatedStyle(() => ({
     opacity: interpolate(
       scrollY.value,
-      [FADE_START, FADE_END],
+      [FADE_MID, FADE_END],
       [0, 1],
       Extrapolation.CLAMP,
     ),
@@ -499,9 +510,10 @@ export default function ProductDetailScreen({ route, navigation }: Props) {
                 contentContainerStyle={styles.relatedScroll}
               >
                 {relatedProducts.map((p) => (
-                  <RelatedCard
+                  <ProductTile
                     key={p.id}
                     product={p}
+                    cardWidth={CARD_W}
                     onPress={() =>
                       navigation.push('ProductDetail', { productId: p.id })
                     }
@@ -518,8 +530,19 @@ export default function ProductDetailScreen({ route, navigation }: Props) {
         pointerEvents="box-none"
         style={[styles.appbar, { paddingTop: insets.top, height: insets.top + 56 }]}
       >
-        {/* Apple-style nav bar — single continuous BlurView covering status
-            bar + 56pt content area. Fades in on scroll like Apple's apps. */}
+        {/* Apple-style nav bar — graduated blur. Soft layer (intensity 30)
+            appears first as user starts scrolling past the hero, then a
+            heavier blur (intensity 80) overlays for the final frosted look. */}
+        <Animated.View
+          pointerEvents="none"
+          style={[StyleSheet.absoluteFill, barSoftStyle]}
+        >
+          <BlurView
+            intensity={30}
+            tint="systemChromeMaterialLight"
+            style={StyleSheet.absoluteFill}
+          />
+        </Animated.View>
         <Animated.View
           pointerEvents="none"
           style={[StyleSheet.absoluteFill, barBgStyle]}
@@ -535,12 +558,23 @@ export default function ProductDetailScreen({ route, navigation }: Props) {
 
         {/* Foreground content — buttons + animated title */}
         <View style={styles.appbarContent}>
-          <IconButton
-            icon="ChevronLeft"
-            size="md"
+          <Pressable
             onPress={() => navigation.goBack()}
+            hitSlop={8}
+            accessibilityRole="button"
             accessibilityLabel="ย้อนกลับ"
-          />
+            style={({ pressed }) => [
+              styles.navIconBtn,
+              pressed && { opacity: 0.7, transform: [{ scale: 0.96 }] },
+            ]}
+          >
+            <Icon
+              name="ChevronLeft"
+              size={20}
+              color="#1A1A1A"
+              strokeWidth={2.4}
+            />
+          </Pressable>
           <Animated.View
             style={[styles.appbarTitleWrap, titleStyle]}
             pointerEvents="none"
@@ -555,12 +589,23 @@ export default function ProductDetailScreen({ route, navigation }: Props) {
           </Animated.View>
           <View ref={cartIconRef} collapsable={false}>
             <Animated.View style={cartBumpStyle}>
-              <IconButton
-                icon="ShoppingCart"
-                size="md"
+              <Pressable
                 onPress={() => navigation.navigate('Cart')}
+                hitSlop={8}
+                accessibilityRole="button"
                 accessibilityLabel="ตะกร้าสินค้า"
-              />
+                style={({ pressed }) => [
+                  styles.navIconBtn,
+                  pressed && { opacity: 0.7, transform: [{ scale: 0.96 }] },
+                ]}
+              >
+                <Icon
+                  name="ShoppingCart"
+                  size={20}
+                  color="#1A1A1A"
+                  strokeWidth={2.2}
+                />
+              </Pressable>
             </Animated.View>
             {cart.count > 0 && (
               <Animated.View
@@ -630,16 +675,34 @@ export default function ProductDetailScreen({ route, navigation }: Props) {
                 uppercase={false}
                 onPress={onAddToCart}
                 style={styles.flexBtn}
+                leftIcon={
+                  <Icon
+                    name="ShoppingBag"
+                    size={18}
+                    color={semantic.primary}
+                    strokeWidth={2.2}
+                  />
+                }
               />
             </View>
             <View style={styles.flexBtnWrap}>
-              <Button
-                label="ชำระเงิน"
-                variant="primary"
-                uppercase={false}
+              <Pressable
                 onPress={onCheckout}
-                style={styles.flexBtn}
-              />
+                style={({ pressed }) => [
+                  styles.checkoutBtn,
+                  pressed && { opacity: 0.85 },
+                ]}
+              >
+                <Icon
+                  name="CreditCard"
+                  size={18}
+                  color="#FFFFFF"
+                  strokeWidth={2.2}
+                />
+                <Text weight="600" style={styles.checkoutBtnText}>
+                  ชำระเงิน
+                </Text>
+              </Pressable>
             </View>
           </View>
         </View>
@@ -677,60 +740,6 @@ export default function ProductDetailScreen({ route, navigation }: Props) {
   );
 }
 
-/* Related product card — used in horizontal "สินค้าแนะนำ" carousel */
-function RelatedCard({
-  product,
-  onPress,
-}: {
-  product: Product;
-  onPress: () => void;
-}) {
-  const [imgFailed, setImgFailed] = useState(false);
-  const cat = categoryMeta[product.category];
-  const isOnSale = !!product.originalPriceBaht;
-  const priceColor = isOnSale ? '#C25450' : '#4FB36C';
-
-  return (
-    <Pressable
-      onPress={onPress}
-      style={({ pressed }) => [
-        styles.relatedCard,
-        pressed && { transform: [{ scale: 0.97 }], opacity: 0.92 },
-      ]}
-    >
-      <View style={[styles.relatedImage, { backgroundColor: cat.bg }]}>
-        {product.imageUrl && !imgFailed ? (
-          <Image
-            source={{ uri: product.imageUrl }}
-            style={StyleSheet.absoluteFill}
-            resizeMode="cover"
-            onError={() => setImgFailed(true)}
-          />
-        ) : (
-          <Text style={{ fontSize: 48 }}>{product.emoji}</Text>
-        )}
-        {isOnSale && (
-          <View style={styles.relatedSaleBadge}>
-            <Text weight="700" style={styles.relatedSaleText}>
-              SALE
-            </Text>
-          </View>
-        )}
-      </View>
-      <View style={styles.relatedBody}>
-        <Text weight="600" style={styles.relatedBrand} numberOfLines={1}>
-          {product.brand}
-        </Text>
-        <Text weight="600" style={styles.relatedName} numberOfLines={2}>
-          {product.name}
-        </Text>
-        <Text weight="700" style={[styles.relatedPrice, { color: priceColor }]}>
-          {fmtBaht(product.priceBaht)}
-        </Text>
-      </View>
-    </Pressable>
-  );
-}
 
 /* Lightbox: fullscreen image viewer with horizontal paging + close button */
 function Lightbox({
@@ -839,6 +848,12 @@ function Lightbox({
 function HeroChip({ icon, label }: { icon: string; label: string }) {
   return (
     <View style={styles.chip}>
+      <BlurView
+        intensity={50}
+        tint="systemThinMaterialLight"
+        style={StyleSheet.absoluteFill}
+      />
+      <View pointerEvents="none" style={styles.chipTint} />
       <Icon name={icon as any} size={11} color="#1A1A1A" strokeWidth={2.4} />
       <Text style={styles.chipText}>{label}</Text>
     </View>
@@ -880,6 +895,21 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: spacing.lg,
     height: 56,
+  },
+  navIconBtn: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: '#FFFFFF',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: 'rgba(0,0,0,0.1)',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.06,
+    shadowRadius: 2,
+    elevation: 1,
   },
   appbarTitleWrap: {
     position: 'absolute',
@@ -996,7 +1026,15 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 100,
-    backgroundColor: 'rgba(255,255,255,0.55)',
+    overflow: 'hidden',
+  },
+  chipTint: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(255,255,255,0.35)',
   },
   chipText: {
     fontSize: 12,
@@ -1092,8 +1130,7 @@ const styles = StyleSheet.create({
     marginHorizontal: spacing.lg,
     padding: spacing.lg,
     borderRadius: 16,
-    borderWidth: 1,
-    borderColor: '#F5E4E7',
+    backgroundColor: '#FFFFFF',
     gap: spacing.md,
   },
   shipRow: {
@@ -1288,8 +1325,22 @@ const styles = StyleSheet.create({
   },
   flexBtn: {
     height: 48,
-    borderRadius: 16,
+    borderRadius: 999,
     width: '100%',
+  },
+  checkoutBtn: {
+    height: 48,
+    borderRadius: 999,
+    width: '100%',
+    backgroundColor: semantic.primary,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+  },
+  checkoutBtnText: {
+    fontSize: 15,
+    color: '#FFFFFF',
   },
   flexBtnWrap: {
     flex: 1,
