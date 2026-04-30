@@ -99,31 +99,23 @@ export default function PetsListScreen({ navigation }: Props) {
           resizeMode="contain"
         />
 
-        <View style={styles.heroText}>
-          <Text
-            variant="bodyStrong"
-            style={[
-              styles.heroTitle,
-              {
-                fontSize: Math.max(22, Math.min(32, windowWidth * 0.07)),
-                lineHeight: Math.max(34, Math.min(46, windowWidth * 0.1)),
-              },
-            ]}
-          >
+        <View
+          style={[
+            styles.heroText,
+            windowWidth > 700 && styles.heroTextTablet,
+          ]}
+        >
+          <Text variant="bodyStrong" style={styles.heroTitle}>
             ข้อมูลสัตว์เลี้ยง
           </Text>
           <Text
             variant="caption"
             color={semantic.textSecondary}
-            style={[
-              styles.heroSubtitle,
-              {
-                fontSize: Math.max(13, Math.min(17, windowWidth * 0.04)),
-                lineHeight: Math.max(24, Math.min(30, windowWidth * 0.07)),
-              },
-            ]}
+            style={styles.heroSubtitle}
           >
-            ตรวจสอบข้อมูลหรือเพิ่มข้อมูล{'\n'}สมาชิกสัตว์เลี้ยงของคุณ
+            {windowWidth > 700
+              ? 'ตรวจสอบข้อมูลหรือเพิ่มข้อมูลสมาชิกสัตว์เลี้ยงของคุณ'
+              : `ตรวจสอบข้อมูลหรือเพิ่มข้อมูล${'\n'}สมาชิกสัตว์เลี้ยงของคุณ`}
           </Text>
         </View>
       </View>
@@ -294,11 +286,18 @@ const styles = StyleSheet.create({
     width: 220,
     gap: spacing.sm,
   },
+  heroTextTablet: {
+    width: 480,
+  },
   heroTitle: {
+    fontSize: 28,
+    lineHeight: 36,
     color: '#1A1A1F',
     fontWeight: '700',
   },
   heroSubtitle: {
+    fontSize: 16,
+    lineHeight: 24,
     color: '#4A4A50',
   },
   sheet: {

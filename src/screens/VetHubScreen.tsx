@@ -62,7 +62,8 @@ const HERO_HEIGHT = 220;
 
 export default function VetHubScreen({ navigation }: Props) {
   const insets = useSafeAreaInsets();
-  const { height: windowHeight } = useWindowDimensions();
+  const { height: windowHeight, width: windowWidth } = useWindowDimensions();
+  const isTablet = windowWidth > 700;
   const [tab, setTab] = useState<Tab>('upcoming');
 
   const upcoming = mockAppointments
@@ -135,12 +136,14 @@ export default function VetHubScreen({ navigation }: Props) {
             style={styles.heroBottomFade}
           />
           <Image source={VET_HERO_IMG} style={styles.heroImage} resizeMode="contain" />
-          <View style={styles.heroText}>
+          <View style={[styles.heroText, isTablet && styles.heroTextTablet]}>
             <Text variant="bodyStrong" style={styles.heroTitle}>
               สัตวแพทย์
             </Text>
             <Text variant="caption" color={semantic.textSecondary} style={styles.heroSubtitle}>
-              นัดหมาย ปรึกษาออนไลน์{'\n'}และประวัติการรักษา
+              {isTablet
+                ? 'นัดหมาย ปรึกษาออนไลน์ และประวัติการรักษา'
+                : `นัดหมาย ปรึกษาออนไลน์${'\n'}และประวัติการรักษา`}
             </Text>
           </View>
         </View>
@@ -992,6 +995,9 @@ const styles = StyleSheet.create({
     top: 110,
     width: 188,
     gap: spacing.sm,
+  },
+  heroTextTablet: {
+    width: 480,
   },
   heroTitle: {
     fontSize: 28,

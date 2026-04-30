@@ -162,6 +162,8 @@ export type FeedingSchedule = {
   note?: string;
   enabled: boolean;
   daysOfWeek: number[]; // 0=Sun..6=Sat, empty = every day
+  /** ISO timestamp of last "ให้อาหารแล้ว"/"เปลี่ยนน้ำแล้ว" confirmation. */
+  lastConfirmedAt?: string;
 };
 
 export const mockSchedules: FeedingSchedule[] = [

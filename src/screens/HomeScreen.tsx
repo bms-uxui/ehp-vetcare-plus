@@ -21,6 +21,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { RootStackParamList } from '../../App';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Button, Card, Icon, ProductTile, Screen, Text } from '../components';
+import { getProductColumns } from '../lib/responsive';
 import VetCareLogo from '../../assets/vet-care-plus.svg';
 import VaccinationIllus from '../../assets/vaccination-appointment.svg';
 import { radii, semantic, shadows, spacing } from '../theme';
@@ -57,6 +58,12 @@ const thTimeOfDayLabel = (time: string) => {
 export default function HomeScreen({ navigation }: Props) {
   const insets = useSafeAreaInsets();
   const { width: windowWidth } = useWindowDimensions();
+  const productCols = getProductColumns(windowWidth);
+  const PRODUCT_GAP = 8;
+  const PRODUCT_PAD = 20; // spacing.xl
+  const productCardWidth =
+    (windowWidth - PRODUCT_PAD * 2 - PRODUCT_GAP * (productCols - 1)) /
+    productCols;
   const bannerPageWidth = windowWidth - spacing.xl * 2;
   const nextAppt = mockAppointments
     .filter((a) => a.status === 'upcoming')
@@ -576,6 +583,7 @@ export default function HomeScreen({ navigation }: Props) {
             <ProductTile
               key={p.id}
               product={p}
+              cardWidth={productCardWidth}
               onPress={() => navigation.navigate('ProductDetail', { productId: p.id })}
             />
           ))}
@@ -892,7 +900,7 @@ const styles = StyleSheet.create({
   productGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: spacing.sm,
+    gap: 8,
   },
   productTile: {
     flexBasis: '47.5%',
