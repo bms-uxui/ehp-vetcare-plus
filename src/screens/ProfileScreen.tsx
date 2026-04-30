@@ -1,23 +1,26 @@
+import { useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { CommonActions, useNavigation } from '@react-navigation/native';
-import { Button, Card, Icon, Screen, Text } from '../components';
+import { Button, Card, ConfirmModal, Icon, Screen, Text } from '../components';
 import { semantic, spacing } from '../theme';
 
 type MenuItem = { icon: string; label: string; route?: keyof import('../../App').RootStackParamList };
 
 const MENU: MenuItem[] = [
-  { icon: 'User', label: 'ข้อมูลส่วนตัว' },
+  { icon: 'User', label: 'ข้อมูลส่วนตัว', route: 'ProfileInfo' },
   { icon: 'CreditCard', label: 'ค่าใช้จ่ายและงบประมาณ', route: 'Expenses' },
   { icon: 'Bell', label: 'การแจ้งเตือน', route: 'Notifications' },
-  { icon: 'Hospital', label: 'คลินิกที่เชื่อมต่อ' },
-  { icon: 'Lock', label: 'ความปลอดภัย' },
-  { icon: 'HelpCircle', label: 'ช่วยเหลือ' },
+  { icon: 'Hospital', label: 'คลินิกที่เชื่อมต่อ', route: 'ConnectedClinics' },
+  { icon: 'Lock', label: 'ความปลอดภัย', route: 'Security' },
+  { icon: 'HelpCircle', label: 'ช่วยเหลือ', route: 'Help' },
 ];
 
 export default function ProfileScreen() {
   const navigation = useNavigation();
+  const [signOutOpen, setSignOutOpen] = useState(false);
 
-  const signOut = () => {
+  const confirmSignOut = () => {
+    setSignOutOpen(false);
     navigation.dispatch(
       CommonActions.reset({ index: 0, routes: [{ name: 'Login' }] }),
     );
@@ -65,8 +68,26 @@ export default function ProfileScreen() {
       </Card>
 
       <View style={styles.signOut}>
-        <Button label="ออกจากระบบ" variant="ghost" uppercase={false} onPress={signOut} />
+        <Button
+          label="ออกจากระบบ"
+          variant="ghost"
+          uppercase={false}
+          onPress={() => setSignOutOpen(true)}
+        />
       </View>
+
+      <ConfirmModal
+        visible={signOutOpen}
+        icon="LogOut"
+        tone="danger"
+        title="ออกจากระบบ?"
+        message="คุณต้องเข้าสู่ระบบใหม่เพื่อใช้งานแอปต่อ"
+        cancelLabel="ยกเลิก"
+        confirmLabel="ออกจากระบบ"
+        confirmTone="danger"
+        onCancel={() => setSignOutOpen(false)}
+        onConfirm={confirmSignOut}
+      />
     </Screen>
   );
 }

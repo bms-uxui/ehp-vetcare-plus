@@ -72,7 +72,7 @@ export default function SubPageHeader({ title, onBack, trailing }: Props) {
 const styles = StyleSheet.create({
   wrap: {
     backgroundColor: 'transparent',
-    paddingBottom: 8,
+    paddingBottom: 4,
     zIndex: 10,
   },
   bannerGradient: {
@@ -95,9 +95,9 @@ const styles = StyleSheet.create({
     color: '#1A1A1A',
   },
   iconBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     backgroundColor: '#FFFFFF',
     alignItems: 'center',
     justifyContent: 'center',
@@ -114,7 +114,7 @@ const styles = StyleSheet.create({
     transform: [{ scale: 0.96 }],
   },
   iconBtnPlaceholder: {
-    width: 36,
-    height: 36,
+    width: 44,
+    height: 44,
   },
 });
