@@ -91,9 +91,11 @@ export default function HomeScreen({ navigation }: Props) {
     clinic: string;
     cta: string;
     onPress: () => void;
-    /** Background illustration. Drop a PNG/SVG in assets/ and require() it here. */
+    /** Full-bleed background illustration. Drop a PNG/SVG in assets/ and require() it here. */
     illustration?: ImageSourcePropType;
-    /** Right-side SVG illustration component (alternative to raster `illustration`). */
+    /** Raster image for the right-side corner slot (alternative to `IllustrationSvg`). */
+    cornerIllustration?: ImageSourcePropType;
+    /** Right-side SVG illustration component (alternative to raster `cornerIllustration`). */
     IllustrationSvg?: React.FC<{ width?: number; height?: number }>;
     /** Fallback tint while no illustration is provided. */
     accent: string;
@@ -128,6 +130,16 @@ export default function HomeScreen({ navigation }: Props) {
       IllustrationSvg: VaccinationIllus,
       onPress: () =>
         navigation.navigate('AppointmentDetail', { appointmentId: nextAppt.id }),
+    },
+    {
+      date: 'พร้อมให้บริการตอนนี้',
+      actionTop: 'ปรึกษาสัตวแพทย์',
+      actionBottom: 'ออนไลน์ทุกที่ ทุกเวลา',
+      clinic: 'มีสัตวแพทย์ออนไลน์ พร้อมตอบคำถามคุณ',
+      cta: 'เริ่มสนทนา',
+      accent: '#E0F0FB',
+      cornerIllustration: require('../../assets/Hero-VetPage.png'),
+      onPress: () => navigation.navigate('Vet' as never),
     },
   ].filter(Boolean) as BannerItem[];
 
@@ -279,6 +291,17 @@ export default function HomeScreen({ navigation }: Props) {
                       />
                     </View>
                   )}
+                </View>
+              ) : item.cornerIllustration ? (
+                <View
+                  style={[styles.bannerIllus, styles.bannerIllusRaster]}
+                  pointerEvents="none"
+                >
+                  <Image
+                    source={item.cornerIllustration}
+                    style={styles.bannerIllusImg}
+                    resizeMode="contain"
+                  />
                 </View>
               ) : null}
               <View style={styles.dateChip}>
@@ -697,6 +720,16 @@ const styles = StyleSheet.create({
     bottom: -96,
     width: 200,
     height: 178,
+  },
+  bannerIllusImg: {
+    width: '100%',
+    height: '100%',
+  },
+  bannerIllusRaster: {
+    width: 220,
+    height: 220,
+    right: -40,
+    bottom: -110,
   },
   bannerPetAvatar: {
     position: 'absolute',
