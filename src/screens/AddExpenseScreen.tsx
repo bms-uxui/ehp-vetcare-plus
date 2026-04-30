@@ -1,5 +1,6 @@
 import { ReactNode, useState } from 'react';
 import {
+  Image,
   Modal,
   Platform,
   Pressable,
@@ -11,6 +12,7 @@ import {
 import DateTimePicker, {
   DateTimePickerEvent,
 } from '@react-native-community/datetimepicker';
+import { LinearGradient } from 'expo-linear-gradient';
 import Animated, {
   useAnimatedScrollHandler,
   useSharedValue,
@@ -23,14 +25,23 @@ import {
   Button,
   Icon,
   PetAvatar,
-  StickyAppBar,
+  SubPageHeader,
   Text,
 } from '../components';
 import { semantic, spacing } from '../theme';
 import { categoryMeta, ExpenseCategory } from '../data/expenses';
 import { mockPets } from '../data/pets';
+import { notifyNow } from '../lib/notifications';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'AddExpense'>;
+
+const CATEGORY_ILLUSTRATIONS: Record<ExpenseCategory, number> = {
+  food: require('../../assets/illustrations/cat-food.png'),
+  treatment: require('../../assets/illustrations/cat-treatment.png'),
+  grooming: require('../../assets/illustrations/cat-grooming.png'),
+  supplies: require('../../assets/illustrations/cat-supplies.png'),
+  other: require('../../assets/illustrations/cat-another.png'),
+};
 
 const TH_MONTHS = [
   'มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน',
@@ -81,6 +92,10 @@ export default function AddExpenseScreen({ navigation }: Props) {
 
   const onSubmit = () => {
     if (!canSubmit) return;
+    notifyNow({
+      title: '✅ บันทึกค่าใช้จ่ายเรียบร้อย',
+      body: `${title.trim()} · ฿${Number(amount).toLocaleString('th-TH')}`,
+    });
     navigation.goBack();
   };
 
@@ -90,75 +105,91 @@ export default function AddExpenseScreen({ navigation }: Props) {
     <View style={styles.root}>
       <AppBackground />
 
-      <StickyAppBar
-        scrollY={scrollY}
-        fadeStartAt={60}
-        fadeEndAt={120}
+      <SubPageHeader
         title="บันทึกค่าใช้จ่าย"
-        leading={{
-          icon: 'ChevronLeft',
-          onPress: () => navigation.goBack(),
-          accessibilityLabel: 'ย้อนกลับ',
-        }}
+        onBack={() => navigation.goBack()}
       />
 
       <Animated.ScrollView
+        style={styles.flex}
         contentContainerStyle={[
           styles.scroll,
-          { paddingTop: insets.top + 56, paddingBottom: insets.bottom + 100 },
+          { paddingTop: spacing.md, paddingBottom: insets.bottom + 100 },
         ]}
         showsVerticalScrollIndicator={false}
         onScroll={scrollHandler}
         scrollEventThrottle={16}
         keyboardShouldPersistTaps="handled"
       >
-        {/* Hero */}
-        <View style={styles.hero}>
-          <Text variant="h1" style={styles.heroTitle}>
-            บันทึกค่าใช้จ่าย
-          </Text>
-          <Text weight="500" style={styles.heroDescription}>
-            เพิ่มรายการเพื่อติดตามงบประมาณรายเดือน
-          </Text>
-        </View>
 
-        {/* Category — wrap chips into 2 rows (no horizontal scroll) */}
-        <View style={styles.chipsSection}>
-          <Text weight="500" style={[styles.sectionTitle, styles.chipsTitle]}>
-            หมวดหมู่
-          </Text>
-          <View style={styles.chipsWrap}>
-            {categories.map((c) => {
-              const meta = categoryMeta[c];
-              const selected = category === c;
-              return (
-                <Pressable
-                  key={c}
-                  onPress={() => setCategory(c)}
-                  style={({ pressed }) => [
-                    styles.catChip,
-                    selected && styles.catChipSelected,
-                    pressed && { opacity: 0.7 },
-                  ]}
-                >
-                  <Icon
-                    name={meta.icon as any}
-                    size={14}
-                    color={selected ? '#FFFFFF' : meta.color}
-                    strokeWidth={2.4}
-                  />
-                  <Text
-                    weight={selected ? '600' : '500'}
-                    style={[
-                      styles.catChipText,
-                      selected && styles.catChipTextSelected,
-                    ]}
-                  >
-                    {meta.label}
-                  </Text>
-                </Pressable>
-              );
-            })}
+        {/* Category card — Figma 529:1118 — chips inside a soft card with
+            pet illustration in the bottom-right corner. Card uses a soft
+            diagonal gradient that follows the selected category's tint. */}
+        <View style={styles.categoryCardWrap}>
+          <View style={styles.categoryCard}>
+            <LinearGradient
+              colors={[
+                categoryMeta[category].bg,
+                categoryMeta[category].color + '33',
+              ]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={StyleSheet.absoluteFill}
+            />
+            <View pointerEvents="none" style={styles.categoryCardImageWrap}>
+              <Image
+                source={CATEGORY_ILLUSTRATIONS[category]}
+                style={styles.categoryCardImage}
+                resizeMode="contain"
+              />
+            </View>
+            <View style={styles.categoryCardContent}>
+              <Text weight="500" style={styles.categoryCardTitle}>
+                หมวดหมู่
+              </Text>
+              {/* Force layout: top 2 chips, bottom 3 chips */}
+              {[categories.slice(0, 2), categories.slice(2)].map(
+                (rowChips, rowIdx) => (
+                  <View key={rowIdx} style={styles.chipsRow}>
+                    {rowChips.map((c) => {
+                      const meta = categoryMeta[c];
+                      const selected = category === c;
+                      return (
+                        <Pressable
+                          key={c}
+                          onPress={() => setCategory(c)}
+                          style={({ pressed }) => [
+                            styles.catChip,
+                            selected && styles.catChipSelected,
+                            selected && {
+                              backgroundColor: meta.color,
+                              shadowColor: meta.color,
+                            },
+                            pressed && { opacity: 0.7 },
+                          ]}
+                        >
+                          <Icon
+                            name={meta.icon as any}
+                            size={14}
+                            color={selected ? '#FFFFFF' : meta.color}
+                            strokeWidth={2.4}
+                          />
+                          <Text
+                            weight={selected ? '600' : '500'}
+                            style={[
+                              styles.catChipText,
+                              selected && styles.catChipTextSelected,
+                            ]}
+                          >
+                            {meta.label}
+                          </Text>
+                        </Pressable>
+                      );
+                    })}
+                  </View>
+                ),
+              )}
+            </View>
           </View>
         </View>
 
@@ -213,42 +244,63 @@ export default function AddExpenseScreen({ navigation }: Props) {
                   key={p.id}
                   onPress={() => togglePet(p.id)}
                   style={({ pressed }) => [
-                    styles.tile,
-                    pressed && { opacity: 0.85 },
+                    styles.petCard,
+                    selected && styles.petCardSelected,
+                    pressed && { opacity: 0.95, transform: [{ scale: 0.98 }] },
                   ]}
                 >
+                  {selected && (
+                    <LinearGradient
+                      pointerEvents="none"
+                      colors={['#FFE9EC', '#FBF3F4']}
+                      start={{ x: 0, y: 0 }}
+                      end={{ x: 1, y: 1 }}
+                      style={StyleSheet.absoluteFill}
+                    />
+                  )}
+                  {selected && (
+                    <View style={styles.petCheckBadge} pointerEvents="none">
+                      <Icon
+                        name="Check"
+                        size={12}
+                        color="#FFFFFF"
+                        strokeWidth={3}
+                      />
+                    </View>
+                  )}
                   <View
                     style={[
-                      styles.petRing,
-                      selected && styles.petRingSelected,
+                      styles.petAvatarRing,
+                      selected && styles.petAvatarRingSelected,
                     ]}
                   >
                     <PetAvatar
                       pet={p}
-                      size={60}
-                      backgroundColor={semantic.primaryMuted}
+                      size={64}
+                      backgroundColor="#FFFFFF"
                     />
-                    {selected && (
-                      <View style={styles.petCheckBadge} pointerEvents="none">
-                        <Icon
-                          name="Check"
-                          size={11}
-                          color="#FFFFFF"
-                          strokeWidth={3}
-                        />
-                      </View>
-                    )}
                   </View>
-                  <Text
-                    weight={selected ? '600' : '500'}
-                    style={[
-                      styles.tileLabel,
-                      selected && { color: semantic.primary },
-                    ]}
-                    numberOfLines={1}
-                  >
-                    {p.name}
-                  </Text>
+                  <View style={styles.petCardTextWrap}>
+                    <Text
+                      weight={selected ? '700' : '600'}
+                      style={[
+                        styles.petCardName,
+                        selected && { color: semantic.primary },
+                      ]}
+                      numberOfLines={1}
+                    >
+                      {p.name}
+                    </Text>
+                    <Text
+                      style={[
+                        styles.petCardSpecies,
+                        selected && { color: semantic.primary, opacity: 0.7 },
+                      ]}
+                      numberOfLines={1}
+                    >
+                      {p.speciesLabel}
+                    </Text>
+                  </View>
                 </Pressable>
               );
             })}
@@ -394,6 +446,7 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: semantic.background,
   },
+  flex: { flex: 1 },
   scroll: {
     paddingBottom: 0,
   },
@@ -426,112 +479,173 @@ const styles = StyleSheet.create({
   },
 
   // Category chip row — horizontal scroll
-  chipsSection: {
-    paddingTop: spacing.sm,
-    paddingBottom: spacing.sm,
+  // Category card — gray rounded container with chips + pet illustration
+  categoryCardWrap: {
+    paddingHorizontal: 16,
+    paddingVertical: spacing.sm,
+  },
+  categoryCard: {
+    backgroundColor: '#F2F2F3',
+    borderRadius: 16,
+    overflow: 'hidden',
+    position: 'relative',
+    minHeight: 140,
+    // Drop shadow tinted lightly so the gradient feels lifted
+    shadowColor: '#5E303C',
+    shadowOpacity: 0.06,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 2,
+  },
+  categoryCardContent: {
+    padding: 16,
     gap: 10,
+    // No paddingRight — chips can extend full width; the illustration
+    // sits at the bottom-right corner and may be visually overlapped at
+    // the start of row 2 (matches the Figma reference behaviour).
   },
-  chipsTitle: {
-    paddingHorizontal: 16,
+  categoryCardTitle: {
+    fontSize: 14,
+    color: '#1A1A1A',
   },
-  chipsWrap: {
+  categoryCardImageWrap: {
+    position: 'absolute',
+    right: 0,
+    bottom: 0,
+    width: 150,
+    height: 150,
+  },
+  categoryCardImage: {
+    width: '100%',
+    height: '100%',
+  },
+  chipsRow: {
     flexDirection: 'row',
+    gap: 10,
     flexWrap: 'wrap',
-    paddingHorizontal: 16,
-    paddingVertical: 6,
-    rowGap: 10,
-    columnGap: 8,
   },
   catChip: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
     borderRadius: 100,
-    backgroundColor: '#F2F2F3',
+    backgroundColor: '#FFFFFF',
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: 'rgba(0,0,0,0.05)',
+    // Soft drop shadow gives chips presence on the colored card
+    shadowColor: '#000',
+    shadowOpacity: 0.06,
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 1 },
+    elevation: 1,
   },
   catChipSelected: {
-    backgroundColor: semantic.primary,
-    shadowColor: semantic.primary,
-    shadowOpacity: 0.25,
-    shadowRadius: 8,
+    // backgroundColor + shadowColor overridden inline per category
+    shadowOpacity: 0.32,
+    shadowRadius: 10,
     shadowOffset: { width: 0, height: 4 },
-    elevation: 3,
+    elevation: 4,
+    borderWidth: 0,
   },
   catChipText: {
-    fontSize: 14,
+    fontSize: 13,
     color: '#1A1A1A',
+    letterSpacing: -0.1,
   },
   catChipTextSelected: {
     color: '#FFFFFF',
   },
 
-  // Tile grid (categories + pets) — 3 cols, 64px circle items
+  // Pet grid — 3 cols of card-style tiles
   tileGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 10,
-    rowGap: 16,
+    rowGap: 10,
   },
-  tile: {
-    width: '31%',
+  petCard: {
+    width: '31.5%',
+    paddingVertical: 16,
+    paddingHorizontal: 10,
+    borderRadius: 20,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#EFE7E9',
     alignItems: 'center',
-    gap: 8,
-  },
-  iconCircle: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  iconCircleSelected: {
+    gap: 10,
+    position: 'relative',
+    overflow: 'hidden',
     shadowColor: '#5E303C',
-    shadowOpacity: 0.18,
-    shadowRadius: 12,
-    shadowOffset: { width: 0, height: 6 },
-    elevation: 4,
+    shadowOpacity: 0.04,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 1,
   },
-  // Pet avatar — 60px photo inside a 68px ring (gives a 4px halo of breathing
-  // room). Unselected ring is a soft hairline; selected fills with primary.
-  petRing: {
-    width: 68,
-    height: 68,
-    borderRadius: 9999,
+  petCardSelected: {
+    borderColor: semantic.primary,
+    borderWidth: 1.5,
+    shadowColor: semantic.primary,
+    shadowOpacity: 0.22,
+    shadowRadius: 16,
+    shadowOffset: { width: 0, height: 8 },
+    elevation: 5,
+  },
+  petAvatarRing: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    padding: 4,
     backgroundColor: '#FFFFFF',
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: '#EBE3E5',
-    position: 'relative',
-  },
-  petRingSelected: {
-    borderWidth: 2,
-    borderColor: semantic.primary,
-    backgroundColor: semantic.primaryMuted,
-    shadowColor: semantic.primary,
-    shadowOpacity: 0.18,
-    shadowRadius: 10,
+    shadowColor: '#5E303C',
+    shadowOpacity: 0.12,
+    shadowRadius: 8,
     shadowOffset: { width: 0, height: 4 },
     elevation: 3,
   },
+  petAvatarRingSelected: {
+    backgroundColor: '#FFFFFF',
+    shadowColor: semantic.primary,
+    shadowOpacity: 0.25,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 4 },
+  },
   petCheckBadge: {
     position: 'absolute',
-    bottom: -2,
-    right: -2,
-    width: 20,
-    height: 20,
-    borderRadius: 10,
+    top: 10,
+    right: 10,
+    width: 22,
+    height: 22,
+    borderRadius: 11,
     backgroundColor: semantic.primary,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 2,
     borderColor: '#FFFFFF',
+    zIndex: 1,
+    shadowColor: semantic.primary,
+    shadowOpacity: 0.4,
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 3,
   },
-  tileLabel: {
+  petCardTextWrap: {
+    alignItems: 'center',
+    gap: 2,
+  },
+  petCardName: {
     fontSize: 14,
+    lineHeight: 18,
     color: '#1A1A1A',
+    textAlign: 'center',
+  },
+  petCardSpecies: {
+    fontSize: 11,
+    lineHeight: 14,
+    color: '#9A9AA0',
     textAlign: 'center',
   },
 

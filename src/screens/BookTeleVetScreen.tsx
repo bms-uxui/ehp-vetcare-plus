@@ -4,7 +4,7 @@ import Animated, { useAnimatedScrollHandler, useSharedValue } from 'react-native
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../App';
-import { AppBackground, Button, Card, Icon, Input, StickyAppBar, Text } from '../components';
+import { AppBackground, Button, Card, Icon, Input, SubPageHeader, Text } from '../components';
 import { semantic, spacing } from '../theme';
 import { mockVets, statusMeta } from '../data/televet';
 
@@ -42,27 +42,21 @@ export default function BookTeleVetScreen({ navigation }: Props) {
   return (
     <View style={styles.root}>
       <AppBackground />
+      <SubPageHeader
+        title="จองนัดปรึกษา"
+        onBack={() => navigation.goBack()}
+      />
       <KeyboardAvoidingView
         style={styles.flex}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
         <Animated.ScrollView
-          contentContainerStyle={[
-            styles.scrollContent,
-            { paddingTop: insets.top + 56 + spacing.md },
-          ]}
+          contentContainerStyle={[styles.scrollContent, { paddingTop: spacing.md }]}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
           onScroll={scrollHandler}
           scrollEventThrottle={16}
         >
-          <Text variant="h1" style={styles.title}>
-            จองนัดปรึกษา
-          </Text>
-          <Text variant="body" color={semantic.textSecondary} style={styles.subtitle}>
-            นัดเวลาปรึกษาสัตวแพทย์ล่วงหน้า
-          </Text>
-
           <Section label="รูปแบบการปรึกษา">
             <View style={styles.row}>
               {MODES.map((m) => (
@@ -156,17 +150,6 @@ export default function BookTeleVetScreen({ navigation }: Props) {
         </Animated.ScrollView>
       </KeyboardAvoidingView>
 
-      <StickyAppBar
-        scrollY={scrollY}
-        fadeStartAt={20}
-        fadeEndAt={80}
-        title="จองนัดปรึกษา"
-        leading={{
-          icon: 'ChevronLeft',
-          onPress: () => navigation.goBack(),
-          accessibilityLabel: 'ย้อนกลับ',
-        }}
-      />
     </View>
   );
 }

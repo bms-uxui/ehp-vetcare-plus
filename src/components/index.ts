@@ -8,5 +8,6 @@ export { default as PetAvatar } from './PetAvatar';
 export { default as ProductTile } from './ProductTile';
 export { default as Screen } from './Screen';
 export { default as StickyAppBar } from './StickyAppBar';
+export { default as SubPageHeader } from './SubPageHeader';
 export { default as Text } from './Text';
 export { default as WeightChart } from './WeightChart';

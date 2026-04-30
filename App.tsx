@@ -4,6 +4,8 @@ import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { View } from 'react-native';
 import { useFonts } from 'expo-font';
+import { useEffect } from 'react';
+import { ensurePermission } from './src/lib/notifications';
 import {
   GoogleSans_400Regular,
   GoogleSans_500Medium,
@@ -73,7 +75,7 @@ export type RootStackParamList = {
       }
     | undefined;
   AppointmentDetail: { appointmentId: string };
-  BookAppointment: undefined;
+  BookAppointment: { selectedVetId?: string } | undefined;
   HealthRecords: { petId: string };
   VisitDetail: { visitId: string };
   Notifications: undefined;
@@ -127,6 +129,11 @@ export default function App() {
     GoogleSans_600SemiBold,
     GoogleSans_700Bold,
   });
+
+  // Request notification permission once at app start (async, non-blocking).
+  useEffect(() => {
+    ensurePermission().catch(() => {});
+  }, []);
 
   if (!fontsLoaded) {
     return <View style={{ flex: 1, backgroundColor: semantic.background }} />;
@@ -201,12 +208,12 @@ export default function App() {
           <Stack.Screen
             name="Notifications"
             component={NotificationsScreen}
-            options={transparentHeader}
+            options={{ headerShown: false }}
           />
           <Stack.Screen
             name="AddFeedingSchedule"
             component={AddFeedingScheduleScreen}
-            options={transparentHeader}
+            options={{ headerShown: false }}
           />
           <Stack.Screen
             name="MealTimeSetting"

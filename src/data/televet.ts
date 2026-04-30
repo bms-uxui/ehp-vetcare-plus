@@ -18,6 +18,10 @@ export type TeleVet = {
   reviewCount: number;
   status: OnlineStatus;
   nextAvailable?: string; // ISO if offline
+  /** Days of week the vet is available (0=Sun, 1=Mon, ..., 6=Sat) */
+  workingDays: number[];
+  /** Time slots available within each working day */
+  timeSlots: string[];
 };
 
 export type Message = {
@@ -54,6 +58,8 @@ export const mockVets: TeleVet[] = [
     rating: 4.9,
     reviewCount: 342,
     status: 'online',
+    workingDays: [1, 2, 3, 4, 5, 6],
+    timeSlots: ['09:00', '10:00', '11:00', '13:00', '14:00', '15:00', '16:00', '17:00'],
   },
   {
     id: 'tv2',
@@ -71,6 +77,8 @@ export const mockVets: TeleVet[] = [
     rating: 4.8,
     reviewCount: 218,
     status: 'busy',
+    workingDays: [1, 2, 3, 4, 5],
+    timeSlots: ['10:00', '11:00', '14:00', '15:00', '16:00'],
   },
   {
     id: 'tv3',
@@ -88,6 +96,8 @@ export const mockVets: TeleVet[] = [
     rating: 4.95,
     reviewCount: 512,
     status: 'online',
+    workingDays: [2, 3, 4, 5, 6, 0],
+    timeSlots: ['11:00', '13:00', '14:00', '15:00', '16:00', '17:00', '18:00'],
   },
   {
     id: 'tv4',
@@ -106,6 +116,68 @@ export const mockVets: TeleVet[] = [
     reviewCount: 96,
     status: 'offline',
     nextAvailable: '2026-04-25T09:00:00',
+    workingDays: [1, 3, 5],
+    timeSlots: ['09:00', '10:00', '11:00', '13:00', '14:00'],
+  },
+  {
+    id: 'tv5',
+    name: 'สพ.ญ. เปรมจิต สุวรรณภักดี',
+    avatar: 'https://images.unsplash.com/photo-1622253692010-333f2da6031d?w=200&h=200&fit=crop&crop=face',
+    specialty: 'จักษุวิทยาสัตว์',
+    clinic: 'EHP VetCare สาขาทองหล่อ',
+    experienceYears: 7,
+    experiences: [
+      { years: '2022-2026', description: 'หัวหน้าคลินิกจักษุสัตว์ EHP VetCare สาขาทองหล่อ ดูแลโรคต้อกระจก ตาแห้ง และต้อหินในสัตว์เลี้ยง' },
+      { years: '2019-2022', description: 'แพทย์ประจำ Eye Vet Clinic ผ่าตัดต้อกระจกและรักษาโรคจอประสาทตา' },
+      { years: '2014-2019', description: 'จบคณะสัตวแพทยศาสตร์ จุฬาลงกรณ์มหาวิทยาลัย ฝึกอบรมเฉพาะทางที่ Asia Veterinary Ophthalmology' },
+    ],
+    ratePerMin: 22,
+    rating: 4.85,
+    reviewCount: 178,
+    status: 'online',
+    // กะบ่ายถึงเย็น เปิด จ-ศ
+    workingDays: [1, 2, 3, 4, 5],
+    timeSlots: ['14:00', '15:00', '16:00', '17:00', '18:00', '19:00', '20:00'],
+  },
+  {
+    id: 'tv6',
+    name: 'สพ. ธนากร ภูริเดชา',
+    avatar: 'https://images.unsplash.com/photo-1537368910025-700350fe46c7?w=200&h=200&fit=crop&crop=face',
+    specialty: 'หัวใจและหลอดเลือด',
+    clinic: 'EHP VetCare สาขาสุขุมวิท',
+    experienceYears: 14,
+    experiences: [
+      { years: '2018-2026', description: 'ผู้เชี่ยวชาญด้านโรคหัวใจสุนัขและแมว ทำ Echocardiography มากกว่า 3,000 เคส' },
+      { years: '2014-2018', description: 'แพทย์ประจำโรงพยาบาลสัตว์ในประเทศญี่ปุ่น Tokyo Animal Cardiology Center' },
+      { years: '2010-2014', description: 'จบคณะสัตวแพทยศาสตร์ ม.เกษตรศาสตร์ Fellowship ด้านโรคหัวใจสัตว์' },
+    ],
+    ratePerMin: 28,
+    rating: 4.92,
+    reviewCount: 264,
+    status: 'busy',
+    // เปิดเฉพาะกลางสัปดาห์ — ตรวจคนไข้ที่นัดล่วงหน้า
+    workingDays: [3, 5, 6],
+    timeSlots: ['13:00', '14:00', '15:00', '16:00', '17:00'],
+  },
+  {
+    id: 'tv7',
+    name: 'สพ.ญ. พิมพ์พิศา ศรีสะอาด',
+    avatar: 'https://images.unsplash.com/photo-1607990281513-2c110a25bd8c?w=200&h=200&fit=crop&crop=face',
+    specialty: 'ทันตกรรมสัตว์เลี้ยง',
+    clinic: 'EHP VetCare สาขาอารีย์',
+    experienceYears: 5,
+    experiences: [
+      { years: '2023-2026', description: 'แพทย์ประจำคลินิกทันตกรรมสัตว์ EHP VetCare ดูแลขูดหินปูน ถอนฟัน และผ่าตัดเหงือก' },
+      { years: '2021-2023', description: 'แพทย์ฝึกหัดด้านทันตกรรมสัตว์เลี้ยง ที่ Pet Dental Specialty Clinic' },
+      { years: '2016-2021', description: 'จบคณะสัตวแพทยศาสตร์ ม.มหิดล ปริญญาโทเอกทันตกรรมสัตว์' },
+    ],
+    ratePerMin: 16,
+    rating: 4.75,
+    reviewCount: 132,
+    status: 'online',
+    // เปิดเสาร์-อาทิตย์เป็นหลัก กับวันธรรมดาตอนเย็น
+    workingDays: [0, 2, 4, 6],
+    timeSlots: ['10:00', '11:00', '13:00', '14:00', '15:00', '16:00'],
   },
 ];
 

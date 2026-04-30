@@ -12,7 +12,7 @@ import Animated, {
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { RootStackParamList } from '../../App';
-import { AppBackground, Icon, StickyAppBar, Text } from '../components';
+import { AppBackground, Icon, SubPageHeader, Text } from '../components';
 import { semantic, spacing } from '../theme';
 import { fmtBaht, categoryMeta } from '../data/products';
 import {
@@ -39,36 +39,18 @@ export default function OrderTrackingScreen({ navigation }: Props) {
     <View style={styles.root}>
       <AppBackground />
 
-      <StickyAppBar
-        scrollY={scrollY}
-        fadeStartAt={60}
-        fadeEndAt={120}
+      <SubPageHeader
         title="ติดตามคำสั่งซื้อ"
-        leading={{
-          icon: 'ChevronLeft',
-          onPress: () => navigation.goBack(),
-          accessibilityLabel: 'ย้อนกลับ',
-        }}
+        onBack={() => navigation.goBack()}
       />
 
       <Animated.ScrollView
-        contentContainerStyle={[
-          styles.scroll,
-          { paddingTop: insets.top + 56, paddingBottom: 120 },
-        ]}
+        style={styles.flex}
+        contentContainerStyle={[styles.scroll, { paddingTop: spacing.md, paddingBottom: 120 }]}
         showsVerticalScrollIndicator={false}
         onScroll={scrollHandler}
         scrollEventThrottle={16}
       >
-        <View style={styles.hero}>
-          <Text weight="700" style={styles.heroTitle}>
-            ติดตามคำสั่งซื้อ
-          </Text>
-          <Text weight="500" style={styles.heroSubtitle}>
-            {mockOrders.length} คำสั่งซื้อ
-          </Text>
-        </View>
-
         {mockOrders.length === 0 ? (
           <View style={styles.empty}>
             <Icon
@@ -308,6 +290,7 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: semantic.background,
   },
+  flex: { flex: 1 },
   scroll: {
     paddingHorizontal: 16,
   },
@@ -318,9 +301,9 @@ const styles = StyleSheet.create({
   },
   heroTitle: {
     fontSize: 28,
-    lineHeight: 34,
+    lineHeight: 40,
     color: '#1A1A1A',
-    letterSpacing: -0.4,
+    letterSpacing: 0,
   },
   heroSubtitle: {
     fontSize: 14,
