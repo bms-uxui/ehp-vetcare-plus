@@ -1,15 +1,15 @@
-import { useEffect, useMemo, useState } from 'react';
-import { Alert, Image, KeyboardAvoidingView, Modal, Platform, Pressable, StyleSheet, View } from 'react-native';
-import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { Image, KeyboardAvoidingView, Platform, Pressable, StyleSheet, View } from 'react-native';
 import Animated, { useAnimatedScrollHandler, useSharedValue } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../App';
-import { AppBackground, Button, Card, Icon, Input, SubPageHeader, Text } from '../components';
+import { AppBackground, CalendarSheet, Card, ConfirmModal, Icon, Input, StepProgress, SubPageHeader, Text } from '../components';
 import { colors, semantic, spacing } from '../theme';
 import { mockPets } from '../data/pets';
 import { typeMeta, AppointmentType, MOCK_VETS } from '../data/appointments';
 import { mockVets } from '../data/televet';
+import { bookingSubmitted } from '../data/bookingState';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'BookAppointment'>;
 
@@ -38,13 +38,22 @@ function formatVetSchedule(workingDays: number[], timeSlots: string[]): string {
 export default function BookAppointmentScreen({ navigation, route }: Props) {
   const insets = useSafeAreaInsets();
   const incomingVetId = route.params?.selectedVetId;
-  const [petId, setPetId] = useState<string | null>(null);
-  const [mode, setMode] = useState<'online' | 'clinic' | null>(null);
-  const [date, setDate] = useState<Date | null>(null);
+  const prefill = route.params;
+  const [petId, setPetId] = useState<string | null>(prefill?.prefillPetId ?? null);
+  const [mode, setMode] = useState<'online' | 'clinic' | null>(
+    prefill?.prefillMode ?? null,
+  );
+  const [date, setDate] = useState<Date | null>(
+    prefill?.prefillDateISO ? new Date(prefill.prefillDateISO) : null,
+  );
   const [datePickerOpen, setDatePickerOpen] = useState(false);
-  const [time, setTime] = useState<string | null>(null);
+  const [time, setTime] = useState<string | null>(prefill?.prefillTime ?? null);
   const [vetId, setVetId] = useState<string | null>(incomingVetId ?? null);
-  const [notes, setNotes] = useState('');
+  const [notes, setNotes] = useState(prefill?.prefillNotes ?? '');
+
+  const [noVetModalOpen, setNoVetModalOpen] = useState(false);
+  const [leaveModalOpen, setLeaveModalOpen] = useState(false);
+  const pendingLeaveActionRef = useRef<unknown>(null);
 
   const isDirty =
     petId !== null ||
@@ -92,11 +101,6 @@ export default function BookAppointmentScreen({ navigation, route }: Props) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [date, time]);
 
-  const onDateChange = (_e: DateTimePickerEvent, picked?: Date) => {
-    if (Platform.OS !== 'ios') setDatePickerOpen(false);
-    if (picked) setDate(picked);
-  };
-
   const dateLabel = date
     ? `${TH_WEEKDAY_SHORT[date.getDay()]} ${date.toLocaleDateString('th-TH', {
         day: 'numeric',
@@ -106,8 +110,8 @@ export default function BookAppointmentScreen({ navigation, route }: Props) {
     : 'แตะเพื่อเลือกวัน';
 
   const canSubmit = useMemo(
-    () => !!(petId && mode && date && time && vetId),
-    [petId, mode, date, time, vetId],
+    () => !!(petId && mode && date && time),
+    [petId, mode, date, time],
   );
 
   const selectedVet = useMemo(
@@ -116,27 +120,39 @@ export default function BookAppointmentScreen({ navigation, route }: Props) {
   );
 
   const onSubmit = () => {
-    if (!canSubmit) return;
-    navigation.goBack();
+    if (!canSubmit || !petId || !mode || !date || !time) return;
+    let chosenVetId = vetId;
+    if (!chosenVetId) {
+      if (matchingVets.length === 0) {
+        setNoVetModalOpen(true);
+        return;
+      }
+      const random = matchingVets[Math.floor(Math.random() * matchingVets.length)];
+      chosenVetId = random.id;
+    }
+    navigation.navigate('BookAppointmentSummary', {
+      petId,
+      mode,
+      dateISO: date.toISOString(),
+      time,
+      vetId: chosenVetId,
+      notes: notes.trim() || undefined,
+    });
   };
 
-  // Confirm before leaving if user has made any selection (intercepts back btn / gesture)
+  // Confirm before leaving if user has made any selection (intercepts back btn / gesture).
+  // Skip when the user has just confirmed the booking on the Summary screen
+  // (bookingSubmitted flag set there).
   useEffect(() => {
     const unsub = navigation.addListener('beforeRemove', (e) => {
+      if (bookingSubmitted.current) {
+        bookingSubmitted.current = false;
+        return;
+      }
       if (!isDirty) return;
       e.preventDefault();
-      Alert.alert(
-        'ออกจากการจองนัด?',
-        'ข้อมูลที่กรอกไว้จะไม่ถูกบันทึก',
-        [
-          { text: 'ทำต่อ', style: 'cancel', onPress: () => {} },
-          {
-            text: 'ออก',
-            style: 'destructive',
-            onPress: () => navigation.dispatch(e.data.action),
-          },
-        ],
-      );
+      pendingLeaveActionRef.current = e.data.action;
+      setLeaveModalOpen(true);
     });
     return unsub;
   }, [navigation, isDirty]);
@@ -152,6 +168,14 @@ export default function BookAppointmentScreen({ navigation, route }: Props) {
       <SubPageHeader
         title="จองนัดหมาย"
         onBack={() => navigation.goBack()}
+      />
+      <StepProgress
+        currentStep={0}
+        steps={[
+          { icon: 'CalendarPlus' },
+          { icon: 'ClipboardCheck' },
+          { icon: 'CircleCheck' },
+        ]}
       />
       <KeyboardAvoidingView
         style={styles.flex}
@@ -294,7 +318,7 @@ export default function BookAppointmentScreen({ navigation, route }: Props) {
                   onPress={
                     date ? () => setTime(time === t ? null : t) : undefined
                   }
-                  style={styles.timeTile}
+                  style={StyleSheet.flatten([styles.timeTile, styles.cardTightShadow])}
                 >
                   <View style={styles.timeInner}>
                     <Text variant="bodyStrong" style={{ fontSize: 13 }}>
@@ -307,10 +331,10 @@ export default function BookAppointmentScreen({ navigation, route }: Props) {
           </Section>
 
           {/* Vet */}
-          <Section label="สัตวแพทย์">
+          <Section label="สัตวแพทย์ที่ต้องการพบ">
             {!date ? (
               <Text variant="caption" color={semantic.textSecondary} style={styles.helperText}>
-                เลือกวันและเวลาเพื่อดูแพทย์ที่ว่าง
+                ถ้าไม่มีแพทย์ประจำ ระบบจะจัดแพทย์ที่ว่างให้
               </Text>
             ) : matchingVets.length === 0 ? (
               <Text variant="caption" color={semantic.textSecondary} style={styles.helperText}>
@@ -328,6 +352,7 @@ export default function BookAppointmentScreen({ navigation, route }: Props) {
                     selected={isSelected}
                     padding="md"
                     onPress={() => setVetId(isSelected ? null : v.id)}
+                    style={styles.cardTightShadow}
                   >
                     <Pressable
                       onPress={() => navigation.navigate('VetDetail', { vetId: v.id })}
@@ -396,50 +421,65 @@ export default function BookAppointmentScreen({ navigation, route }: Props) {
           </Section>
 
           <View style={styles.submit}>
-            <Button label="ยืนยันการจอง" onPress={onSubmit} disabled={!canSubmit} />
+            <Pressable
+              onPress={onSubmit}
+              disabled={!canSubmit}
+              style={({ pressed }) => [
+                styles.submitBtn,
+                !canSubmit && styles.submitBtnDisabled,
+                pressed && canSubmit && { opacity: 0.92 },
+              ]}
+              accessibilityRole="button"
+              accessibilityLabel="ยืนยันการจอง"
+            >
+              <Text variant="bodyStrong" color={semantic.onPrimary} style={styles.submitBtnText}>
+                ยืนยันการจอง
+              </Text>
+            </Pressable>
           </View>
         </Animated.ScrollView>
       </KeyboardAvoidingView>
 
-      {/* Date picker — bottom sheet modal */}
-      {datePickerOpen && (
-        <Modal
-          visible
-          transparent
-          animationType="slide"
-          onRequestClose={() => setDatePickerOpen(false)}
-          statusBarTranslucent
-        >
-          <Pressable style={styles.dateBackdrop} onPress={() => setDatePickerOpen(false)}>
-            <Pressable
-              style={[styles.dateSheet, { paddingBottom: insets.bottom + 16 }]}
-              onPress={() => {}}
-            >
-              <View style={styles.dateSheetHandle} />
-              <View style={styles.dateSheetHeader}>
-                <Text weight="500" style={styles.dateSheetTitle}>
-                  เลือกวันที่
-                </Text>
-                <Pressable onPress={() => setDatePickerOpen(false)} hitSlop={8}>
-                  <Text weight="600" style={styles.dateSheetDone}>
-                    เสร็จ
-                  </Text>
-                </Pressable>
-              </View>
-              <DateTimePicker
-                value={date ?? new Date()}
-                mode="date"
-                display={Platform.OS === 'ios' ? 'inline' : 'default'}
-                onChange={onDateChange}
-                locale="th-TH"
-                themeVariant="light"
-                minimumDate={new Date()}
-                style={styles.dateSheetPicker}
-              />
-            </Pressable>
-          </Pressable>
-        </Modal>
-      )}
+      <CalendarSheet
+        visible={datePickerOpen}
+        value={date}
+        onChange={setDate}
+        onClose={() => setDatePickerOpen(false)}
+        minDate={new Date()}
+      />
+
+      <ConfirmModal
+        visible={leaveModalOpen}
+        icon="LogOut"
+        tone="warning"
+        title="ออกจากการจองนัด?"
+        message="ข้อมูลที่กรอกไว้จะไม่ถูกบันทึก"
+        cancelLabel="ทำต่อ"
+        confirmLabel="ออก"
+        confirmTone="danger"
+        onCancel={() => {
+          pendingLeaveActionRef.current = null;
+          setLeaveModalOpen(false);
+        }}
+        onConfirm={() => {
+          const action = pendingLeaveActionRef.current;
+          pendingLeaveActionRef.current = null;
+          setLeaveModalOpen(false);
+          if (action) navigation.dispatch(action as never);
+        }}
+      />
+
+      <ConfirmModal
+        visible={noVetModalOpen}
+        singleAction
+        icon="CalendarOff"
+        tone="info"
+        title="ไม่มีแพทย์ว่าง"
+        message="ไม่มีแพทย์ที่ว่างในวันและเวลาที่เลือก ลองเปลี่ยนวันหรือเวลาดูครับ"
+        confirmLabel="ตกลง"
+        onConfirm={() => setNoVetModalOpen(false)}
+        onCancel={() => setNoVetModalOpen(false)}
+      />
     </View>
   );
 }
@@ -587,8 +627,7 @@ const styles = StyleSheet.create({
     opacity: 0.45,
   },
   timeTile: {
-    flexBasis: '22%',
-    flexGrow: 1,
+    width: 80,
   },
   timeInner: {
     alignItems: 'center',
@@ -601,6 +640,13 @@ const styles = StyleSheet.create({
     marginLeft: spacing.xs,
     marginTop: -spacing.xs,
     marginBottom: 0,
+  },
+  cardTightShadow: {
+    shadowColor: '#000',
+    shadowOpacity: 0.06,
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 2,
   },
   dateBtn: {
     flexDirection: 'row',
@@ -735,5 +781,26 @@ const styles = StyleSheet.create({
   submit: {
     marginTop: spacing.sm,
     marginBottom: spacing.xl,
+  },
+  submitBtn: {
+    height: 54,
+    borderRadius: 999,
+    backgroundColor: semantic.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: spacing.lg,
+    shadowColor: '#000',
+    shadowOpacity: 0.12,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 3 },
+    elevation: 3,
+  },
+  submitBtnDisabled: {
+    backgroundColor: semantic.borderStrong,
+    shadowOpacity: 0,
+    elevation: 0,
+  },
+  submitBtnText: {
+    fontSize: 16,
   },
 });

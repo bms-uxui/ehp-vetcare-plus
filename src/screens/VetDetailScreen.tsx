@@ -242,9 +242,16 @@ export default function VetDetailScreen({ navigation, route }: Props) {
 
             <View style={styles.actionRow}>
               <Pressable
-                onPress={() =>
-                  navigation.navigate('BookAppointment', { selectedVetId: vetId })
-                }
+                onPress={() => {
+                  // Pop back to BookAppointment so its state (pet, date, time, etc.)
+                  // is preserved. Fall back to navigate when the screen isn't
+                  // already in the stack.
+                  if (navigation.canGoBack()) {
+                    navigation.popTo('BookAppointment', { selectedVetId: vetId });
+                  } else {
+                    navigation.navigate('BookAppointment', { selectedVetId: vetId });
+                  }
+                }}
                 style={({ pressed }) => [styles.bookingBtn, pressed && styles.btnPressed]}
               >
                 <Text variant="bodyStrong" color={semantic.onPrimary} style={{ fontSize: 15 }}>
