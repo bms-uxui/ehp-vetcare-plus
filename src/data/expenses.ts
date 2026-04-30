@@ -21,15 +21,15 @@ export const categoryMeta: Record<ExpenseCategory, { label: string; icon: string
 };
 
 export const mockExpenses: Expense[] = [
-  { id: 'e1', category: 'food', title: 'Prescription Diet Hypoallergenic 7kg', amount: 1850, dateISO: '2026-04-20', petId: 'p1', petName: 'ข้าวปั้น', petEmoji: '🐕' },
-  { id: 'e2', category: 'treatment', title: 'ยา Apoquel + ตรวจผิวหนัง', amount: 2400, dateISO: '2026-04-18', petId: 'p1', petName: 'ข้าวปั้น', petEmoji: '🐕', note: 'หมอ ปิยะพร' },
+  { id: 'e1', category: 'food', title: 'Prescription Diet Hypoallergenic 7kg', amount: 1850, dateISO: '2026-04-20', petId: 'p1', petName: 'ข้าวปั้น', petEmoji: '🐕', note: 'สูตรใหม่ ลดภูมิแพ้ผิวหนัง — ใช้ได้ ~1 เดือน' },
+  { id: 'e2', category: 'treatment', title: 'ยา Apoquel + ตรวจผิวหนัง', amount: 2400, dateISO: '2026-04-18', petId: 'p1', petName: 'ข้าวปั้น', petEmoji: '🐕', note: 'หมอ ปิยะพร นัดติดตามอีก 2 สัปดาห์' },
   { id: 'e3', category: 'food', title: 'อาหารแมว Royal Canin 4kg', amount: 780, dateISO: '2026-04-15', petId: 'p2', petName: 'มะลิ', petEmoji: '🐈' },
-  { id: 'e4', category: 'grooming', title: 'อาบน้ำตัดขน', amount: 650, dateISO: '2026-04-10', petId: 'p1', petName: 'ข้าวปั้น', petEmoji: '🐕' },
+  { id: 'e4', category: 'grooming', title: 'อาบน้ำตัดขน', amount: 650, dateISO: '2026-04-10', petId: 'p1', petName: 'ข้าวปั้น', petEmoji: '🐕', note: 'ตัดขนสั้นรับหน้าร้อน + ตัดเล็บ' },
   { id: 'e5', category: 'supplies', title: 'ของเล่นและที่ข่วนเล็บ', amount: 420, dateISO: '2026-04-05', petId: 'p2', petName: 'มะลิ', petEmoji: '🐈' },
-  { id: 'e6', category: 'treatment', title: 'ตรวจสุขภาพประจำปี', amount: 1200, dateISO: '2026-04-02', petId: 'p2', petName: 'มะลิ', petEmoji: '🐈' },
+  { id: 'e6', category: 'treatment', title: 'ตรวจสุขภาพประจำปี', amount: 1200, dateISO: '2026-04-02', petId: 'p2', petName: 'มะลิ', petEmoji: '🐈', note: 'ตรวจเลือด + ปัสสาวะ ผลปกติ' },
   { id: 'e7', category: 'food', title: 'ขนมและของว่าง', amount: 290, dateISO: '2026-03-28', petId: 'p1', petName: 'ข้าวปั้น', petEmoji: '🐕' },
-  { id: 'e8', category: 'food', title: 'อาหารเม็ด 15kg', amount: 1650, dateISO: '2026-03-20', petId: 'p1', petName: 'ข้าวปั้น', petEmoji: '🐕' },
-  { id: 'e9', category: 'treatment', title: 'ฉีดวัคซีนรวม + พิษสุนัขบ้า', amount: 900, dateISO: '2026-03-15', petId: 'p1', petName: 'ข้าวปั้น', petEmoji: '🐕' },
+  { id: 'e8', category: 'food', title: 'อาหารเม็ด 15kg', amount: 1650, dateISO: '2026-03-20', petId: 'p1', petName: 'ข้าวปั้น', petEmoji: '🐕', note: 'ซื้อจาก PetLover Online — มีโปรลด 10%' },
+  { id: 'e9', category: 'treatment', title: 'ฉีดวัคซีนรวม + พิษสุนัขบ้า', amount: 900, dateISO: '2026-03-15', petId: 'p1', petName: 'ข้าวปั้น', petEmoji: '🐕', note: 'นัดถัดไป มี.ค. 2570' },
   { id: 'e10', category: 'grooming', title: 'อาบน้ำ', amount: 350, dateISO: '2026-03-12', petId: 'p2', petName: 'มะลิ', petEmoji: '🐈' },
 ];
 

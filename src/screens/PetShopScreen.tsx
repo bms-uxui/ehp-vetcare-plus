@@ -1,40 +1,36 @@
 import { ReactNode, useMemo, useRef, useState } from 'react';
 import {
-  Dimensions,
   Image,
   Keyboard,
+  Modal,
   Pressable,
   ScrollView,
   StyleSheet,
   TextInput,
+  useWindowDimensions,
   View,
 } from 'react-native';
 import Animated, {
   Extrapolation,
   interpolate,
-  runOnJS,
   useAnimatedScrollHandler,
   useAnimatedStyle,
   useSharedValue,
-  withSpring,
-  withTiming,
 } from 'react-native-reanimated';
 import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
-import { GlassView, isLiquidGlassAvailable } from '../lib/glass-effect';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { AppTabsParamList } from '../navigation/AppTabs';
 import { RootStackParamList } from '../../App';
-import { AppBackground, Icon, IconButton, Text } from '../components';
+import { Icon, ProductTile, Text } from '../components';
 import { semantic, spacing } from '../theme';
 import {
   mockProducts,
   categoryMeta,
   ProductCategory,
-  fmtBaht,
   Product,
 } from '../data/products';
 import { mockPets } from '../data/pets';
@@ -43,27 +39,29 @@ import { mockOrders } from '../data/orders';
 
 type Props = BottomTabScreenProps<AppTabsParamList, 'PetShop'>;
 
-const SCREEN_W = Dimensions.get('window').width;
 const SECTION_PAD = 16;
 const CARD_GAP = 10;
-const CARD_W = (SCREEN_W - SECTION_PAD * 2 - CARD_GAP) / 2;
+
+// Responsive grid: phones get 2 cols, iPad / large screens scale up
+function getNumColumns(width: number) {
+  if (width >= 1200) return 5;
+  if (width >= 900) return 4;
+  if (width >= 600) return 3;
+  return 2;
+}
 
 // Bar fades in once the large title scrolls under the app bar
 const FADE_START = 30;
 const FADE_END = 90;
 
-// Morph search field — same constants as CartScreen for consistency
-const LIQUID_GLASS = isLiquidGlassAvailable();
-const FIELD_MIN_W = 44;
-const CANCEL_W = 60;
-const CANCEL_GAP = 12;
-const TOOLBAR_PAD = 16;
-const FIELD_MAX_W = SCREEN_W - TOOLBAR_PAD * 2 - CANCEL_W - CANCEL_GAP;
-
 export default function PetShopScreen({}: Props) {
   const insets = useSafeAreaInsets();
   const rootNav = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const { count } = useCart();
+  const { width: screenW } = useWindowDimensions();
+  const numColumns = getNumColumns(screenW);
+  const cardWidth =
+    (screenW - SECTION_PAD * 2 - CARD_GAP * (numColumns - 1)) / numColumns;
   const activeOrderCount = useMemo(
     () =>
       mockOrders.filter(
@@ -77,61 +75,16 @@ export default function PetShopScreen({}: Props) {
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const searchInputRef = useRef<TextInput>(null);
-  const searchAnim = useSharedValue(0);
 
   const openSearch = () => {
     setSearchOpen(true);
-    searchAnim.value = withSpring(1, {
-      damping: 22,
-      stiffness: 200,
-      mass: 0.8,
-    });
-    setTimeout(() => searchInputRef.current?.focus(), 100);
+    setTimeout(() => searchInputRef.current?.focus(), 350);
   };
   const closeSearch = () => {
     Keyboard.dismiss();
-    searchAnim.value = withTiming(0, { duration: 220 }, (finished) => {
-      if (finished) {
-        runOnJS(setSearchOpen)(false);
-        runOnJS(setSearchQuery)('');
-      }
-    });
+    setSearchOpen(false);
+    setSearchQuery('');
   };
-
-  const fieldStyle = useAnimatedStyle(() => ({
-    width: interpolate(
-      searchAnim.value,
-      [0, 1],
-      [FIELD_MIN_W, FIELD_MAX_W],
-    ),
-  }));
-  const fieldContentStyle = useAnimatedStyle(() => ({
-    opacity: interpolate(
-      searchAnim.value,
-      [0.4, 0.9],
-      [0, 1],
-      Extrapolation.CLAMP,
-    ),
-  }));
-  const cancelStyle = useAnimatedStyle(() => ({
-    opacity: interpolate(
-      searchAnim.value,
-      [0.55, 1],
-      [0, 1],
-      Extrapolation.CLAMP,
-    ),
-    transform: [
-      {
-        translateX: interpolate(
-          searchAnim.value,
-          [0.55, 1],
-          [24, 0],
-          Extrapolation.CLAMP,
-        ),
-      },
-    ],
-    width: interpolate(searchAnim.value, [0, 0.55, 1], [0, 0, CANCEL_W]),
-  }));
 
   const scrollY = useSharedValue(0);
   const scrollHandler = useAnimatedScrollHandler((e) => {
@@ -205,23 +158,127 @@ export default function PetShopScreen({}: Props) {
 
   return (
     <View style={styles.root}>
-      <AppBackground />
-
       <Animated.ScrollView
-        contentContainerStyle={[
-          styles.scroll,
-          { paddingTop: insets.top + 56 + spacing.sm },
-        ]}
+        contentContainerStyle={styles.scroll}
         showsVerticalScrollIndicator={false}
         onScroll={scrollHandler}
         scrollEventThrottle={16}
       >
-        {/* Large title (Apple App Store style) — scrolls away on scroll */}
-        <View style={styles.heroTitleWrap}>
-          <Text variant="h1" style={styles.heroTitle}>
-            ร้านค้า
-          </Text>
+        {/* Hero — matches PetsList pattern */}
+        <View
+          style={[
+            styles.heroBlock,
+            { height: 220 + insets.top, paddingTop: insets.top },
+          ]}
+        >
+          {/* Pink gradient bg */}
+          <LinearGradient
+            pointerEvents="none"
+            colors={['rgba(251,208,222,0)', '#FBD0DE']}
+            start={{ x: 0.5, y: 0 }}
+            end={{ x: 0.5, y: 1 }}
+            style={StyleSheet.absoluteFill}
+          />
+          {/* Bottom fade — blends into AppBackground */}
+          <LinearGradient
+            pointerEvents="none"
+            colors={['rgba(255,253,249,0)', '#FFFDFB']}
+            start={{ x: 0.5, y: 0 }}
+            end={{ x: 0.5, y: 1 }}
+            style={styles.heroBottomFade}
+          />
+
+          <Image
+            source={require('../../assets/illustrations/girl-shopping.png')}
+            style={styles.heroImage}
+            resizeMode="contain"
+          />
+
+          <View style={styles.heroText}>
+            <Text variant="bodyStrong" style={styles.heroTitle}>
+              ร้านค้า
+            </Text>
+            <Text
+              variant="caption"
+              color={semantic.textSecondary}
+              style={styles.heroSubtitle}
+              numberOfLines={2}
+            >
+              อาหาร ของเล่น และของจำเป็นสำหรับเพื่อนขนปุย
+            </Text>
+          </View>
         </View>
+
+        {/* Body sheet — overlaps hero by 24pt with rounded top corners */}
+        <View style={styles.sheet}>
+        {/* Toolbar — floats between hero and sheet (overlaps top of sheet) */}
+        {!searchOpen && (
+          <View style={styles.toolbarWrap}>
+            <Pressable
+              onPress={openSearch}
+              style={({ pressed }) => [
+                styles.searchPill,
+                pressed && { opacity: 0.85 },
+              ]}
+            >
+              <Icon
+                name="Search"
+                size={18}
+                color={semantic.textMuted}
+                strokeWidth={2.2}
+              />
+              <Text style={styles.searchPillText}>ค้นหาสินค้า</Text>
+            </Pressable>
+            <View>
+              <Pressable
+                onPress={() => rootNav.navigate('OrderTracking')}
+                style={({ pressed }) => [
+                  styles.toolbarBtn,
+                  pressed && { opacity: 0.85 },
+                ]}
+                accessibilityLabel="ติดตามคำสั่งซื้อ"
+              >
+                <Icon
+                  name="Package"
+                  size={20}
+                  color="#1A1A1A"
+                  strokeWidth={2.2}
+                />
+              </Pressable>
+              {activeOrderCount > 0 && (
+                <View style={styles.cartBadge} pointerEvents="none">
+                  <Text weight="700" style={styles.cartBadgeText}>
+                    {activeOrderCount > 99 ? '99+' : activeOrderCount}
+                  </Text>
+                </View>
+              )}
+            </View>
+            <View>
+              <Pressable
+                onPress={() => rootNav.navigate('Cart')}
+                style={({ pressed }) => [
+                  styles.toolbarBtn,
+                  pressed && { opacity: 0.85 },
+                ]}
+                accessibilityLabel="ตะกร้า"
+              >
+                <Icon
+                  name="ShoppingCart"
+                  size={20}
+                  color="#1A1A1A"
+                  strokeWidth={2.2}
+                />
+              </Pressable>
+              {count > 0 && (
+                <View style={styles.cartBadge} pointerEvents="none">
+                  <Text weight="700" style={styles.cartBadgeText}>
+                    {count > 99 ? '99+' : count}
+                  </Text>
+                </View>
+              )}
+            </View>
+          </View>
+        )}
 
         {/* Category chips — horizontal scroll */}
         <ScrollView
@@ -229,22 +286,26 @@ export default function PetShopScreen({}: Props) {
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={styles.chipsScroll}
         >
-          {categories.map((c) => (
-            <CategoryChip
-              key={c.key ?? 'all'}
-              icon={c.icon}
-              label={c.label}
-              active={activeCategory === c.key}
-              onPress={() => setActiveCategory(c.key)}
-            />
-          ))}
-        </ScrollView>
+            {categories.map((c) => (
+              <CategoryChip
+                key={c.key ?? 'all'}
+                icon={c.icon}
+                label={c.label}
+                active={activeCategory === c.key}
+                onPress={() => setActiveCategory(c.key)}
+              />
+            ))}
+          </ScrollView>
 
         {trimmedQuery ? (
           // Search results — replaces all sections when query is active
           <Section title={`ผลการค้นหา (${searchResults.length})`}>
             {searchResults.length > 0 ? (
-              <Grid data={searchResults} onPress={goToProduct} />
+              <Grid
+                data={searchResults}
+                onPress={goToProduct}
+                cardWidth={cardWidth}
+              />
             ) : (
               <View style={styles.searchEmpty}>
                 <Icon
@@ -264,7 +325,11 @@ export default function PetShopScreen({}: Props) {
             {/* Promotion */}
             {!activeCategory && featured.length > 0 && (
               <Section title="โปรโมชั่น">
-                <Grid data={featured} onPress={goToProduct} />
+                <Grid
+                  data={featured}
+                  onPress={goToProduct}
+                  cardWidth={cardWidth}
+                />
               </Section>
             )}
 
@@ -274,7 +339,11 @@ export default function PetShopScreen({}: Props) {
                 title="แนะนำสำหรับสัตว์ของคุณ"
                 trailing={<PetStack />}
               >
-                <Grid data={recommended.slice(0, 4)} onPress={goToProduct} />
+                <Grid
+                  data={recommended.slice(0, 4)}
+                  onPress={goToProduct}
+                  cardWidth={cardWidth}
+                />
               </Section>
             )}
 
@@ -286,13 +355,18 @@ export default function PetShopScreen({}: Props) {
                   : `สินค้าทั้งหมด (${allProducts.length})`
               }
             >
-              <Grid data={allProducts} onPress={goToProduct} />
+              <Grid
+                data={allProducts}
+                onPress={goToProduct}
+                cardWidth={cardWidth}
+              />
             </Section>
           </>
         )}
 
-        {/* Bottom space for tab bar */}
-        <View style={{ height: 110 }} />
+          {/* Bottom space for tab bar */}
+          <View style={{ height: 110 }} />
+        </View>
       </Animated.ScrollView>
 
       {/* Top fade — soft white wash matching Screen wrapper used by other tabs */}
@@ -338,133 +412,103 @@ export default function PetShopScreen({}: Props) {
             </Text>
           </Animated.View>
 
-          <View style={styles.appbarActions}>
-            {!searchOpen && (
-              <>
-                <IconButton
-                  icon="Search"
-                  size="md"
-                  onPress={openSearch}
-                  accessibilityLabel="ค้นหา"
-                />
-                <View>
-                  <IconButton
-                    icon="Package"
-                    size="md"
-                    onPress={() => rootNav.navigate('OrderTracking')}
-                    accessibilityLabel="ติดตามคำสั่งซื้อ"
-                  />
-                  {activeOrderCount > 0 && (
-                    <View style={styles.cartBadge} pointerEvents="none">
-                      <Text weight="700" style={styles.cartBadgeText}>
-                        {activeOrderCount > 99 ? '99+' : activeOrderCount}
-                      </Text>
-                    </View>
-                  )}
-                </View>
-                <View>
-                  <IconButton
-                    icon="ShoppingCart"
-                    size="md"
-                    onPress={() => rootNav.navigate('Cart')}
-                    accessibilityLabel="ตะกร้า"
-                  />
-                  {count > 0 && (
-                    <View style={styles.cartBadge} pointerEvents="none">
-                      <Text weight="700" style={styles.cartBadgeText}>
-                        {count > 99 ? '99+' : count}
-                      </Text>
-                    </View>
-                  )}
-                </View>
-              </>
-            )}
-          </View>
+          <View style={styles.appbarPlaceholder} />
         </View>
       </View>
 
-      {/* Apple-style morph search overlay — sits above appbar (zIndex 11) */}
-      {searchOpen && (
-        <View
-          pointerEvents="box-none"
-          style={[
-            styles.searchOverlay,
-            { paddingTop: insets.top, height: insets.top + 56 },
-          ]}
-        >
-          <View style={styles.searchMorphRow}>
-            <Animated.View style={[styles.searchMorphField, fieldStyle]}>
-              {LIQUID_GLASS ? (
-                <GlassView
-                  glassEffectStyle="regular"
-                  colorScheme="light"
-                  style={StyleSheet.absoluteFill}
-                />
-              ) : (
-                <>
-                  <BlurView
-                    intensity={70}
-                    tint="systemThinMaterialLight"
-                    style={StyleSheet.absoluteFill}
-                  />
-                  <View
-                    pointerEvents="none"
-                    style={[StyleSheet.absoluteFill, styles.searchMorphTint]}
-                  />
-                </>
-              )}
-              <View
-                pointerEvents="none"
-                style={[StyleSheet.absoluteFill, styles.searchMorphHairline]}
+      {/* Search modal — full screen, opens when search bar tapped */}
+      <Modal
+        visible={searchOpen}
+        animationType="slide"
+        presentationStyle="fullScreen"
+        onRequestClose={closeSearch}
+      >
+        <View style={[styles.searchModalRoot, { paddingTop: insets.top }]}>
+          <View style={styles.searchModalHeader}>
+            <Pressable
+              onPress={closeSearch}
+              hitSlop={8}
+              accessibilityLabel="ย้อนกลับ"
+              style={({ pressed }) => [
+                styles.searchModalBack,
+                pressed && { opacity: 0.6 },
+              ]}
+            >
+              <Icon
+                name="ChevronLeft"
+                size={22}
+                color="#1A1A1A"
+                strokeWidth={2.4}
               />
+            </Pressable>
+            <View style={styles.searchModalField}>
               <Icon
                 name="Search"
                 size={18}
-                color="#1A1A1A"
+                color={semantic.textMuted}
                 strokeWidth={2.2}
               />
-              <Animated.View
-                style={[styles.searchMorphInner, fieldContentStyle]}
-              >
-                <TextInput
-                  ref={searchInputRef}
-                  style={styles.searchInput}
-                  value={searchQuery}
-                  onChangeText={setSearchQuery}
-                  placeholder="ค้นหาสินค้า"
-                  placeholderTextColor={semantic.textMuted}
-                  returnKeyType="search"
-                  autoCorrect={false}
-                  autoCapitalize="none"
-                />
-                {searchQuery.length > 0 && (
-                  <Pressable
-                    onPress={() => setSearchQuery('')}
-                    hitSlop={8}
-                    accessibilityLabel="ล้างคำค้น"
-                  >
-                    <View style={styles.searchClear}>
-                      <Icon
-                        name="X"
-                        size={11}
-                        color="#FFFFFF"
-                        strokeWidth={3}
-                      />
-                    </View>
-                  </Pressable>
-                )}
-              </Animated.View>
-            </Animated.View>
-            <Animated.View style={cancelStyle}>
-              <Pressable onPress={closeSearch} hitSlop={8}>
-                <Text weight="500" style={styles.searchCancel}>
-                  ยกเลิก
-                </Text>
-              </Pressable>
-            </Animated.View>
+              <TextInput
+                ref={searchInputRef}
+                style={styles.searchModalInput}
+                value={searchQuery}
+                onChangeText={setSearchQuery}
+                placeholder="ค้นหาสินค้า"
+                placeholderTextColor={semantic.textMuted}
+                returnKeyType="search"
+                autoCorrect={false}
+                autoCapitalize="none"
+              />
+              {searchQuery.length > 0 && (
+                <Pressable
+                  onPress={() => setSearchQuery('')}
+                  hitSlop={8}
+                  accessibilityLabel="ล้างคำค้น"
+                >
+                  <View style={styles.searchClear}>
+                    <Icon
+                      name="X"
+                      size={11}
+                      color="#FFFFFF"
+                      strokeWidth={3}
+                    />
+                  </View>
+                </Pressable>
+              )}
+            </View>
           </View>
+
+          <ScrollView
+            keyboardShouldPersistTaps="handled"
+            contentContainerStyle={styles.searchModalScroll}
+            showsVerticalScrollIndicator={false}
+          >
+            {trimmedQuery && searchResults.length === 0 && (
+              <View style={styles.searchEmpty}>
+                <Icon
+                  name="SearchX"
+                  size={32}
+                  color={semantic.textMuted}
+                  strokeWidth={1.6}
+                />
+                <Text variant="body" color={semantic.textSecondary}>
+                  ไม่พบ "{trimmedQuery}"
+                </Text>
+              </View>
+            )}
+            {trimmedQuery && searchResults.length > 0 && (
+              <Grid
+                data={searchResults}
+                onPress={(id) => {
+                  closeSearch();
+                  goToProduct(id);
+                }}
+                cardWidth={cardWidth}
+              />
+            )}
+          </ScrollView>
         </View>
-      )}
+      </Modal>
     </View>
   );
 }
@@ -483,12 +527,6 @@ function Section({
   return (
     <View style={styles.section}>
       <View style={styles.sectionHeader}>
-        <Icon
-          name="ChevronRight"
-          size={14}
-          color={semantic.textSecondary}
-          strokeWidth={2.6}
-        />
         <Text weight="600" style={styles.sectionTitle}>
           {title}
         </Text>
@@ -525,71 +563,23 @@ function PetStack() {
 function Grid({
   data,
   onPress,
+  cardWidth,
 }: {
   data: Product[];
   onPress: (id: string) => void;
+  cardWidth: number;
 }) {
   return (
     <View style={styles.grid}>
       {data.map((p) => (
-        <ProductCard key={p.id} product={p} onPress={() => onPress(p.id)} />
+        <ProductTile
+          key={p.id}
+          product={p}
+          onPress={() => onPress(p.id)}
+          cardWidth={cardWidth}
+        />
       ))}
     </View>
-  );
-}
-
-/* ---------- Product card ---------- */
-
-function ProductCard({
-  product,
-  onPress,
-}: {
-  product: Product;
-  onPress: () => void;
-}) {
-  const [imgFailed, setImgFailed] = useState(false);
-  const isOnSale = !!product.originalPriceBaht;
-  const priceColor = isOnSale ? '#C25450' : '#4FB36C';
-
-  return (
-    <Pressable
-      onPress={onPress}
-      style={({ pressed }) => [
-        styles.card,
-        pressed && { opacity: 0.92, transform: [{ scale: 0.98 }] },
-      ]}
-    >
-      <View style={styles.cardImage}>
-        {product.imageUrl && !imgFailed ? (
-          <Image
-            source={{ uri: product.imageUrl }}
-            style={StyleSheet.absoluteFill}
-            resizeMode="cover"
-            onError={() => setImgFailed(true)}
-          />
-        ) : (
-          <Text style={styles.cardEmoji}>{product.emoji}</Text>
-        )}
-        {isOnSale && (
-          <View style={styles.saleBadge}>
-            <Text weight="700" style={styles.saleBadgeText}>
-              SALE
-            </Text>
-          </View>
-        )}
-      </View>
-      <View style={styles.cardBody}>
-        <Text weight="600" style={styles.cardBrand} numberOfLines={1}>
-          {product.brand}
-        </Text>
-        <Text weight="600" style={styles.cardName} numberOfLines={1}>
-          {product.name}
-        </Text>
-        <Text weight="700" style={[styles.cardPrice, { color: priceColor }]}>
-          {fmtBaht(product.priceBaht)}
-        </Text>
-      </View>
-    </Pressable>
   );
 }
 
@@ -716,16 +706,102 @@ const styles = StyleSheet.create({
     lineHeight: 12,
   },
 
-  // Hero title (large title in content area)
-  heroTitleWrap: {
-    paddingHorizontal: SECTION_PAD,
-    paddingBottom: spacing.sm,
+  // Hero banner — matches PetsList pattern
+  heroBlock: {
+    position: 'relative',
+    overflow: 'hidden',
+    justifyContent: 'center',
+  },
+  heroBottomFade: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    height: 37,
+  },
+  heroImage: {
+    position: 'absolute',
+    right: spacing.xl,
+    bottom: 60,
+    width: 140,
+    height: 140,
+  },
+  heroText: {
+    paddingHorizontal: spacing.xl,
+    width: 220,
+    gap: spacing.sm,
   },
   heroTitle: {
-    fontSize: 34,
-    lineHeight: 41,
-    color: '#1A1A1A',
-    letterSpacing: -0.4,
+    fontSize: 28,
+    lineHeight: 36,
+    color: '#1A1A1F',
+  },
+  heroSubtitle: {
+    fontSize: 16,
+    lineHeight: 24,
+    color: '#4A4A50',
+  },
+
+  // Body sheet — overlaps hero by 24 with rounded top corners
+  sheet: {
+    backgroundColor: semantic.background,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    marginTop: -24,
+  },
+  // Glass toolbar — search field + actions, floats over the sheet's top edge
+  toolbarWrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    paddingHorizontal: SECTION_PAD,
+    marginTop: -24,
+    marginBottom: spacing.md,
+  },
+  searchPill: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    height: 48,
+    paddingHorizontal: 18,
+    borderRadius: 999,
+    backgroundColor: '#FFFFFF',
+    shadowColor: '#000',
+    shadowOpacity: 0.12,
+    shadowRadius: 20,
+    shadowOffset: { width: 0, height: 8 },
+    elevation: 6,
+  },
+  searchPillText: {
+    fontSize: 15,
+    color: '#9A9AA0',
+    letterSpacing: -0.2,
+  },
+  toolbarBtn: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#FFFFFF',
+    shadowColor: '#000',
+    shadowOpacity: 0.12,
+    shadowRadius: 20,
+    shadowOffset: { width: 0, height: 8 },
+    elevation: 6,
+  },
+
+  // White content card — wraps chips + sections; rounded top, soft top shadow
+  contentCard: {
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    paddingTop: spacing.sm,
+    shadowColor: '#000',
+    shadowOpacity: 0.08,
+    shadowRadius: 24,
+    shadowOffset: { width: 0, height: -4 },
   },
 
   // Category chips
@@ -801,114 +877,44 @@ const styles = StyleSheet.create({
     gap: CARD_GAP,
   },
 
-  // Card — white container holds image + body, single drop shadow
-  card: {
-    width: CARD_W,
+  // Apple-style morph search overlay (matches CartScreen)
+  // Search modal — full-screen sheet
+  searchModalRoot: {
+    flex: 1,
     backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    overflow: 'hidden',
-    shadowColor: '#5E303C',
-    shadowOpacity: 0.08,
-    shadowRadius: 16,
-    shadowOffset: { width: 0, height: 6 },
-    elevation: 4,
   },
-  cardImage: {
-    width: CARD_W,
-    height: CARD_W,
+  searchModalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    paddingHorizontal: SECTION_PAD,
+    paddingVertical: spacing.sm,
+  },
+  searchModalBack: {
+    width: 36,
+    height: 36,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  cardEmoji: {
-    fontSize: 56,
-  },
-  saleBadge: {
-    position: 'absolute',
-    top: 10,
-    left: 10,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 100,
-    backgroundColor: '#C25450',
-  },
-  saleBadgeText: {
-    fontSize: 10,
-    lineHeight: 13,
-    color: '#FFFFFF',
-    letterSpacing: 0.6,
-  },
-  cardBody: {
-    padding: 12,
-    gap: 2,
-  },
-  cardBrand: {
-    fontSize: 10,
-    lineHeight: 13,
-    color: '#9A9AA0',
-    letterSpacing: 0.6,
-    textTransform: 'uppercase',
-  },
-  cardName: {
-    fontSize: 13,
-    lineHeight: 17,
-    color: '#1A1A1A',
-  },
-  cardPrice: {
-    fontSize: 15,
-    lineHeight: 20,
-    marginTop: 2,
-  },
-
-  // Apple-style morph search overlay (matches CartScreen)
-  searchOverlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    zIndex: 11, // above sticky AppBar (10)
-  },
-  searchMorphRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'flex-end',
-    gap: spacing.md,
-    paddingHorizontal: SECTION_PAD,
-    height: 56,
-  },
-  searchMorphField: {
-    height: 44,
-    borderRadius: 22,
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 14,
-    backgroundColor: 'transparent',
-    overflow: 'hidden',
-    shadowColor: '#000',
-    shadowOpacity: 0.12,
-    shadowRadius: 20,
-    shadowOffset: { width: 0, height: 8 },
-    elevation: 6,
-  },
-  searchMorphTint: {
-    backgroundColor: 'rgba(255,255,255,0.55)',
-  },
-  searchMorphHairline: {
-    borderRadius: 22,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: 'rgba(255,255,255,0.55)',
-  },
-  searchMorphInner: {
+  searchModalField: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
-    marginLeft: spacing.sm,
+    height: 44,
+    paddingHorizontal: 14,
+    borderRadius: 999,
+    backgroundColor: '#F2F2F3',
   },
-  searchInput: {
+  searchModalInput: {
     flex: 1,
     fontSize: 15,
     color: '#1A1A1A',
     paddingVertical: 0,
+  },
+  searchModalScroll: {
+    paddingHorizontal: SECTION_PAD,
+    paddingBottom: 80,
   },
   searchClear: {
     width: 18,
@@ -917,10 +923,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#9A9AA0',
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  searchCancel: {
-    fontSize: 15,
-    color: semantic.primary,
   },
   searchEmpty: {
     paddingVertical: spacing['2xl'],

@@ -301,9 +301,9 @@ const styles = StyleSheet.create({
   },
   heroTitle: {
     fontSize: 28,
-    lineHeight: 34,
+    lineHeight: 40,
     color: '#1A1A1A',
-    letterSpacing: -0.4,
+    letterSpacing: 0,
   },
   heroSubtitle: {
     fontSize: 14,
