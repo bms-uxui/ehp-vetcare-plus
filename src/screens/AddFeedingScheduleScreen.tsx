@@ -1,69 +1,26 @@
-import { useEffect, useState } from 'react';
-import { Image, Pressable, StyleSheet, View } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useState } from 'react';
+import { Pressable, StyleSheet, TextInput, View } from 'react-native';
 import Animated, {
-  Extrapolation,
-  interpolate,
   useAnimatedScrollHandler,
-  useAnimatedStyle,
   useSharedValue,
-  withSequence,
-  withSpring,
-  withTiming,
 } from 'react-native-reanimated';
-import { LinearGradient } from 'expo-linear-gradient';
-import { BlurView } from 'expo-blur';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { RootStackParamList } from '../../App';
 import {
-  AppBackground,
-  Card,
+  FeedingTypeCard,
   Icon,
-  Input,
   PetAvatar,
+  StickyAppBar,
   Text,
 } from '../components';
-import { semantic, spacing } from '../theme';
+import type { FeedingType } from '../components/FeedingTypeCard';
+import { semantic } from '../theme';
 import { mockPets } from '../data/pets';
 import { useSchedules } from '../data/schedulesContext';
 import { notifyNow } from '../lib/notifications';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'AddFeedingSchedule'>;
-
-const HEADER_HEIGHT = 56;
-
-type ScheduleType = 'food' | 'water';
-
-const TYPE_IMAGES: Record<ScheduleType, number> = {
-  food: require('../../assets/illustrations/cat-meal.png'),
-  water: require('../../assets/illustrations/cat-water.png'),
-};
-
-const TYPES: {
-  key: ScheduleType;
-  label: string;
-  icon: string;
-  color: string;
-  bg: string;
-  gradient: [string, string];
-}[] = [
-  {
-    key: 'food',
-    label: 'อาหาร',
-    icon: 'UtensilsCrossed',
-    color: '#D99A20',
-    bg: '#FFF6D9',
-    gradient: ['#FFE9B8', '#FFF6D9'],
-  },
-  {
-    key: 'water',
-    label: 'น้ำ',
-    icon: 'Droplet',
-    color: '#4A8FD1',
-    bg: '#E0F0FB',
-    gradient: ['#C6E4F8', '#E0F0FB'],
-  },
-];
 
 const DAYS: { key: number; label: string }[] = [
   { key: 1, label: 'จ' },
@@ -89,8 +46,7 @@ const TIME_OPTIONS = [
 export default function AddFeedingScheduleScreen({ navigation }: Props) {
   const insets = useSafeAreaInsets();
   const { addSchedule } = useSchedules();
-  const [type, setType] = useState<ScheduleType>('food');
-  const activeTypeMeta = TYPES.find((t) => t.key === type) ?? TYPES[0];
+  const [type, setType] = useState<FeedingType>('food');
   const [selectedPetIds, setSelectedPetIds] = useState<Set<string>>(
     () => new Set(mockPets[0] ? [mockPets[0].id] : []),
   );
@@ -117,35 +73,9 @@ export default function AddFeedingScheduleScreen({ navigation }: Props) {
     scrollY.value = e.contentOffset.y;
   });
 
-  // Two blur layers stacked behind the header — opacity is animated by
-  // scrollY so the frosted glass fades in progressively as content scrolls
-  // under. Animating opacity on Animated.View is far more reliable than
-  // animating BlurView's `intensity` prop (which expo-blur doesn't always
-  // wire through `createAnimatedComponent`).
-  const headerSoftBlurStyle = useAnimatedStyle(() => ({
-    opacity: interpolate(scrollY.value, [0, 80], [0, 1], Extrapolation.CLAMP),
-  }));
-  const headerHardBlurStyle = useAnimatedStyle(() => ({
-    opacity: interpolate(
-      scrollY.value,
-      [60, 160],
-      [0, 1],
-      Extrapolation.CLAMP,
-    ),
-  }));
-  const headerHairlineStyle = useAnimatedStyle(() => ({
-    opacity: interpolate(
-      scrollY.value,
-      [60, 160],
-      [0, 1],
-      Extrapolation.CLAMP,
-    ),
-  }));
-
   const onSubmit = () => {
     if (!canSubmit || !time) return;
     const selectedPets = mockPets.filter((p) => selectedPetIds.has(p.id));
-    // daysOfWeek convention: empty array means "every day"; otherwise sorted day numbers.
     const allDays = days.size === 7;
     const daysOfWeek = allDays ? [] : Array.from(days).sort((a, b) => a - b);
     const trimmedNote = note.trim();
@@ -170,7 +100,6 @@ export default function AddFeedingScheduleScreen({ navigation }: Props) {
       title: 'บันทึกตารางเรียบร้อย',
       body: `${typeLabel} · ${time} · ${trimmedAmount}`,
     });
-
     navigation.goBack();
   };
 
@@ -185,66 +114,45 @@ export default function AddFeedingScheduleScreen({ navigation }: Props) {
 
   return (
     <View style={styles.root}>
-      <AppBackground />
+      <StickyAppBar
+        scrollY={scrollY}
+        fadeStartAt={60}
+        fadeEndAt={120}
+        title="เพิ่มตาราง"
+        leading={{
+          icon: 'ChevronLeft',
+          onPress: () => navigation.goBack(),
+          accessibilityLabel: 'ย้อนกลับ',
+        }}
+      />
 
       <Animated.ScrollView
         contentContainerStyle={[
           styles.scroll,
-          {
-            paddingTop: insets.top + HEADER_HEIGHT,
-            paddingBottom: insets.bottom + 96,
-          },
+          { paddingTop: insets.top + 56, paddingBottom: 32 },
         ]}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
         onScroll={scrollHandler}
         scrollEventThrottle={16}
       >
-        {/* Type selector card with cat food bag illustration */}
+        {/* Hero */}
+        <View style={styles.hero}>
+          <Text variant="h1" style={styles.heroTitle}>
+            เพิ่มตาราง
+          </Text>
+          <Text style={styles.heroDesc}>
+            ตั้งเวลาและปริมาณสำหรับการแจ้งเตือน
+          </Text>
+        </View>
+
         <View style={styles.section}>
-          <View style={styles.typeCard}>
-            <LinearGradient
-              pointerEvents="none"
-              colors={activeTypeMeta.gradient}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-              style={StyleSheet.absoluteFill}
-            />
-            <View style={styles.typeCardContent}>
-              <Text weight="600" style={styles.typeCardHeading}>
-                ดูแลน้องให้ครบทุกมื้อ
-              </Text>
-              <Text style={styles.typeCardDesc}>
-                ตั้งเวลาไว้ เราจะช่วยเตือนให้เอง
-              </Text>
-              <View style={styles.typeChipsRow}>
-                {TYPES.map((t) => (
-                  <TypeChip
-                    key={t.key}
-                    chip={t}
-                    active={type === t.key}
-                    onPress={() => setType(t.key)}
-                  />
-                ))}
-              </View>
-            </View>
-            <View pointerEvents="none" style={styles.typeCardImageWrap}>
-              <Image
-                source={TYPE_IMAGES[type]}
-                style={styles.typeCardImage}
-                resizeMode="cover"
-              />
-            </View>
-          </View>
+          <FeedingTypeCard value={type} onChange={setType} />
         </View>
 
         {/* Pet selector */}
         <View style={styles.section}>
-          <Text
-            variant="caption"
-            color={semantic.textSecondary}
-            style={styles.sectionLabel}
-          >
+          <Text weight="500" style={styles.sectionLabel}>
             สัตว์เลี้ยง
           </Text>
           <View style={styles.petGrid}>
@@ -299,314 +207,115 @@ export default function AddFeedingScheduleScreen({ navigation }: Props) {
 
         {/* Amount field */}
         <View style={styles.fieldSection}>
-          <Input
-            label="ปริมาณ"
+          <Text style={styles.fieldLabel}>ปริมาณ</Text>
+          <TextInput
+            style={styles.fieldInput}
             value={amount}
             onChangeText={setAmount}
             placeholder={type === 'food' ? 'เช่น 80 กรัม' : 'เช่น 1 ชาม'}
+            placeholderTextColor="#9A9AA0"
           />
         </View>
 
         {/* Days picker */}
         <View style={styles.fieldSection}>
-          <Text
-            variant="caption"
-            color={semantic.textSecondary}
-            style={styles.sectionLabel}
-          >
-            วันที่
-          </Text>
+          <Text style={styles.fieldLabel}>วันที่</Text>
           <View style={styles.daysRow}>
-            {DAYS.map((d) => (
-              <DayChip
-                key={d.key}
-                label={d.label}
-                active={days.has(d.key)}
-                onPress={() => toggleDay(d.key)}
-              />
-            ))}
+            {DAYS.map((d) => {
+              const active = days.has(d.key);
+              return (
+                <Pressable
+                  key={d.key}
+                  onPress={() => toggleDay(d.key)}
+                  style={({ pressed }) => [
+                    styles.dayCircle,
+                    active && styles.dayCircleActive,
+                    pressed && { opacity: 0.85 },
+                  ]}
+                >
+                  <Text
+                    weight="500"
+                    style={[
+                      styles.dayText,
+                      active && { color: '#FFFFFF' },
+                    ]}
+                  >
+                    {d.label}
+                  </Text>
+                </Pressable>
+              );
+            })}
           </View>
         </View>
 
         {/* Time picker */}
         <View style={styles.fieldSection}>
-          <Text
-            variant="caption"
-            color={semantic.textSecondary}
-            style={styles.sectionLabel}
-          >
-            เวลา
-          </Text>
+          <Text style={styles.fieldLabel}>เวลา</Text>
           <View style={styles.timeGrid}>
-            {TIME_OPTIONS.map((t) => (
-              <TimeTile
-                key={t}
-                time={t}
-                selected={time === t}
-                onPress={() => setTime(time === t ? null : t)}
-              />
-            ))}
+            {TIME_OPTIONS.map((t) => {
+              const active = time === t;
+              return (
+                <Pressable
+                  key={t}
+                  onPress={() => setTime(t)}
+                  style={({ pressed }) => [
+                    styles.timePill,
+                    active && styles.timePillActive,
+                    pressed && { opacity: 0.85 },
+                  ]}
+                >
+                  <Text
+                    weight="500"
+                    style={[
+                      styles.timeText,
+                      active && { color: '#FFFFFF' },
+                    ]}
+                  >
+                    {t}
+                  </Text>
+                </Pressable>
+              );
+            })}
           </View>
         </View>
 
         {/* Note field — multiline */}
         <View style={styles.fieldSection}>
-          <Input
-            label="หมายเหตุ"
+          <Text style={styles.fieldLabel}>หมายเหตุ</Text>
+          <TextInput
+            style={[styles.fieldInput, styles.fieldInputMultiline]}
             value={note}
             onChangeText={setNote}
             placeholder="เช่น อาหารเม็ด Prescription"
+            placeholderTextColor="#9A9AA0"
             multiline
           />
         </View>
 
-      </Animated.ScrollView>
-
-      {/* Animated blur header — transparent at top of scroll, frosted blur
-          fades in as content scrolls under it. iOS "scroll-under" pattern. */}
-      <View
-        style={[
-          styles.header,
-          { paddingTop: insets.top, height: insets.top + HEADER_HEIGHT },
-        ]}
-        pointerEvents="box-none"
-      >
-        {/* Soft light blur — appears first as user starts scrolling */}
-        <Animated.View
-          pointerEvents="none"
-          style={[StyleSheet.absoluteFill, headerSoftBlurStyle]}
-        >
-          <BlurView
-            intensity={30}
-            tint="systemChromeMaterialLight"
-            style={StyleSheet.absoluteFill}
-          />
-        </Animated.View>
-        {/* Heavier frosted blur — overlays once content scrolls further */}
-        <Animated.View
-          pointerEvents="none"
-          style={[StyleSheet.absoluteFill, headerHardBlurStyle]}
-        >
-          <BlurView
-            intensity={80}
-            tint="systemChromeMaterialLight"
-            style={StyleSheet.absoluteFill}
-          />
-        </Animated.View>
-        <Animated.View
-          pointerEvents="none"
-          style={[styles.headerHairline, headerHairlineStyle]}
-        />
-
-        <View style={styles.headerRow}>
+        {/* Save button */}
+        <View style={styles.submitWrap}>
           <Pressable
-            onPress={() => navigation.goBack()}
-            hitSlop={8}
+            onPress={onSubmit}
+            disabled={!canSubmit}
             style={({ pressed }) => [
-              styles.headerIconBtn,
-              pressed && { opacity: 0.7, transform: [{ scale: 0.96 }] },
+              styles.submitBtn,
+              canSubmit && styles.submitBtnActive,
+              pressed && canSubmit && { opacity: 0.9 },
             ]}
           >
-            <Icon
-              name="ChevronLeft"
-              size={20}
-              color="#1A1A1A"
-              strokeWidth={2.4}
-            />
+            <Text
+              weight="500"
+              style={[
+                styles.submitBtnText,
+                canSubmit && { color: '#FFFFFF' },
+              ]}
+            >
+              บันทึกตาราง
+            </Text>
           </Pressable>
-          <Text
-            variant="bodyStrong"
-            numberOfLines={1}
-            style={styles.headerTitle}
-          >
-            เพิ่มตาราง
-          </Text>
-          <View style={styles.headerIconPlaceholder} />
         </View>
-      </View>
-
-      {/* Save button — pinned to bottom with frosted-glass blur so the
-          scroll content can be glimpsed scrolling underneath. */}
-      <View style={[styles.saveBar, { paddingBottom: insets.bottom + 16 }]}>
-        <BlurView
-          intensity={80}
-          tint="systemChromeMaterialLight"
-          style={StyleSheet.absoluteFill}
-        />
-        <Pressable
-          onPress={onSubmit}
-          disabled={!canSubmit}
-          style={({ pressed }) => [
-            styles.submitBtn,
-            canSubmit && styles.submitBtnActive,
-            pressed && canSubmit && { opacity: 0.9 },
-          ]}
-        >
-          <Text
-            weight="500"
-            style={[
-              styles.submitBtnText,
-              canSubmit && { color: '#FFFFFF' },
-            ]}
-          >
-            บันทึกตาราง
-          </Text>
-        </Pressable>
-      </View>
+      </Animated.ScrollView>
     </View>
-  );
-}
-
-/* ---------- Time tile — scale-bump animation on selection ---------- */
-
-function TimeTile({
-  time,
-  selected,
-  onPress,
-}: {
-  time: string;
-  selected: boolean;
-  onPress: () => void;
-}) {
-  const scale = useSharedValue(1);
-  useEffect(() => {
-    if (selected) {
-      scale.value = withSequence(
-        withTiming(1.08, { duration: 140 }),
-        withSpring(1, { damping: 12, stiffness: 200 }),
-      );
-    }
-  }, [selected, scale]);
-
-  const animatedStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: scale.value }],
-  }));
-
-  return (
-    <Animated.View style={[styles.timeTile, animatedStyle]}>
-      <Card
-        variant="elevated"
-        selected={selected}
-        padding="sm"
-        onPress={onPress}
-        style={styles.timeTileShadow}
-      >
-        <View style={styles.timeInner}>
-          <Text variant="bodyStrong" style={{ fontSize: 13 }}>
-            {time}
-          </Text>
-        </View>
-      </Card>
-    </Animated.View>
-  );
-}
-
-/* ---------- Day circle — scale-bump animation on activation ---------- */
-
-function DayChip({
-  label,
-  active,
-  onPress,
-}: {
-  label: string;
-  active: boolean;
-  onPress: () => void;
-}) {
-  const scale = useSharedValue(1);
-  useEffect(() => {
-    if (active) {
-      scale.value = withSequence(
-        withTiming(1.12, { duration: 130 }),
-        withSpring(1, { damping: 11, stiffness: 220 }),
-      );
-    }
-  }, [active, scale]);
-
-  const animatedStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: scale.value }],
-  }));
-
-  return (
-    <Pressable
-      onPress={onPress}
-      style={({ pressed }) => [pressed && { opacity: 0.85 }]}
-    >
-      <Animated.View
-        style={[
-          styles.dayCircle,
-          active && styles.dayCircleActive,
-          animatedStyle,
-        ]}
-      >
-        <Text
-          weight="500"
-          style={[styles.dayText, active && { color: '#FFFFFF' }]}
-        >
-          {label}
-        </Text>
-      </Animated.View>
-    </Pressable>
-  );
-}
-
-/* ---------- Type chip — scale-bump animation on activation ---------- */
-
-function TypeChip({
-  chip,
-  active,
-  onPress,
-}: {
-  chip: (typeof TYPES)[number];
-  active: boolean;
-  onPress: () => void;
-}) {
-  const scale = useSharedValue(1);
-  useEffect(() => {
-    if (active) {
-      scale.value = withSequence(
-        withTiming(1.08, { duration: 140 }),
-        withSpring(1, { damping: 12, stiffness: 200 }),
-      );
-    }
-  }, [active, scale]);
-
-  const animatedStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: scale.value }],
-  }));
-
-  return (
-    <Pressable
-      onPress={onPress}
-      style={({ pressed }) => [pressed && { opacity: 0.85 }]}
-    >
-      <Animated.View
-        style={[
-          styles.typeChip,
-          active && {
-            backgroundColor: chip.color,
-            shadowColor: chip.color,
-            shadowOpacity: 0.28,
-            shadowRadius: 8,
-            shadowOffset: { width: 0, height: 3 },
-            elevation: 3,
-          },
-          animatedStyle,
-        ]}
-      >
-        <Icon
-          name={chip.icon as any}
-          size={16}
-          color={active ? '#FFFFFF' : chip.color}
-          strokeWidth={2.4}
-        />
-        <Text
-          weight="500"
-          style={[styles.typeChipText, active && { color: '#FFFFFF' }]}
-        >
-          {chip.label}
-        </Text>
-      </Animated.View>
-    </Pressable>
   );
 }
 
@@ -643,63 +352,8 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   sectionLabel: {
-    marginLeft: spacing.xs,
-  },
-
-  // Type selector card with illustration
-  typeCard: {
-    borderRadius: 24,
-    overflow: 'hidden',
-    flexDirection: 'row',
-    paddingRight: 91,
-    minHeight: 120,
-    position: 'relative',
-  },
-  typeCardContent: {
-    flex: 1,
-    padding: 16,
-    gap: 8,
-    justifyContent: 'center',
-  },
-  typeCardHeading: {
-    fontSize: 17,
-    lineHeight: 22,
+    fontSize: 14,
     color: '#1A1A1A',
-  },
-  typeCardDesc: {
-    fontSize: 12,
-    lineHeight: 16,
-    color: '#5C4A4F',
-    marginBottom: 4,
-  },
-  typeChipsRow: {
-    flexDirection: 'row',
-    gap: 10,
-  },
-  typeChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    height: 40,
-    paddingHorizontal: 14,
-    borderRadius: 1000,
-    backgroundColor: '#FFFFFF',
-  },
-  typeChipText: {
-    fontSize: 15,
-    lineHeight: 20,
-    color: '#1A1A1A',
-  },
-  typeCardImageWrap: {
-    position: 'absolute',
-    right: 0,
-    bottom: 0,
-    width: 110,
-    height: 110,
-  },
-  typeCardImage: {
-    width: '100%',
-    height: '100%',
   },
 
   // Pet selector
@@ -752,37 +406,43 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     gap: 4,
   },
+  fieldLabel: {
+    fontSize: 10,
+    color: '#9A9AA0',
+  },
+  fieldInput: {
+    borderWidth: 1,
+    borderColor: '#F2F2F3',
+    borderRadius: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    fontSize: 16,
+    color: '#1A1A1A',
+  },
+  fieldInputMultiline: {
+    minHeight: 96,
+    textAlignVertical: 'top',
+  },
 
   // Days picker (7 circles)
   daysRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    gap: 10,
     marginTop: 6,
   },
   dayCircle: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: '#FFFFFF',
+    flex: 1,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#F2F2F3',
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#000',
-    shadowOpacity: 0.08,
-    shadowRadius: 6,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 2,
   },
   dayCircleActive: {
     backgroundColor: semantic.primary,
-    shadowColor: semantic.primary,
-    shadowOpacity: 0.28,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 3 },
-    elevation: 3,
   },
   dayText: {
-    fontSize: 15,
-    lineHeight: 20,
+    fontSize: 14,
     color: '#1A1A1A',
   },
 
@@ -790,83 +450,31 @@ const styles = StyleSheet.create({
   timeGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: spacing.sm,
+    gap: 10,
     marginTop: 6,
   },
-  timeTile: {
-    flexBasis: '22%',
+  timePill: {
+    flexBasis: '23%',
     flexGrow: 1,
-  },
-  timeTileShadow: {
-    shadowColor: '#000',
-    shadowOpacity: 0.06,
-    shadowRadius: 6,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 2,
-  },
-  timeInner: {
-    alignItems: 'center',
-  },
-
-  // Animated blur header — overlay at the top, blurs in on scroll
-  header: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    zIndex: 10,
-  },
-  headerHairline: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    height: StyleSheet.hairlineWidth,
-    backgroundColor: 'rgba(0,0,0,0.08)',
-  },
-  headerRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    height: HEADER_HEIGHT,
-    paddingHorizontal: 12,
-  },
-  headerIconBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: '#FFFFFF',
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    borderRadius: 100,
+    backgroundColor: '#F2F2F3',
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: 'rgba(0,0,0,0.1)',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.06,
-    shadowRadius: 2,
-    elevation: 1,
   },
-  headerIconPlaceholder: {
-    width: 36,
-    height: 36,
+  timePillActive: {
+    backgroundColor: semantic.primary,
   },
-  headerTitle: {
-    flex: 1,
-    marginLeft: 16,
-    fontSize: 17,
+  timeText: {
+    fontSize: 14,
     color: '#1A1A1A',
   },
 
-  // Save button — pinned bottom bar with frosted-glass blur (safe-area aware)
-  saveBar: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    bottom: 0,
+  // Save button
+  submitWrap: {
     paddingHorizontal: 16,
-    paddingTop: 12,
-    overflow: 'hidden',
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: 'rgba(0,0,0,0.08)',
+    paddingTop: 16,
   },
   submitBtn: {
     height: 48,

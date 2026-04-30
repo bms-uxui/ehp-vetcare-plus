@@ -50,7 +50,7 @@ const PET_BOOKING_IMG = require('../../assets/Pet-booking.png');
 const PET_COMING_SOON_IMG = require('../../assets/Pet-coming soon.png');
 const PET_DRIVE_IMG = require('../../assets/Pet-drive.png');
 const PET_VIDEOCALL_IMG = require('../../assets/Pet-videocall.png');
-const VET_HERO_IMG = require('../../assets/pet-profile-hero.png');
+const VET_HERO_IMG = require('../../assets/Hero-VetPage.png');
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Vet'>;
 
@@ -63,7 +63,6 @@ const HERO_HEIGHT = 220;
 export default function VetHubScreen({ navigation }: Props) {
   const insets = useSafeAreaInsets();
   const { height: windowHeight, width: windowWidth } = useWindowDimensions();
-  const isTablet = windowWidth > 700;
   const [tab, setTab] = useState<Tab>('upcoming');
 
   const upcoming = mockAppointments
@@ -136,14 +135,31 @@ export default function VetHubScreen({ navigation }: Props) {
             style={styles.heroBottomFade}
           />
           <Image source={VET_HERO_IMG} style={styles.heroImage} resizeMode="contain" />
-          <View style={[styles.heroText, isTablet && styles.heroTextTablet]}>
-            <Text variant="bodyStrong" style={styles.heroTitle}>
+          <View style={styles.heroText}>
+            <Text
+              variant="bodyStrong"
+              style={[
+                styles.heroTitle,
+                {
+                  fontSize: Math.max(22, Math.min(32, windowWidth * 0.07)),
+                  lineHeight: Math.max(34, Math.min(46, windowWidth * 0.1)),
+                },
+              ]}
+            >
               สัตวแพทย์
             </Text>
-            <Text variant="caption" color={semantic.textSecondary} style={styles.heroSubtitle}>
-              {isTablet
-                ? 'นัดหมาย ปรึกษาออนไลน์ และประวัติการรักษา'
-                : `นัดหมาย ปรึกษาออนไลน์${'\n'}และประวัติการรักษา`}
+            <Text
+              variant="caption"
+              color={semantic.textSecondary}
+              style={[
+                styles.heroSubtitle,
+                {
+                  fontSize: Math.max(13, Math.min(17, windowWidth * 0.04)),
+                  lineHeight: Math.max(24, Math.min(30, windowWidth * 0.07)),
+                },
+              ]}
+            >
+              นัดหมาย ปรึกษาออนไลน์{'\n'}และประวัติการรักษา
             </Text>
           </View>
         </View>
@@ -163,6 +179,7 @@ export default function VetHubScreen({ navigation }: Props) {
               accessibilityRole="button"
               accessibilityLabel="จองนัดหมาย"
             >
+              <Icon name="CalendarPlus" size={18} color={semantic.onPrimary} strokeWidth={2.4} />
               <Text variant="bodyStrong" color={semantic.onPrimary} style={styles.addBtnText}>
                 จองนัดหมาย
               </Text>
@@ -973,7 +990,7 @@ const styles = StyleSheet.create({
   hero: {
     position: 'relative',
     overflow: 'hidden',
-    paddingHorizontal: spacing.xl,
+    justifyContent: 'center',
   },
   heroBottomFade: {
     position: 'absolute',
@@ -985,28 +1002,20 @@ const styles = StyleSheet.create({
   heroImage: {
     position: 'absolute',
     right: spacing.xl,
-    top: 70,
+    bottom: 60,
     width: 140,
     height: 140,
   },
   heroText: {
-    position: 'absolute',
-    left: spacing.xl,
-    top: 110,
-    width: 188,
+    paddingHorizontal: spacing.xl,
+    width: 220,
     gap: spacing.sm,
   },
-  heroTextTablet: {
-    width: 480,
-  },
   heroTitle: {
-    fontSize: 28,
-    lineHeight: 36,
     color: '#1A1A1F',
+    fontWeight: '700',
   },
   heroSubtitle: {
-    fontSize: 16,
-    lineHeight: 24,
     color: '#4A4A50',
   },
   sheet: {
@@ -1093,9 +1102,9 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0,0,0,0.08)',
   },
   headerIconBtn: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
     backgroundColor: semantic.surface,
     alignItems: 'center',
     justifyContent: 'center',

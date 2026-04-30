@@ -20,8 +20,7 @@ import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { RootStackParamList } from '../../App';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Button, Card, Icon, ProductTile, Screen, Text } from '../components';
-import { getProductColumns } from '../lib/responsive';
+import { Button, Card, Icon, PetAvatar, ProductTile, Screen, Text } from '../components';
 import VetCareLogo from '../../assets/vet-care-plus.svg';
 import VaccinationIllus from '../../assets/vaccination-appointment.svg';
 import { radii, semantic, shadows, spacing } from '../theme';
@@ -58,18 +57,17 @@ const thTimeOfDayLabel = (time: string) => {
 export default function HomeScreen({ navigation }: Props) {
   const insets = useSafeAreaInsets();
   const { width: windowWidth } = useWindowDimensions();
-  const productCols = getProductColumns(windowWidth);
-  const PRODUCT_GAP = 8;
-  const PRODUCT_PAD = 20; // spacing.xl
-  const productCardWidth =
-    (windowWidth - PRODUCT_PAD * 2 - PRODUCT_GAP * (productCols - 1)) /
-    productCols;
   const bannerPageWidth = windowWidth - spacing.xl * 2;
-  const nextAppt = mockAppointments
-    .filter((a) => a.status === 'upcoming')
-    .sort((a, b) => a.dateISO.localeCompare(b.dateISO))[0];
-
   const vaccineReminder = mockReminders.find((r) => r.type === 'vaccine');
+
+  // Pick the next upcoming appointment that belongs to a *different* pet from
+  // the vaccine reminder so the two banners show different pets/avatars.
+  const upcomingAppts = mockAppointments
+    .filter((a) => a.status === 'upcoming')
+    .sort((a, b) => a.dateISO.localeCompare(b.dateISO));
+  const nextAppt =
+    upcomingAppts.find((a) => a.petId !== vaccineReminder?.petId) ??
+    upcomingAppts[0];
 
   // Expense
   const thisMonth = new Date().toISOString().slice(0, 7);
@@ -87,14 +85,17 @@ export default function HomeScreen({ navigation }: Props) {
   type BannerItem = {
     date: string;
     pet?: string;
+    petId?: string;
     actionTop: string;
     actionBottom: string;
     clinic: string;
     cta: string;
     onPress: () => void;
-    /** Background illustration. Drop a PNG/SVG in assets/ and require() it here. */
+    /** Full-bleed background illustration. Drop a PNG/SVG in assets/ and require() it here. */
     illustration?: ImageSourcePropType;
-    /** Right-side SVG illustration component (alternative to raster `illustration`). */
+    /** Raster image for the right-side corner slot (alternative to `IllustrationSvg`). */
+    cornerIllustration?: ImageSourcePropType;
+    /** Right-side SVG illustration component (alternative to raster `cornerIllustration`). */
     IllustrationSvg?: React.FC<{ width?: number; height?: number }>;
     /** Fallback tint while no illustration is provided. */
     accent: string;
@@ -106,7 +107,8 @@ export default function HomeScreen({ navigation }: Props) {
         ? thFullDate(vaccineReminder.dueISO)
         : thFullDate(new Date().toISOString()),
       pet: vaccineReminder?.petName ?? 'ข้าวปั้น',
-      actionTop: 'เข้ารับบริการ',
+      petId: vaccineReminder?.petId ?? 'p1',
+      actionTop: 'มีนัดบริการ',
       actionBottom: 'ฉีดวัคซีนพิษสุนัขบ้า',
       clinic: 'ปุกปุยสัตวแพทย์ PUKPUI Rabbit&Exotic Pet Clinic',
       cta: 'ดูรายละเอียด',
@@ -119,12 +121,13 @@ export default function HomeScreen({ navigation }: Props) {
     nextAppt && {
       date: thFullDate(nextAppt.dateISO),
       pet: nextAppt.petName,
-      actionTop: 'เข้ารับบริการ',
+      petId: nextAppt.petId,
+      actionTop: 'มีนัดบริการ',
       actionBottom: nextAppt.typeLabel,
       clinic: nextAppt.clinicName,
       cta: 'ดูรายละเอียด',
       accent: '#FFF4EA',
-      // illustration: require('../../assets/banner-checkup.png'),
+      IllustrationSvg: VaccinationIllus,
       onPress: () =>
         navigation.navigate('AppointmentDetail', { appointmentId: nextAppt.id }),
     },
@@ -135,18 +138,8 @@ export default function HomeScreen({ navigation }: Props) {
       clinic: 'มีสัตวแพทย์ออนไลน์ พร้อมตอบคำถามคุณ',
       cta: 'เริ่มสนทนา',
       accent: '#E0F0FB',
-      // illustration: require('../../assets/banner-televet.png'),
+      cornerIllustration: require('../../assets/Hero-VetPage.png'),
       onPress: () => navigation.navigate('Vet' as never),
-    },
-    {
-      date: 'โปรโมชั่น',
-      actionTop: 'ลด 15% สำหรับ',
-      actionBottom: 'อาหารสมาชิก',
-      clinic: 'ใช้สิทธิ์ได้ภายใน 30 เม.ย. 69',
-      cta: 'เข้าสู่ร้านค้า',
-      accent: '#E7F5E9',
-      // illustration: require('../../assets/banner-promo.png'),
-      onPress: () => navigation.navigate('PetShop' as never),
     },
   ].filter(Boolean) as BannerItem[];
 
@@ -289,6 +282,26 @@ export default function HomeScreen({ navigation }: Props) {
               {item.IllustrationSvg ? (
                 <View style={styles.bannerIllus} pointerEvents="none">
                   <item.IllustrationSvg width={200} height={178} />
+                  {item.petId && (
+                    <View style={styles.bannerPetAvatar}>
+                      <PetAvatar
+                        petId={item.petId}
+                        size={56}
+                        backgroundColor="#FFFFFF"
+                      />
+                    </View>
+                  )}
+                </View>
+              ) : item.cornerIllustration ? (
+                <View
+                  style={[styles.bannerIllus, styles.bannerIllusRaster]}
+                  pointerEvents="none"
+                >
+                  <Image
+                    source={item.cornerIllustration}
+                    style={styles.bannerIllusImg}
+                    resizeMode="contain"
+                  />
                 </View>
               ) : null}
               <View style={styles.dateChip}>
@@ -301,9 +314,8 @@ export default function HomeScreen({ navigation }: Props) {
               <Text variant="bodyStrong" style={styles.bannerHeadline}>
                 {item.pet ? (
                   <>
-                    อย่าลืมพา{' '}
                     <Text variant="bodyStrong" weight="700">
-                      {item.pet}
+                      น้อง{item.pet}
                     </Text>{' '}
                     {item.actionTop}
                   </>
@@ -517,7 +529,7 @@ export default function HomeScreen({ navigation }: Props) {
 
         {/* ── VET SERVICE WIDE CARD ── */}
         <Pressable
-          onPress={() => navigation.navigate('Vet' as never)}
+          onPress={() => navigation.navigate('BookAppointment')}
           android_ripple={RIPPLE}
           style={({ pressed }) => [styles.cardShadow, pressed && { opacity: 0.9 }]}
         >
@@ -583,7 +595,6 @@ export default function HomeScreen({ navigation }: Props) {
             <ProductTile
               key={p.id}
               product={p}
-              cardWidth={productCardWidth}
               onPress={() => navigation.navigate('ProductDetail', { productId: p.id })}
             />
           ))}
@@ -646,7 +657,7 @@ const styles = StyleSheet.create({
   },
   content: {
     paddingHorizontal: spacing.xl,
-    gap: spacing.md,
+    gap: spacing.xl,
     marginTop: -60, // pull content up so banner bottom hits pet card middle (~120/2)
   },
   bannerBgStack: {
@@ -663,7 +674,7 @@ const styles = StyleSheet.create({
   bannerStack: {
     position: 'relative',
     marginTop: spacing.xl,
-    minHeight: 140,
+    height: 160,
   },
   swipeOverlay: {
     ...StyleSheet.absoluteFillObject,
@@ -674,6 +685,7 @@ const styles = StyleSheet.create({
     top: 0,
     left: 0,
     right: 0,
+    bottom: 0,
     gap: spacing.md,
     alignItems: 'flex-start',
     justifyContent: 'flex-start',
@@ -708,6 +720,29 @@ const styles = StyleSheet.create({
     bottom: -96,
     width: 200,
     height: 178,
+  },
+  bannerIllusImg: {
+    width: '100%',
+    height: '100%',
+  },
+  bannerIllusRaster: {
+    width: 220,
+    height: 220,
+    right: -40,
+    bottom: -110,
+  },
+  bannerPetAvatar: {
+    position: 'absolute',
+    top: -16,
+    left: 36,
+    borderRadius: 999,
+    backgroundColor: '#FFFFFF',
+    padding: 3,
+    shadowColor: '#7E3D4F',
+    shadowOpacity: 0.18,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 6,
   },
   bannerLogoFade: {
     position: 'absolute',
@@ -786,7 +821,7 @@ const styles = StyleSheet.create({
   },
   bentoRow: {
     flexDirection: 'row',
-    gap: spacing.md,
+    gap: spacing.lg,
   },
   bentoTile: {
     flex: 1,
@@ -893,14 +928,14 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   sectionLabel: {
-    marginTop: spacing.md,
+    marginTop: spacing.lg,
     marginLeft: spacing.xs,
     fontSize: 12,
   },
   productGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 8,
+    gap: spacing.sm,
   },
   productTile: {
     flexBasis: '47.5%',

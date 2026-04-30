@@ -1,8 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import {
-  FlatList,
   Image,
-  Modal,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -17,10 +15,12 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../App';
-import { AppBackground, Icon, Text } from '../components';
+import { AppBackground, DropdownField, Icon, Text } from '../components';
 import { semantic } from '../theme';
+import { breedOptions } from '../data/breeds';
 import { mockPets, Pet } from '../data/pets';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'AddPetManual'>;
@@ -54,40 +54,6 @@ const SPECIES: {
   { key: 'other', label: 'อื่นๆ', emoji: '🐾' },
 ];
 
-const BREEDS: Record<Species, string[]> = {
-  dog: [
-    'ชิบะ อินุ',
-    'โกลเด้น รีทรีฟเวอร์',
-    'ลาบราดอร์',
-    'พุดเดิ้ล',
-    'ชิวาวา',
-    'ปั๊ก',
-    'บีเกิ้ล',
-    'ปอมเมอเรเนียน',
-    'ไทยหลังอาน',
-    'อื่นๆ',
-  ],
-  cat: [
-    'เปอร์เซีย',
-    'เมนคูน',
-    'สก๊อตติช โฟลด์',
-    'อเมริกัน ช็อตแฮร์',
-    'แร็กดอลล์',
-    'บริติช ช็อตแฮร์',
-    'ไทย วิเชียรมาศ',
-    'อื่นๆ',
-  ],
-  rabbit: [
-    'ฮอลแลนด์ ลอป',
-    'เน็ตเธอร์แลนด์ ดวอร์ฟ',
-    'ไลออนเฮด',
-    'เร็กซ์',
-    'อังกอร่า',
-    'อื่นๆ',
-  ],
-  other: ['อื่นๆ'],
-};
-
 const STEPS = [
   { title: 'เลือกชนิดสัตว์เลี้ยง', subtitle: 'เลือกชนิดที่ใกล้เคียงน้องของคุณที่สุด' },
   { title: 'ข้อมูลพื้นฐาน', subtitle: 'กรอกชื่อและข้อมูลเบื้องต้นของน้อง' },
@@ -97,7 +63,9 @@ const STEPS = [
 export default function AddPetManualScreen({ navigation, route }: Props) {
   const prefill = route.params?.prefill;
   const insets = useSafeAreaInsets();
-  const [stepIndex, setStepIndex] = useState(0);
+  const [stepIndex, setStepIndex] = useState(
+    Math.max(0, Math.min(2, route.params?.startStep ?? 0)),
+  );
   const [species, setSpecies] = useState<Species>('dog');
   const [gender, setGender] = useState<'male' | 'female'>('male');
   const [name, setName] = useState(prefill?.name ?? '');
@@ -220,15 +188,15 @@ export default function AddPetManualScreen({ navigation, route }: Props) {
         ))}
       </View>
 
-      <ScrollView
+      <KeyboardAwareScrollView
         ref={scrollRef}
+        bottomOffset={24}
         contentContainerStyle={[
           styles.body,
           { paddingBottom: insets.bottom + 120 },
         ]}
         keyboardShouldPersistTaps="handled"
         keyboardDismissMode="interactive"
-        automaticallyAdjustKeyboardInsets
         showsVerticalScrollIndicator={false}
       >
         <Text variant="bodyStrong" style={styles.titleText}>
@@ -295,10 +263,10 @@ export default function AddPetManualScreen({ navigation, route }: Props) {
             <FormField label="ชื่อ" value={name} onChange={setName} placeholder="เช่น ข้าวปั้น" />
             <View style={styles.fieldRow}>
               <View style={styles.fieldCol}>
-                <BreedField
+                <DropdownField
                   label="สายพันธุ์"
                   value={breed}
-                  options={BREEDS[species]}
+                  options={breedOptions[species]}
                   onChange={setBreed}
                 />
               </View>
@@ -432,7 +400,7 @@ export default function AddPetManualScreen({ navigation, route }: Props) {
             <ReviewRow label="ไมโครชิป" value={microchipId || '-'} />
           </View>
         )}
-      </ScrollView>
+      </KeyboardAwareScrollView>
 
       <View
         style={[styles.actionBar, { paddingBottom: insets.bottom + 16 }]}
@@ -466,132 +434,6 @@ export default function AddPetManualScreen({ navigation, route }: Props) {
           </Text>
         </Pressable>
       </View>
-    </View>
-  );
-}
-
-function BreedField({
-  label,
-  value,
-  options,
-  onChange,
-}: {
-  label: string;
-  value: string;
-  options: string[];
-  onChange: (v: string) => void;
-}) {
-  const [open, setOpen] = useState(false);
-  const [focused, setFocused] = useState(false);
-  return (
-    <View style={styles.fieldWrap}>
-      <Text
-        variant="caption"
-        style={[styles.fieldLabel, focused && { color: semantic.primary }]}
-      >
-        {label}
-      </Text>
-      <Pressable
-        onPress={() => {
-          setFocused(true);
-          setOpen(true);
-        }}
-        style={[
-          styles.fieldUnderline,
-          focused && {
-            borderBottomColor: semantic.primary,
-            borderBottomWidth: 1.5,
-          },
-        ]}
-      >
-        <View style={styles.dropdownRow}>
-          <Text
-            variant="bodyStrong"
-            style={[
-              styles.fieldInput,
-              !value && { color: '#9A9AA0', fontWeight: '500' },
-              { paddingVertical: 0, height: undefined },
-            ]}
-          >
-            {value || 'เลือกสายพันธุ์'}
-          </Text>
-          <Icon
-            name="ChevronDown"
-            size={18}
-            color="#6E6E74"
-            strokeWidth={2.2}
-          />
-        </View>
-      </Pressable>
-
-      <Modal
-        visible={open}
-        presentationStyle="pageSheet"
-        animationType="slide"
-        onRequestClose={() => {
-          setOpen(false);
-          setFocused(false);
-        }}
-      >
-        <View style={styles.dropdownSheetRoot}>
-          <View style={styles.dropdownGrabber} />
-          <View style={styles.dropdownHeader}>
-            <Text variant="bodyStrong" style={styles.dropdownTitle}>
-              {label}
-            </Text>
-            <Pressable
-              onPress={() => {
-                setOpen(false);
-                setFocused(false);
-              }}
-              hitSlop={8}
-              accessibilityLabel="ปิด"
-              style={styles.dropdownCloseBtn}
-            >
-              <Icon name="X" size={14} color="#1A1A1A" strokeWidth={2.6} />
-            </Pressable>
-          </View>
-          <FlatList
-            data={options}
-            keyExtractor={(item) => item}
-            ItemSeparatorComponent={() => <View style={styles.dropdownSep} />}
-            renderItem={({ item }) => {
-              const selected = value === item;
-              return (
-                <Pressable
-                  onPress={() => {
-                    onChange(item);
-                    setOpen(false);
-                    setFocused(false);
-                  }}
-                  style={({ pressed }) => [
-                    styles.dropdownItem,
-                    pressed && { backgroundColor: '#FBF3F4' },
-                  ]}
-                >
-                  <Text
-                    variant="bodyStrong"
-                    style={[
-                      styles.dropdownItemText,
-                      selected && { color: semantic.primary },
-                    ]}
-                  >
-                    {item}
-                  </Text>
-                  {selected && (
-                    <Icon
-                      name="Check"
-                      size={18}
-                      color={semantic.primary}
-                      strokeWidth={2.4}
-                    />
-                  )}
-                </Pressable>
-              );
-            }}
-          />
-        </View>
-      </Modal>
     </View>
   );
 }
@@ -987,76 +829,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#9F5266',
     borderColor: '#9F5266',
     opacity: 1,
-  },
-  dropdownRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    height: 40,
-  },
-  dropdownSheetRoot: {
-    flex: 1,
-    backgroundColor: '#FFFFFF',
-    borderTopLeftRadius: 32,
-    borderTopRightRadius: 32,
-    overflow: 'hidden',
-  },
-  dropdownGrabber: {
-    alignSelf: 'center',
-    width: 40,
-    height: 5,
-    borderRadius: 100,
-    backgroundColor: '#D0D0D4',
-    marginTop: 8,
-  },
-  dropdownHeader: {
-    height: 60,
-    paddingHorizontal: 16,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    position: 'relative',
-  },
-  dropdownTitle: {
-    fontSize: 16,
-    lineHeight: 20,
-    color: '#1A1A1A',
-    letterSpacing: -0.2,
-  },
-  dropdownCloseBtn: {
-    position: 'absolute',
-    right: 16,
-    top: 8,
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: 'rgba(255,255,255,0.65)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: 'rgba(255,255,255,0.55)',
-    shadowColor: '#000',
-    shadowOpacity: 0.12,
-    shadowRadius: 20,
-    shadowOffset: { width: 0, height: 8 },
-    elevation: 6,
-  },
-  dropdownItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingVertical: 14,
-  },
-  dropdownItemText: {
-    fontSize: 15,
-    color: '#1A1A1F',
-    fontWeight: '500',
-  },
-  dropdownSep: {
-    height: StyleSheet.hairlineWidth,
-    backgroundColor: '#E6E6E8',
-    marginHorizontal: 20,
   },
   reviewList: {
     marginTop: 8,

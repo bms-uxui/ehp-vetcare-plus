@@ -1,7 +1,9 @@
-import { NavigationContainer, DefaultTheme, createNavigationContainerRef } from '@react-navigation/native';
+import { NavigationContainer, DefaultTheme } from '@react-navigation/native';
+import { navigationRef } from './src/lib/navigationRef';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { KeyboardProvider } from 'react-native-keyboard-controller';
 import { View } from 'react-native';
 import { useFonts } from 'expo-font';
 import { useEffect } from 'react';
@@ -30,6 +32,7 @@ import AddPetScanScreen from './src/screens/AddPetScanScreen';
 import AddPetMicrochipScreen from './src/screens/AddPetMicrochipScreen';
 import AppointmentDetailScreen from './src/screens/AppointmentDetailScreen';
 import BookAppointmentScreen from './src/screens/BookAppointmentScreen';
+import BookAppointmentSummaryScreen from './src/screens/BookAppointmentSummaryScreen';
 import HealthRecordsScreen from './src/screens/HealthRecordsScreen';
 import VisitDetailScreen from './src/screens/VisitDetailScreen';
 import NotificationsScreen from './src/screens/NotificationsScreen';
@@ -60,6 +63,10 @@ import ProductDetailScreen from './src/screens/ProductDetailScreen';
 import CartScreen from './src/screens/CartScreen';
 import CheckoutScreen from './src/screens/CheckoutScreen';
 import OrderTrackingScreen from './src/screens/OrderTrackingScreen';
+import ProfileInfoScreen from './src/screens/ProfileInfoScreen';
+import ConnectedClinicsScreen from './src/screens/ConnectedClinicsScreen';
+import SecurityScreen from './src/screens/SecurityScreen';
+import HelpScreen from './src/screens/HelpScreen';
 import AppTabs from './src/navigation/AppTabs';
 import { semantic } from './src/theme';
 
@@ -89,10 +96,28 @@ export type RootStackParamList = {
           neuteredDate?: string;
           neuteredClinic?: string;
         };
+        startStep?: number;
       }
     | undefined;
   AppointmentDetail: { appointmentId: string };
-  BookAppointment: { selectedVetId?: string } | undefined;
+  BookAppointment:
+    | {
+        selectedVetId?: string;
+        prefillPetId?: string;
+        prefillMode?: 'online' | 'clinic';
+        prefillDateISO?: string;
+        prefillTime?: string;
+        prefillNotes?: string;
+      }
+    | undefined;
+  BookAppointmentSummary: {
+    petId: string;
+    mode: 'online' | 'clinic';
+    dateISO: string;
+    time: string;
+    vetId: string;
+    notes?: string;
+  };
   HealthRecords: { petId: string };
   VisitDetail: { visitId: string };
   Notifications: undefined;
@@ -100,7 +125,12 @@ export type RootStackParamList = {
   MealTimeSetting: { petId: string; scheduleId?: string };
   PetEdit: { petId: string };
   TeleVet: undefined;
-  Chat: { conversationId: string; vetId?: string };
+  Chat: {
+    conversationId: string;
+    vetId?: string;
+    aiMode?: boolean;
+    petId?: string;
+  };
   ChatList: undefined;
   VideoCall: { vetId: string };
   BookTeleVet: undefined;
@@ -114,11 +144,15 @@ export type RootStackParamList = {
   Cart: undefined;
   Checkout: { selectedIds?: string[] } | undefined;
   OrderTracking: undefined;
+  ProfileInfo: undefined;
+  ConnectedClinics: undefined;
+  Security: undefined;
+  Help: undefined;
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
-export const navigationRef = createNavigationContainerRef<RootStackParamList>();
+export { navigationRef };
 
 const navTheme = {
   ...DefaultTheme,
@@ -198,6 +232,7 @@ export default function App() {
 
   return (
     <SafeAreaProvider>
+      <KeyboardProvider>
       <StatusBar style="dark" />
       <CallProvider>
        <ExpensesProvider>
@@ -249,11 +284,16 @@ export default function App() {
           <Stack.Screen
             name="AppointmentDetail"
             component={AppointmentDetailScreen}
-            options={transparentHeader}
+            options={{ headerShown: false }}
           />
           <Stack.Screen
             name="BookAppointment"
             component={BookAppointmentScreen}
+            options={{ headerShown: false }}
+          />
+          <Stack.Screen
+            name="BookAppointmentSummary"
+            component={BookAppointmentSummaryScreen}
             options={{ headerShown: false }}
           />
           <Stack.Screen
@@ -356,6 +396,26 @@ export default function App() {
             component={OrderTrackingScreen}
             options={{ headerShown: false }}
           />
+          <Stack.Screen
+            name="ProfileInfo"
+            component={ProfileInfoScreen}
+            options={{ headerShown: false }}
+          />
+          <Stack.Screen
+            name="ConnectedClinics"
+            component={ConnectedClinicsScreen}
+            options={{ headerShown: false }}
+          />
+          <Stack.Screen
+            name="Security"
+            component={SecurityScreen}
+            options={{ headerShown: false }}
+          />
+          <Stack.Screen
+            name="Help"
+            component={HelpScreen}
+            options={{ headerShown: false }}
+          />
           </Stack.Navigator>
         </NavigationContainer>
          </NotifyPrefsProvider>
@@ -363,6 +423,7 @@ export default function App() {
        </ExpensesProvider>
         <MiniCallOverlay />
       </CallProvider>
+      </KeyboardProvider>
     </SafeAreaProvider>
   );
 }
