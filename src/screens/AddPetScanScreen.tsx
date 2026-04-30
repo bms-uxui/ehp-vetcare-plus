@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Animated, Easing, Pressable, StyleSheet, View } from 'react-native';
+import { Animated, Easing, Image, Pressable, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -36,6 +36,9 @@ async function handleOcrCapture(): Promise<{
   };
 }
 
+const CARD_W = 276;
+const CARD_H = 171;
+
 export default function AddPetScanScreen({ navigation }: Props) {
   const insets = useSafeAreaInsets();
   const [started, setStarted] = useState(false);
@@ -47,14 +50,14 @@ export default function AddPetScanScreen({ navigation }: Props) {
     const loop = Animated.loop(
       Animated.sequence([
         Animated.timing(scanY, {
-          toValue: TARGET_H - 4,
-          duration: 1600,
+          toValue: CARD_H - 4,
+          duration: 1200,
           easing: Easing.inOut(Easing.ease),
           useNativeDriver: true,
         }),
         Animated.timing(scanY, {
           toValue: 0,
-          duration: 1600,
+          duration: 1200,
           easing: Easing.inOut(Easing.ease),
           useNativeDriver: true,
         }),
@@ -63,6 +66,15 @@ export default function AddPetScanScreen({ navigation }: Props) {
     loop.start();
     return () => loop.stop();
   }, [scanY, started]);
+
+  const onCapture = async () => {
+    setBusy(true);
+    const extracted = await handleOcrCapture();
+    navigation.replace('AddPetManual', {
+      prefill: extracted,
+      startStep: 2,
+    } as any);
+  };
 
   if (!started) {
     return (
@@ -88,7 +100,11 @@ export default function AddPetScanScreen({ navigation }: Props) {
 
         <View style={styles.introBody}>
           <View style={styles.introIllus}>
-            <Icon name="ScanLine" size={56} color="#9F5266" strokeWidth={2.2} />
+            <Image
+              source={require('../../assets/pet-id-card.png')}
+              style={styles.introIllusImage}
+              resizeMode="contain"
+            />
           </View>
 
           <Text variant="bodyStrong" style={styles.introHeading}>
@@ -138,39 +154,32 @@ export default function AddPetScanScreen({ navigation }: Props) {
     );
   }
 
-  const onCapture = async () => {
-    setBusy(true);
-    // TODO: Haptics.notificationAsync(Success) on result
-    const extracted = await handleOcrCapture();
-    setBusy(false);
-    navigation.replace('AddPetManual', { prefill: extracted } as any);
-  };
-
   return (
     <Screen padded={false} backgroundColor="#0E0B0C">
       <View style={styles.viewfinder}>
-        {/* darken outside the target — top, bottom, left, right strips */}
         <View style={[styles.mask, styles.maskTop]} />
         <View style={[styles.mask, styles.maskBottom]} />
         <View style={[styles.mask, styles.maskLeft]} />
         <View style={[styles.mask, styles.maskRight]} />
 
         <View style={styles.target}>
-          {/* corner markers */}
           <View style={[styles.corner, styles.cornerTL]} />
           <View style={[styles.corner, styles.cornerTR]} />
           <View style={[styles.corner, styles.cornerBL]} />
           <View style={[styles.corner, styles.cornerBR]} />
 
-          {/* animated laser line */}
-          <Animated.View style={[styles.laserWrap, { transform: [{ translateY: scanY }] }]}>
-            <LinearGradient
-              colors={['rgba(217,134,146,0)', '#EFA5B8', 'rgba(217,134,146,0)']}
-              start={{ x: 0, y: 0.5 }}
-              end={{ x: 1, y: 0.5 }}
-              style={styles.laser}
-            />
-          </Animated.View>
+          {!busy && (
+            <Animated.View
+              style={[styles.laserWrap, { transform: [{ translateY: scanY }] }]}
+            >
+              <LinearGradient
+                colors={['rgba(217,134,146,0)', '#EFA5B8', 'rgba(217,134,146,0)']}
+                start={{ x: 0, y: 0.5 }}
+                end={{ x: 1, y: 0.5 }}
+                style={styles.laser}
+              />
+            </Animated.View>
+          )}
         </View>
 
         <View style={styles.tooltip}>
@@ -194,6 +203,42 @@ export default function AddPetScanScreen({ navigation }: Props) {
           onPress={() => navigation.replace('AddPetManual')}
         />
       </View>
+
+      {busy && (
+        <View style={styles.scanOverlay} pointerEvents="auto">
+          <View style={styles.scanCardWrap}>
+            <Image
+              source={require('../../assets/pet-id-card.png')}
+              style={styles.scanCardImage}
+              resizeMode="cover"
+            />
+            <Animated.View
+              style={[
+                styles.scanLineWrap,
+                { transform: [{ translateY: scanY }] },
+              ]}
+              pointerEvents="none"
+            >
+              <LinearGradient
+                colors={[
+                  'rgba(159,82,102,0)',
+                  '#9F5266',
+                  'rgba(159,82,102,0)',
+                ]}
+                start={{ x: 0, y: 0.5 }}
+                end={{ x: 1, y: 0.5 }}
+                style={styles.scanLine}
+              />
+            </Animated.View>
+          </View>
+          <Text variant="bodyStrong" style={styles.scanTitle}>
+            กำลังอ่านบัตรของน้อง...
+          </Text>
+          <Text variant="caption" style={styles.scanSubtitle}>
+            กรุณารอสักครู่ ระบบกำลังดึงข้อมูล
+          </Text>
+        </View>
+      )}
     </Screen>
   );
 }
@@ -236,9 +281,13 @@ const styles = StyleSheet.create({
     width: 276,
     height: 171,
     borderRadius: 16,
-    backgroundColor: '#F1ECEC',
     alignItems: 'center',
     justifyContent: 'center',
+    overflow: 'hidden',
+  },
+  introIllusImage: {
+    width: '100%',
+    height: '100%',
   },
   introHeading: {
     fontSize: 16,
@@ -287,6 +336,53 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#FFFFFF',
     fontWeight: '700',
+  },
+  scanOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: '#FBF3F4',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 24,
+    gap: 16,
+  },
+  scanCardWrap: {
+    width: CARD_W,
+    height: CARD_H,
+    borderRadius: 16,
+    overflow: 'hidden',
+    backgroundColor: '#FFFFFF',
+    shadowColor: '#7E3D4F',
+    shadowOpacity: 0.18,
+    shadowRadius: 22,
+    shadowOffset: { width: 0, height: 12 },
+    elevation: 8,
+  },
+  scanCardImage: {
+    width: '100%',
+    height: '100%',
+  },
+  scanLineWrap: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    top: 0,
+  },
+  scanLine: {
+    height: 3,
+    borderRadius: 2,
+  },
+  scanTitle: {
+    fontSize: 16,
+    lineHeight: 24,
+    color: '#1A1A1F',
+    fontWeight: '700',
+    textAlign: 'center',
+  },
+  scanSubtitle: {
+    fontSize: 13,
+    lineHeight: 20,
+    color: '#6E6E74',
+    textAlign: 'center',
   },
   viewfinder: {
     flex: 1,

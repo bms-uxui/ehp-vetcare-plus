@@ -1,6 +1,8 @@
 export { default as AppBackground } from './AppBackground';
 export { default as Button } from './Button';
 export { default as Card } from './Card';
+export { default as DropdownField } from './DropdownField';
+export { default as FeedingTypeCard } from './FeedingTypeCard';
 export { default as Icon } from './Icon';
 export { default as IconButton } from './IconButton';
 export { default as Input } from './Input';
@@ -10,4 +12,5 @@ export { default as Screen } from './Screen';
 export { default as StickyAppBar } from './StickyAppBar';
 export { default as SubPageHeader } from './SubPageHeader';
 export { default as Text } from './Text';
+export { default as TextField } from './TextField';
 export { default as WeightChart } from './WeightChart';

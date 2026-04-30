@@ -12,8 +12,8 @@ import Animated, {
 } from 'react-native-reanimated';
 import {
   Image,
+  Modal,
   Pressable,
-  ScrollView,
   StyleSheet,
   Switch,
   TextInput,
@@ -21,10 +21,18 @@ import {
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../App';
-import { AppBackground, Icon, Text } from '../components';
+import {
+  AppBackground,
+  DropdownField,
+  Icon,
+  Text,
+  TextField,
+} from '../components';
 import { semantic } from '../theme';
+import { breedOptions } from '../data/breeds';
 import { mockPets, Pet } from '../data/pets';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'PetEdit'>;
@@ -79,10 +87,26 @@ export default function PetEditScreen({ route, navigation }: Props) {
   const update = <K extends keyof Pet>(key: K, value: Pet[K]) =>
     setDraft((d) => (d ? { ...d, [key]: value } : d));
 
-  const pickAvatar = async () => {
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const pickFromLibrary = async () => {
+    setPickerOpen(false);
     const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!perm.granted) return;
     const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.8,
+    });
+    if (!result.canceled && result.assets[0]) {
+      update('photo', { uri: result.assets[0].uri });
+    }
+  };
+  const pickFromCamera = async () => {
+    setPickerOpen(false);
+    const perm = await ImagePicker.requestCameraPermissionsAsync();
+    if (!perm.granted) return;
+    const result = await ImagePicker.launchCameraAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
       allowsEditing: true,
       aspect: [1, 1],
@@ -147,25 +171,30 @@ export default function PetEditScreen({ route, navigation }: Props) {
           hitSlop={8}
           style={({ pressed }) => [
             styles.appbarBtn,
+            styles.appbarSaveBtn,
             hasErrors && { opacity: 0.4 },
             pressed && !hasErrors && { opacity: 0.6 },
           ]}
         >
-          <Text variant="bodyStrong" style={styles.appbarSave}>
+          <Text
+            variant="bodyStrong"
+            style={styles.appbarSave}
+            numberOfLines={1}
+          >
             บันทึก
           </Text>
         </Pressable>
       </View>
 
-      <ScrollView
+      <KeyboardAwareScrollView
+        bottomOffset={24}
         keyboardShouldPersistTaps="handled"
         keyboardDismissMode="interactive"
-        automaticallyAdjustKeyboardInsets
         contentContainerStyle={styles.body}
         showsVerticalScrollIndicator={false}
       >
         <Pressable
-          onPress={pickAvatar}
+          onPress={() => setPickerOpen(true)}
           style={({ pressed }) => [
             styles.avatarWrap,
             pressed && { opacity: 0.9 },
@@ -190,7 +219,7 @@ export default function PetEditScreen({ route, navigation }: Props) {
           </View>
         </Pressable>
 
-        <EditField
+        <TextField
           label="ชื่อ"
           value={draft.name}
           error={errs.name}
@@ -199,15 +228,15 @@ export default function PetEditScreen({ route, navigation }: Props) {
 
         <View style={styles.fieldRow}>
           <View style={styles.fieldCol}>
-            <EditField
+            <DropdownField
               label="สายพันธุ์"
               value={draft.breed}
-              error={errs.breed}
+              options={breedOptions[draft.species]}
               onChange={(v) => update('breed', v)}
             />
           </View>
           <View style={styles.fieldCol}>
-            <EditField
+            <TextField
               label="สี"
               value={draft.color}
               error={errs.color}
@@ -218,7 +247,7 @@ export default function PetEditScreen({ route, navigation }: Props) {
 
         <View style={styles.fieldRow}>
           <View style={styles.fieldCol}>
-            <EditField
+            <TextField
               label="น้ำหนัก (กก.)"
               value={String(draft.weightKg)}
               keyboardType="decimal-pad"
@@ -268,7 +297,7 @@ export default function PetEditScreen({ route, navigation }: Props) {
           </View>
         </View>
 
-        <EditField
+        <TextField
           label="ไมโครชิป"
           value={draft.microchipId ?? ''}
           keyboardType="number-pad"
@@ -303,7 +332,7 @@ export default function PetEditScreen({ route, navigation }: Props) {
           </Animated.View>
         </Pressable>
 
-        <EditField
+        <TextField
           label="โรคประจำตัว"
           placeholder="เช่น ภูมิแพ้ผิวหนัง (คั่นด้วยจุลภาค)"
           multiline
@@ -326,68 +355,65 @@ export default function PetEditScreen({ route, navigation }: Props) {
             );
           }}
         />
-      </ScrollView>
-    </View>
-  );
-}
+      </KeyboardAwareScrollView>
 
-function EditField({
-  label,
-  value,
-  onChange,
-  keyboardType,
-  placeholder,
-  multiline,
-  error,
-}: {
-  label: string;
-  value: string;
-  onChange: (v: string) => void;
-  keyboardType?: 'default' | 'decimal-pad' | 'number-pad';
-  placeholder?: string;
-  multiline?: boolean;
-  error?: string;
-}) {
-  const [focused, setFocused] = useState(false);
-  const showError = !!error && !focused;
-  const accent = showError ? '#C25450' : semantic.primary;
-  return (
-    <View style={styles.fieldWrap}>
-      <Text
-        variant="caption"
-        style={[
-          styles.fieldLabel,
-          (focused || showError) && { color: accent },
-        ]}
+      <Modal
+        visible={pickerOpen}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setPickerOpen(false)}
+        statusBarTranslucent
       >
-        {label}
-      </Text>
-      <View
-        style={[
-          styles.fieldUnderline,
-          (focused || showError) && {
-            borderBottomColor: accent,
-            borderBottomWidth: 1.5,
-          },
-        ]}
-      >
-        <TextInput
-          value={value}
-          onChangeText={onChange}
-          keyboardType={keyboardType ?? 'default'}
-          placeholder={placeholder}
-          placeholderTextColor="#9A9AA0"
-          multiline={multiline}
-          onFocus={() => setFocused(true)}
-          onBlur={() => setFocused(false)}
-          style={[styles.fieldInput, multiline && styles.fieldInputMultiline]}
-        />
-      </View>
-      {showError && (
-        <Text variant="caption" style={styles.fieldError}>
-          {error}
-        </Text>
-      )}
+        <Pressable
+          style={styles.pickerBackdrop}
+          onPress={() => setPickerOpen(false)}
+        >
+          <Pressable
+            style={[styles.pickerSheet, { paddingBottom: insets.bottom + 12 }]}
+            onPress={() => {}}
+          >
+            <Text variant="bodyStrong" style={styles.pickerTitle}>
+              เปลี่ยนรูปน้อง
+            </Text>
+            <Pressable
+              onPress={pickFromCamera}
+              style={({ pressed }) => [
+                styles.pickerItem,
+                pressed && { backgroundColor: '#FBF3F4' },
+              ]}
+            >
+              <Icon name="Camera" size={20} color="#9F5266" strokeWidth={2.2} />
+              <Text variant="bodyStrong" style={styles.pickerItemText}>
+                ถ่ายภาพ
+              </Text>
+            </Pressable>
+            <View style={styles.pickerDivider} />
+            <Pressable
+              onPress={pickFromLibrary}
+              style={({ pressed }) => [
+                styles.pickerItem,
+                pressed && { backgroundColor: '#FBF3F4' },
+              ]}
+            >
+              <Icon name="Image" size={20} color="#9F5266" strokeWidth={2.2} />
+              <Text variant="bodyStrong" style={styles.pickerItemText}>
+                เลือกจากเครื่อง
+              </Text>
+            </Pressable>
+            <Pressable
+              onPress={() => setPickerOpen(false)}
+              style={({ pressed }) => [
+                styles.pickerCancel,
+                pressed && { opacity: 0.7 },
+              ]}
+            >
+              <Text variant="bodyStrong" style={styles.pickerCancelText}>
+                ยกเลิก
+              </Text>
+            </Pressable>
+          </Pressable>
+        </Pressable>
+      </Modal>
     </View>
   );
 }
@@ -409,6 +435,11 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   appbarTitle: { fontSize: 16, color: '#1A1A1A', flex: 1, textAlign: 'center' },
+  appbarSaveBtn: {
+    width: 'auto',
+    minWidth: 56,
+    paddingHorizontal: 8,
+  },
   appbarSave: {
     fontSize: 15,
     color: '#9F5266',
@@ -448,28 +479,60 @@ const styles = StyleSheet.create({
     borderWidth: 3,
     borderColor: '#FFFFFF',
   },
-  fieldWrap: { gap: 4, paddingTop: 6 },
-  fieldRow: { flexDirection: 'row', gap: 16 },
-  fieldCol: { flex: 1 },
-  fieldLabel: { fontSize: 12, color: '#6E6E74', fontWeight: '500' },
-  fieldUnderline: {
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: '#D0D0D4',
+  pickerBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.4)',
+    justifyContent: 'flex-end',
+    padding: 12,
+    gap: 10,
   },
-  fieldInput: {
-    height: 40,
+  pickerSheet: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 14,
+    paddingTop: 8,
+  },
+  pickerTitle: {
+    fontSize: 13,
+    color: '#6E6E74',
+    fontWeight: '500',
+    textAlign: 'center',
+    paddingVertical: 12,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: '#E6E6E8',
+  },
+  pickerItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10,
+    paddingVertical: 16,
+  },
+  pickerItemText: {
     fontSize: 17,
     color: '#1A1A1F',
     fontWeight: '500',
   },
-  fieldInputMultiline: {
-    height: undefined,
-    minHeight: 40,
-    paddingTop: 10,
-    paddingBottom: 6,
-    textAlignVertical: 'top',
+  pickerDivider: {
+    height: StyleSheet.hairlineWidth,
+    backgroundColor: '#E6E6E8',
+    marginHorizontal: 16,
   },
-  fieldError: { fontSize: 11, color: '#C25450', marginTop: 4 },
+  pickerCancel: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 14,
+    marginTop: 10,
+    paddingVertical: 16,
+    alignItems: 'center',
+  },
+  pickerCancelText: {
+    fontSize: 17,
+    color: '#9F5266',
+    fontWeight: '700',
+  },
+  fieldWrap: { gap: 4, paddingTop: 6 },
+  fieldRow: { flexDirection: 'row', gap: 16 },
+  fieldCol: { flex: 1 },
+  fieldLabel: { fontSize: 12, color: '#6E6E74', fontWeight: '500' },
   toggleRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',

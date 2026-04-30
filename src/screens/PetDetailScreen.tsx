@@ -17,15 +17,11 @@ import Animated, {
   useAnimatedScrollHandler,
   useAnimatedStyle,
   useSharedValue,
-  withDelay,
   withRepeat,
-  withSequence,
   withTiming,
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
-import { BlurView } from 'expo-blur';
-import { Sparkles, Stethoscope, Salad, ScanFace } from 'lucide-react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useFocusEffect } from '@react-navigation/native';
 import { useCallback } from 'react';
@@ -595,7 +591,17 @@ export default function PetDetailScreen({ route, navigation }: Props) {
         }}
       />
 
-      <AiFab bottom={insets.bottom + spacing.xl} />
+      <AiFab
+        bottom={insets.bottom + spacing.xl}
+        onPress={() =>
+          navigation.navigate('Chat', {
+            conversationId: 'c-ai',
+            vetId: 'tv-ai',
+            aiMode: true,
+            petId,
+          })
+        }
+      />
 
       {toast && (
         <Animated.View
@@ -614,129 +620,189 @@ export default function PetDetailScreen({ route, navigation }: Props) {
   );
 }
 
-const AI_FEATURES = [
-  { Icon: Stethoscope, label: 'วิเคราะห์สุขภาพเบื้องต้นจากอาการ' },
-  { Icon: Salad, label: 'แนะนำอาหาร/กิจกรรมที่เหมาะสม' },
-  { Icon: ScanFace, label: 'จดจำใบหน้าสัตว์เลี้ยง' },
-] as const;
+// Animation timeline (absolute ms within one cycle).
+// Long rest before each shake so the mascot doesn't loop too often.
+const REST_BEFORE = 2000;
+const SHAKE_MS = 600;
+const POP_MS = 350;
+const VISIBLE_MS = 1500;
+const RETRACT_MS = 350;
+const REST_AFTER = 1200;
+const SHAKE_AT = REST_BEFORE;
+const POP_AT = SHAKE_AT + SHAKE_MS;
+const VIS_AT = POP_AT + POP_MS;
+const RETRACT_AT = VIS_AT + VISIBLE_MS;
+const END_AT = RETRACT_AT + RETRACT_MS;
+const CYCLE_MS = END_AT + REST_AFTER;
 
-function AiFab({ bottom }: { bottom: number }) {
-  const [open, setOpen] = useState(false);
-  const pulse = useSharedValue(0);
-  const shimmer = useSharedValue(0);
+function AiFab({ bottom, onPress }: { bottom: number; onPress: () => void }) {
+  const t = useSharedValue(0);
   useEffect(() => {
-    pulse.value = withRepeat(
-      withTiming(1, { duration: 1800, easing: Easing.inOut(Easing.ease) }),
-      -1,
-      true,
-    );
-    shimmer.value = withRepeat(
-      withSequence(
-        withTiming(1, { duration: 1400, easing: Easing.inOut(Easing.ease) }),
-        withDelay(2200, withTiming(0, { duration: 0 })),
-      ),
+    t.value = withRepeat(
+      withTiming(1, { duration: CYCLE_MS, easing: Easing.linear }),
       -1,
       false,
     );
-  }, [pulse, shimmer]);
-  const auraStyle = useAnimatedStyle(() => ({
-    opacity: 0.85 + pulse.value * 0.15,
-    transform: [{ scale: 0.95 + pulse.value * 0.22 }],
-  }));
-  const shimmerStyle = useAnimatedStyle(() => ({
-    transform: [
-      { translateX: -160 + shimmer.value * 320 },
-      { skewX: '-20deg' },
-    ],
-  }));
+  }, [t]);
+
+  const pawStyle = useAnimatedStyle(() => {
+    'worklet';
+    const ms = t.value * CYCLE_MS;
+    let rot = 0;
+    if (ms >= SHAKE_AT && ms < POP_AT) {
+      const local = (ms - SHAKE_AT) / SHAKE_MS;
+      rot = Math.sin(local * Math.PI * 6) * 14;
+    }
+    let opacity = 1;
+    if (ms >= POP_AT && ms < VIS_AT) opacity = 1 - (ms - POP_AT) / POP_MS;
+    else if (ms >= VIS_AT && ms < RETRACT_AT) opacity = 0;
+    else if (ms >= RETRACT_AT && ms < END_AT) opacity = (ms - RETRACT_AT) / RETRACT_MS;
+    return { opacity, transform: [{ rotate: `${rot}deg` }] };
+  });
+
+  const mascotStyle = useAnimatedStyle(() => {
+    'worklet';
+    const ms = t.value * CYCLE_MS;
+    let scale = 0;
+    let translateY = 8;
+    if (ms >= POP_AT && ms < VIS_AT) {
+      const local = (ms - POP_AT) / POP_MS;
+      scale = local;
+      translateY = 8 - 8 * local;
+    } else if (ms >= VIS_AT && ms < RETRACT_AT) {
+      scale = 1;
+      const local = (ms - VIS_AT) / VISIBLE_MS;
+      translateY = -2 - Math.sin(local * Math.PI * 3) * 2.5;
+    } else if (ms >= RETRACT_AT && ms < END_AT) {
+      const local = (ms - RETRACT_AT) / RETRACT_MS;
+      scale = 1 - local;
+      translateY = 8 * local;
+    }
+    return {
+      opacity: scale,
+      transform: [{ translateY }, { scale }],
+    };
+  });
+
+  // Continuous slow breath for the aura behind the button.
+  const auraStyle = useAnimatedStyle(() => {
+    'worklet';
+    const v = (Math.sin(t.value * Math.PI * 2) + 1) / 2; // 0..1
+    return {
+      opacity: 0.55 + v * 0.35,
+      transform: [{ scale: 0.95 + v * 0.15 }],
+    };
+  });
+
   return (
     <View pointerEvents="box-none" style={[styles.fabWrap, { bottom }]}>
-      {open && (
-        <Animated.View entering={FadeIn.duration(160)} style={styles.fabMenu}>
-          {AI_FEATURES.map(({ Icon, label }, i) => (
-            <Pressable
-              key={i}
-              android_ripple={{ color: 'rgba(159,82,102,0.12)', borderless: false }}
-              onPress={() => setOpen(false)}
-              style={({ pressed }) => [styles.fabMenuRow, pressed && { opacity: 0.85 }]}
-            >
-              <View style={styles.fabMenuIcon}>
-                <Icon size={16} color="#9F5266" strokeWidth={2.2} />
-              </View>
-              <Text variant="bodyStrong" style={styles.fabMenuLabel} numberOfLines={2}>
-                {label}
-              </Text>
-            </Pressable>
-          ))}
-        </Animated.View>
-      )}
-      <View style={styles.fabPillWrap}>
-        <Animated.View pointerEvents="none" style={[styles.auraGlow, styles.auraGlowBlue, auraStyle]} />
-        <Animated.View pointerEvents="none" style={[styles.auraGlow, styles.auraGlowPink, auraStyle]} />
-        <View style={styles.fabStrokeWrap}>
-          <View style={styles.fabStrokeClip}>
-            <LinearGradient
-              colors={['#5B6BE0', '#8E6BFF', '#C77BFF', '#FF8FD4']}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-              style={StyleSheet.absoluteFill}
-            />
-          </View>
-          <Pressable
-            onPress={() => setOpen((v) => !v)}
-            android_ripple={{ color: 'rgba(120,140,200,0.18)', borderless: false }}
-            style={({ pressed }) => [
-              styles.fabPill,
-              pressed && { transform: [{ scale: 0.97 }] },
-            ]}
-            accessibilityLabel="AI ผู้ช่วยดูแลน้อง"
+      <Animated.View
+        pointerEvents="none"
+        style={[styles.meowFabAura, styles.meowFabAuraCyan, auraStyle]}
+      />
+      <Animated.View
+        pointerEvents="none"
+        style={[styles.meowFabAura, styles.meowFabAuraPink, auraStyle]}
+      />
+      <View style={styles.meowFabBorder}>
+        <LinearGradient
+          pointerEvents="none"
+          colors={['#7CD9F0', '#A78BFF', '#E08FE3']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={[StyleSheet.absoluteFill, { borderRadius: 999 }]}
+        />
+        <Pressable
+          onPress={onPress}
+          android_ripple={{ color: 'rgba(167,139,255,0.18)', borderless: false }}
+          accessibilityLabel="คุยกับหมอเหมียว"
+          style={({ pressed }) => [
+            styles.meowFab,
+            pressed && { transform: [{ scale: 0.97 }] },
+          ]}
+        >
+          <Text variant="bodyStrong" style={styles.meowFabLabel}>
+            คุยกับหมอเหมียว
+          </Text>
+          <Animated.View style={[styles.meowFabPaw, pawStyle]}>
+            <Icon name="PawPrint" size={18} color="#A78BFF" strokeWidth={2.4} />
+          </Animated.View>
+
+          <Animated.View
+            pointerEvents="none"
+            style={[styles.meowFabMascot, mascotStyle]}
           >
-            <BlurView
-              intensity={50}
-              tint="light"
-              style={[StyleSheet.absoluteFill, { borderRadius: 999 }]}
+            <MascotSparkles t={t} />
+            <Image
+              source={require('../../assets/dr-meaw.png')}
+              style={styles.meowFabMascotImg}
+              resizeMode="contain"
             />
-            <LinearGradient
-              pointerEvents="none"
-              colors={['#FFFFFF', '#FFFFFF', '#EAEAF2']}
-              locations={[0, 0.5, 1]}
-              start={{ x: 0.5, y: 0 }}
-              end={{ x: 0.5, y: 1 }}
-              style={StyleSheet.absoluteFill}
-            />
-            <LinearGradient
-              pointerEvents="none"
-              colors={['rgba(255,255,255,0.9)', 'rgba(255,255,255,0)']}
-              start={{ x: 0.5, y: 0 }}
-              end={{ x: 0.5, y: 1 }}
-              style={styles.fabGloss}
-            />
-            <Animated.View
-              pointerEvents="none"
-              style={[styles.fabShimmer, shimmerStyle]}
-            >
-              <LinearGradient
-                colors={[
-                  'rgba(167,139,255,0)',
-                  'rgba(167,139,255,0.22)',
-                  'rgba(167,139,255,0)',
-                ]}
-                locations={[0, 0.5, 1]}
-                start={{ x: 0, y: 0.5 }}
-                end={{ x: 1, y: 0.5 }}
-                style={StyleSheet.absoluteFill}
-              />
-            </Animated.View>
-            <View style={styles.fabPillContent}>
-              <Sparkles size={16} color="#5B6BE0" strokeWidth={2.4} />
-              <Text variant="bodyStrong" style={styles.fabPillLabel}>
-                วิเคราะห์โดย AI
-              </Text>
-            </View>
-          </Pressable>
-        </View>
+          </Animated.View>
+        </Pressable>
       </View>
     </View>
+  );
+}
+
+function MascotSparkles({ t }: { t: ReturnType<typeof useSharedValue<number>> }) {
+  // Three sparkles around the mascot with phase offsets, only visible while
+  // the mascot is out (p ∈ [0.35, 0.75]).
+  const positions: { top: number; left?: number; right?: number; phase: number; size: number }[] = [
+    { top: -8, left: -10, phase: 0, size: 12 },
+    { top: 10, right: -12, phase: 0.33, size: 10 },
+    { top: -2, right: 8, phase: 0.66, size: 8 },
+  ];
+  return (
+    <>
+      {positions.map((pos, i) => (
+        <Sparkle key={i} t={t} phase={pos.phase} top={pos.top} left={pos.left} right={pos.right} size={pos.size} />
+      ))}
+    </>
+  );
+}
+
+function Sparkle({
+  t,
+  phase,
+  top,
+  left,
+  right,
+  size,
+}: {
+  t: ReturnType<typeof useSharedValue<number>>;
+  phase: number;
+  top: number;
+  left?: number;
+  right?: number;
+  size: number;
+}) {
+  const style = useAnimatedStyle(() => {
+    'worklet';
+    const ms = t.value * CYCLE_MS;
+    if (ms < VIS_AT || ms >= RETRACT_AT) {
+      return { opacity: 0, transform: [{ scale: 0 }] };
+    }
+    const local = (ms - VIS_AT) / VISIBLE_MS;
+    // shift by phase, wrap to [0,1]
+    const shifted = (local + phase) % 1;
+    // Two pulses across the visible window
+    const v = Math.sin(shifted * Math.PI * 2);
+    const opacity = Math.max(0, v);
+    const scale = 0.6 + opacity * 0.6;
+    return { opacity, transform: [{ scale }] };
+  });
+  return (
+    <Animated.View
+      pointerEvents="none"
+      style={[
+        styles.meowSparkle,
+        { top, left, right },
+        style,
+      ]}
+    >
+      <Icon name="Sparkles" size={size} color="#C77BFF" strokeWidth={2.2} fill="#C77BFF" />
+    </Animated.View>
   );
 }
 
@@ -1821,124 +1887,73 @@ const styles = StyleSheet.create({
     position: 'absolute',
     right: spacing.xl,
     alignItems: 'flex-end',
-    gap: spacing.sm,
   },
-  fabMenu: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    paddingVertical: 6,
-    paddingHorizontal: 6,
-    minWidth: 240,
-    borderWidth: 1,
-    borderColor: 'rgba(184,106,124,0.12)',
-    shadowColor: '#7E3D4F',
-    shadowOpacity: 0.18,
-    shadowRadius: 18,
-    shadowOffset: { width: 0, height: 10 },
-    elevation: 8,
-    gap: 2,
-  },
-  fabMenuRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-    paddingVertical: 10,
-    paddingHorizontal: 10,
-    borderRadius: 12,
-  },
-  fabMenuIcon: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: '#F5E4E7',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  fabMenuLabel: {
-    flex: 1,
-    fontSize: 13,
-    color: '#1A1A1F',
-    fontWeight: '600',
-  },
-  fabPillWrap: {
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  fabStrokeWrap: {
-    padding: 2,
-    borderRadius: 999,
-    shadowColor: '#1A1A2E',
-    shadowOpacity: 0.1,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 4,
-  },
-  fabGloss: {
+  meowFabAura: {
     position: 'absolute',
-    top: 2,
-    left: 10,
-    right: 10,
-    height: 16,
-    borderTopLeftRadius: 999,
-    borderTopRightRadius: 999,
-  },
-  fabStrokeClip: {
-    ...StyleSheet.absoluteFillObject,
-    borderRadius: 999,
-    overflow: 'hidden',
-  },
-  auraGlow: {
-    position: 'absolute',
-    top: 6,
-    bottom: 6,
-    width: 90,
+    top: 4,
+    bottom: 4,
+    width: 110,
     borderRadius: 999,
     shadowOpacity: 1,
-    shadowRadius: 56,
+    shadowRadius: 40,
     shadowOffset: { width: 0, height: 0 },
-    elevation: 18,
+    elevation: 14,
   },
-  auraGlowBlue: {
-    left: 14,
-    backgroundColor: '#7AB8FF',
-    shadowColor: '#7AB8FF',
+  meowFabAuraCyan: {
+    left: 8,
+    backgroundColor: '#7CD9F0',
+    shadowColor: '#7CD9F0',
   },
-  auraGlowPink: {
-    right: 14,
-    backgroundColor: '#FF9ED2',
-    shadowColor: '#FF9ED2',
+  meowFabAuraPink: {
+    right: 8,
+    backgroundColor: '#E08FE3',
+    shadowColor: '#E08FE3',
   },
-  fabStrokeSpin: {
-    position: 'absolute',
-    top: -40,
-    left: -40,
-    right: -40,
-    bottom: -40,
-  },
-  fabPill: {
-    paddingHorizontal: 18,
-    height: 44,
+  meowFabBorder: {
+    padding: 2,
     borderRadius: 999,
-    overflow: 'hidden',
+    shadowColor: '#7E3D4F',
+    shadowOpacity: 0.16,
+    shadowRadius: 14,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 6,
+  },
+  meowFab: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    height: 40,
+    paddingHorizontal: 16,
+    borderRadius: 999,
     backgroundColor: '#FFFFFF',
+  },
+  meowFabPaw: {
+    width: 22,
+    height: 22,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  fabShimmer: {
-    position: 'absolute',
-    top: -10,
-    bottom: -10,
-    width: 80,
-  },
-  fabPillContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-  fabPillLabel: {
+  meowFabLabel: {
     fontSize: 14,
     color: '#1A1A1F',
-    fontWeight: '600',
+    fontWeight: '700',
+  },
+  meowFabMascot: {
+    position: 'absolute',
+    right: 6,
+    top: -50,
+    width: 56,
+    height: 60,
+    alignItems: 'center',
+    justifyContent: 'flex-end',
+  },
+  meowFabMascotImg: {
+    width: '100%',
+    height: '100%',
+  },
+  meowSparkle: {
+    position: 'absolute',
   },
   toast: {
     position: 'absolute',

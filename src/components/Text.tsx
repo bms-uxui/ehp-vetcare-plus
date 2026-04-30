@@ -1,4 +1,4 @@
-import { Text as RNText, TextProps, TextStyle } from 'react-native';
+import { StyleSheet, Text as RNText, TextProps, TextStyle } from 'react-native';
 import { fontFamily, semantic, typography, TypographyVariant } from '../theme';
 
 type Props = TextProps & {
@@ -32,10 +32,19 @@ export default function Text({
   children,
   ...rest
 }: Props) {
-  const weightStyle =
-    weight !== undefined
-      ? { fontFamily: weightToFamily[String(weight)] ?? fontFamily.regular }
-      : undefined;
+  // Android falls back to system Roboto whenever fontWeight is set without a
+  // matching fontFamily. Inspect the incoming style for fontWeight, translate
+  // it to the right Google Sans family, and strip the raw fontWeight so iOS
+  // doesn't get a duplicate either.
+  const flat = (StyleSheet.flatten(style) ?? {}) as TextStyle;
+  const { fontWeight: styleWeight, fontFamily: styleFamily, ...restStyle } = flat;
+  const effectiveWeight = weight ?? styleWeight;
+  const resolvedFamily =
+    styleFamily ??
+    (effectiveWeight !== undefined
+      ? weightToFamily[String(effectiveWeight)] ?? fontFamily.regular
+      : undefined);
+  const familyStyle = resolvedFamily ? { fontFamily: resolvedFamily } : undefined;
 
   return (
     <RNText
@@ -43,8 +52,8 @@ export default function Text({
         typography[variant],
         { color },
         align && { textAlign: align },
-        weightStyle,
-        style,
+        familyStyle,
+        restStyle,
       ]}
       {...rest}
     >
