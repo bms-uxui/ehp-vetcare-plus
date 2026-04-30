@@ -1,10 +1,10 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Alert, Image, Pressable, StyleSheet, View } from 'react-native';
+import { Image, Pressable, StyleSheet, View } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../App';
-import { Button, Card, Icon, PetAvatar, Screen, Text } from '../components';
+import { Button, Card, ConfirmModal, Icon, PetAvatar, Screen, SubPageHeader, Text } from '../components';
 import { semantic, spacing } from '../theme';
-import { mockAppointments, typeMeta, thDate } from '../data/appointments';
+import { mockAppointments, thDate } from '../data/appointments';
 import { mockVets, mockConversations } from '../data/televet';
 
 const TH_WEEKDAY_SHORT = ['อา.', 'จ.', 'อ.', 'พ.', 'พฤ.', 'ศ.', 'ส.'];
@@ -49,7 +49,6 @@ export default function AppointmentDetailScreen({ route, navigation }: Props) {
     );
   }
 
-  const meta = typeMeta[appointment.type];
   const isUpcoming = appointment.status === 'upcoming';
   const isOnline = appointment.type === 'consultation';
   const canVideoCall = isOnline && isUpcoming && isDayReached(appointment.dateISO);
@@ -87,31 +86,26 @@ export default function AppointmentDetailScreen({ route, navigation }: Props) {
     if (existing) navigation.navigate('Chat', { conversationId: existing.id });
   };
 
-  const onCancel = () => {
-    Alert.alert('ยกเลิกนัดหมาย', 'คุณแน่ใจหรือไม่ว่าต้องการยกเลิกนัดหมายนี้?', [
-      { text: 'ไม่ใช่', style: 'cancel' },
-      {
-        text: 'ยกเลิก',
-        style: 'destructive',
-        onPress: () => navigation.goBack(),
-      },
-    ]);
-  };
+  const [cancelModalOpen, setCancelModalOpen] = useState(false);
+  const onCancel = () => setCancelModalOpen(true);
 
   const onReschedule = () => {
-    navigation.replace('BookAppointment');
+    const matchedVet = mockVets.find((v) => v.name.startsWith(appointment.vetName));
+    navigation.replace('BookAppointment', {
+      prefillPetId: appointment.petId,
+      prefillMode: appointment.type === 'consultation' ? 'online' : 'clinic',
+      prefillDateISO: appointment.dateISO,
+      prefillTime: appointment.time,
+      selectedVetId: matchedVet?.id,
+      prefillNotes: appointment.notes,
+    });
   };
 
   return (
     <View style={styles.root}>
-    <Screen scroll>
+    <SubPageHeader title="รายละเอียดการนัด" onBack={() => navigation.goBack()} />
+    <Screen scroll topFade={false} style={{ paddingTop: spacing.md }}>
       <View style={styles.hero}>
-        <View style={[styles.iconCircle, { backgroundColor: meta.color + '22' }]}>
-          <Icon name={meta.icon as any} size={38} color={meta.color} strokeWidth={1.8} />
-        </View>
-        <Text variant="caption" color={meta.color} style={{ marginTop: spacing.md }}>
-          {meta.label}
-        </Text>
         <Text variant="h1" align="center" style={styles.title}>
           {appointment.typeLabel}
         </Text>
@@ -238,6 +232,22 @@ export default function AppointmentDetailScreen({ route, navigation }: Props) {
         </View>
       </View>
     )}
+
+    <ConfirmModal
+      visible={cancelModalOpen}
+      icon="CalendarX"
+      tone="danger"
+      title="ยกเลิกนัดหมาย?"
+      message="เมื่อยกเลิกแล้วจะไม่สามารถกู้คืนข้อมูลได้"
+      cancelLabel="ไม่ใช่"
+      confirmLabel="ยกเลิกนัด"
+      confirmTone="danger"
+      onCancel={() => setCancelModalOpen(false)}
+      onConfirm={() => {
+        setCancelModalOpen(false);
+        navigation.goBack();
+      }}
+    />
     </View>
   );
 }
@@ -326,6 +336,11 @@ const styles = StyleSheet.create({
   },
   card: {
     marginBottom: spacing.md,
+    shadowColor: '#000',
+    shadowOpacity: 0.06,
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 2,
   },
   infoRow: {
     flexDirection: 'row',
@@ -398,8 +413,8 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
   chatBtn: {
+    width: 48,
     height: 48,
-    paddingHorizontal: spacing.lg,
     borderRadius: 24,
     backgroundColor: semantic.primaryMuted,
     alignItems: 'center',
