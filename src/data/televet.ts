@@ -160,6 +160,21 @@ export const mockVets: TeleVet[] = [
     timeSlots: ['13:00', '14:00', '15:00', '16:00', '17:00'],
   },
   {
+    id: 'tv-ai',
+    name: 'หมอเหมียว',
+    avatar: '',
+    specialty: 'AI Assistant',
+    clinic: 'EHP VetCare AI',
+    experienceYears: 0,
+    experiences: [],
+    ratePerMin: 0,
+    rating: 5,
+    reviewCount: 0,
+    status: 'online',
+    workingDays: [0, 1, 2, 3, 4, 5, 6],
+    timeSlots: [],
+  },
+  {
     id: 'tv7',
     name: 'สพ.ญ. พิมพ์พิศา ศรีสะอาด',
     avatar: 'https://images.unsplash.com/photo-1607990281513-2c110a25bd8c?w=200&h=200&fit=crop&crop=face',
@@ -182,6 +197,13 @@ export const mockVets: TeleVet[] = [
 ];
 
 export const mockConversations: Conversation[] = [
+  {
+    id: 'c-ai',
+    vetId: 'tv-ai',
+    lastMessage: 'พร้อมช่วยตอบคำถามเกี่ยวกับน้องของคุณค่ะ',
+    lastSentAtISO: '2026-04-30T08:00:00',
+    unread: 0,
+  },
   {
     id: 'c1',
     vetId: 'tv3',
@@ -245,6 +267,70 @@ export const mockMessages: Message[] = [
   // c2 - skin rash
   { id: 'm7', conversationId: 'c2', fromVet: false, text: 'คุณหมอคะ มะลิมีผื่นที่คอ', sentAtISO: '2026-04-23T17:30:00' },
   { id: 'm8', conversationId: 'c2', fromVet: true, text: 'ส่งรูปผื่นบริเวณคอมาให้หมอดูได้เลยนะคะ', sentAtISO: '2026-04-23T17:45:00' },
+];
+
+export const AI_VET_ID = 'tv-ai';
+export const AI_CONVERSATION_ID = 'c-ai';
+
+export type AiCategory = {
+  key: string;
+  label: string;
+  icon: string;
+  /** Prompt sent as the user message. {pet} is replaced with the pet name. */
+  prompt: string;
+  /** Canned AI reply. {pet} is replaced with the pet name. */
+  reply: string;
+};
+
+export const AI_CATEGORIES: AiCategory[] = [
+  {
+    key: 'symptom',
+    label: 'วิเคราะห์อาการเบื้องต้น',
+    icon: 'Stethoscope',
+    prompt: 'ช่วยวิเคราะห์อาการเบื้องต้นของน้อง{pet}หน่อยค่ะ',
+    reply:
+      'จากข้อมูลทั่วไปของน้อง{pet} แนะนำให้สังเกต 3 จุดหลักค่ะ:\n• การกินอาหาร/น้ำ ผิดปกติไหม\n• ระดับความตื่นตัวและการเล่น\n• อาการทางผิวหนัง/ทางเดินอาหาร\nหากอาการต่อเนื่องเกิน 24 ชม. แนะนำให้ปรึกษาสัตวแพทย์ค่ะ',
+  },
+  {
+    key: 'food',
+    label: 'แนะนำอาหาร/กิจกรรม',
+    icon: 'Salad',
+    prompt: 'แนะนำอาหาร/กิจกรรมที่เหมาะสมสำหรับน้อง{pet}หน่อยค่ะ',
+    reply:
+      'สำหรับน้อง{pet} แนะนำอาหารโปรตีนคุณภาพสูง 25-30% ไขมัน 12-15% ค่ะ\nแบ่งมื้อ 2 ครั้ง/วัน เช้า-เย็น และมีน้ำสะอาดตลอดเวลา\nกิจกรรม: เดิน/เล่น 20-30 นาที/วัน เพื่อรักษาน้ำหนักและสุขภาพข้อต่อค่ะ',
+  },
+  {
+    key: 'portion',
+    label: 'คำนวณปริมาณอาหาร',
+    icon: 'Scale',
+    prompt: 'ช่วยคำนวณปริมาณอาหารที่เหมาะสมสำหรับน้อง{pet}หน่อยค่ะ',
+    reply:
+      'จากน้ำหนักของน้อง{pet} แนะนำปริมาณอาหารต่อวันดังนี้ค่ะ:\n• โปรตีน 25-30 กรัม/น้ำหนักตัว 1 กก.\n• แบ่ง 2 มื้อ เช้า-เย็น\n• ปรับขึ้น 10% หากน้องเล่นเยอะ ลด 10% หากน้องอ้วน\nควรชั่งน้ำหนักทุก 2 สัปดาห์เพื่อปรับให้พอดีค่ะ',
+  },
+  {
+    key: 'meds',
+    label: 'ตรวจสอบยาที่ใช้อยู่',
+    icon: 'Pill',
+    prompt: 'ช่วยตรวจสอบยาที่น้อง{pet}กำลังใช้อยู่หน่อยค่ะ',
+    reply:
+      'จากประวัติของน้อง{pet} ยาที่ใช้อยู่ปัจจุบัน:\n• ตรวจสอบความถี่และปริมาณตามที่สัตวแพทย์สั่ง\n• สังเกตอาการข้างเคียง เช่น เบื่ออาหาร อาเจียน ท้องเสีย\n• ห้ามผสมยาคนกับยาสัตว์โดยไม่ปรึกษาสัตวแพทย์\nหากต้องการรายละเอียดเพิ่มเติม แนะนำคุยกับคุณหมอที่สั่งยาค่ะ',
+  },
+  {
+    key: 'ageCare',
+    label: 'แนะนำการดูแลตามอายุ',
+    icon: 'HeartPulse',
+    prompt: 'แนะนำการดูแลที่เหมาะสมตามอายุ/พันธุ์ของน้อง{pet}ค่ะ',
+    reply:
+      'การดูแลน้อง{pet} ตามอายุและสายพันธุ์:\n• ตรวจสุขภาพประจำปี + วัคซีนตามตาราง\n• ขูดหินปูน/ตรวจช่องปากทุก 6-12 เดือน\n• ออกกำลังกายสม่ำเสมอตามวัย\n• ควบคุมน้ำหนัก + อาหารเสริมข้อต่อในวัยซีเนียร์\n• สังเกตการเปลี่ยนแปลงพฤติกรรมเพื่อตรวจจับโรคแต่เนิ่นๆ',
+  },
+  {
+    key: 'breed',
+    label: 'ข้อมูลสายพันธุ์',
+    icon: 'PawPrint',
+    prompt: 'อยากรู้ข้อมูลสายพันธุ์ของน้อง{pet}',
+    reply:
+      'ข้อมูลทั่วไปของสายพันธุ์น้อง{pet}:\n• อายุขัยเฉลี่ย: 12-15 ปี\n• อุปนิสัย: ฉลาด รักครอบครัว\n• ปัญหาสุขภาพที่พบบ่อย: ภูมิแพ้ผิวหนัง, ข้อสะโพก\n• การดูแล: แปรงขน 2-3 ครั้ง/สัปดาห์',
+  },
 ];
 
 export const thTime = (iso: string) => {

@@ -1,7 +1,9 @@
-import { NavigationContainer, DefaultTheme, createNavigationContainerRef } from '@react-navigation/native';
+import { NavigationContainer, DefaultTheme } from '@react-navigation/native';
+import { navigationRef } from './src/lib/navigationRef';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { KeyboardProvider } from 'react-native-keyboard-controller';
 import { View } from 'react-native';
 import { useFonts } from 'expo-font';
 import { useEffect } from 'react';
@@ -77,6 +79,7 @@ export type RootStackParamList = {
           neuteredDate?: string;
           neuteredClinic?: string;
         };
+        startStep?: number;
       }
     | undefined;
   AppointmentDetail: { appointmentId: string };
@@ -105,7 +108,12 @@ export type RootStackParamList = {
   MealTimeSetting: { petId: string; scheduleId?: string };
   PetEdit: { petId: string };
   TeleVet: undefined;
-  Chat: { conversationId: string; vetId?: string };
+  Chat: {
+    conversationId: string;
+    vetId?: string;
+    aiMode?: boolean;
+    petId?: string;
+  };
   ChatList: undefined;
   VideoCall: { vetId: string };
   BookTeleVet: undefined;
@@ -127,7 +135,7 @@ export type RootStackParamList = {
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
-export const navigationRef = createNavigationContainerRef<RootStackParamList>();
+export { navigationRef };
 
 const navTheme = {
   ...DefaultTheme,
@@ -167,6 +175,7 @@ export default function App() {
 
   return (
     <SafeAreaProvider>
+      <KeyboardProvider>
       <StatusBar style="dark" />
       <CallProvider>
         <NavigationContainer ref={navigationRef} theme={navTheme}>
@@ -350,6 +359,7 @@ export default function App() {
         </NavigationContainer>
         <MiniCallOverlay />
       </CallProvider>
+      </KeyboardProvider>
     </SafeAreaProvider>
   );
 }

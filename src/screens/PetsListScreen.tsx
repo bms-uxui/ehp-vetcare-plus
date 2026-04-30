@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { memo, useCallback, useEffect, useState } from 'react';
 import { Image, Pressable, StyleSheet, useWindowDimensions, View } from 'react-native';
 import Animated, {
   Easing,
@@ -23,6 +23,9 @@ type Props = NativeStackScreenProps<RootStackParamList, 'PetsList'>;
 const HERO_HEIGHT = 220;
 const TAB_BAR_SPACE = 110;
 const RIPPLE = { color: 'rgba(184,106,124,0.18)', borderless: false } as const;
+const RIPPLE_LIGHT = { color: 'rgba(255,255,255,0.25)', borderless: false } as const;
+const HERO_IMAGE = require('../../assets/pet-profile-hero.png');
+const PATTERN_IMAGE = require('../../assets/pet-card-bg.png');
 
 const AnimatedLG = Animated.createAnimatedComponent(LinearGradient);
 const BTN_WIDTH_GUESS = 320;
@@ -59,6 +62,43 @@ export default function PetsListScreen({ navigation }: Props) {
   const stickyFadeStart = HERO_HEIGHT - 40;
   const stickyFadeEnd = HERO_HEIGHT + 10;
 
+  const onAddPet = useCallback(
+    () => navigation.navigate('AddPet'),
+    [navigation],
+  );
+  const onOpenPet = useCallback(
+    (petId: string) => navigation.navigate('PetDetail', { petId }),
+    [navigation],
+  );
+
+  // Mock skeleton loading state — flips off after ~700ms so the real cards render.
+  const [loading, setLoading] = useState(true);
+  useEffect(() => {
+    const t = setTimeout(() => setLoading(false), 700);
+    return () => clearTimeout(t);
+  }, []);
+
+  // Skeleton shimmer sweep (separate from the add-button shimmer).
+  const skeleton = useSharedValue(0);
+  useEffect(() => {
+    skeleton.value = withRepeat(
+      withTiming(1, { duration: 1100, easing: Easing.inOut(Easing.ease) }),
+      -1,
+      false,
+    );
+  }, [skeleton]);
+  const skeletonShimmerStyle = useAnimatedStyle(() => ({
+    transform: [
+      {
+        translateX: interpolate(
+          skeleton.value,
+          [0, 1],
+          [-windowWidth, windowWidth],
+        ),
+      },
+    ],
+  }));
+
   return (
     <View style={styles.root}>
       <AppBackground />
@@ -94,36 +134,21 @@ export default function PetsListScreen({ navigation }: Props) {
         />
 
         <Image
-          source={require('../../assets/pet-profile-hero.png')}
+          source={HERO_IMAGE}
           style={styles.heroImage}
           resizeMode="contain"
         />
 
         <View style={styles.heroText}>
-          <Text
-            variant="bodyStrong"
-            style={[
-              styles.heroTitle,
-              {
-                fontSize: Math.max(22, Math.min(32, windowWidth * 0.07)),
-                lineHeight: Math.max(34, Math.min(46, windowWidth * 0.1)),
-              },
-            ]}
-          >
-            ข้อมูลสัตว์เลี้ยง
+          <Text variant="bodyStrong" style={styles.heroTitle}>
+            สัตว์เลี้ยง
           </Text>
           <Text
             variant="caption"
             color={semantic.textSecondary}
-            style={[
-              styles.heroSubtitle,
-              {
-                fontSize: Math.max(13, Math.min(17, windowWidth * 0.04)),
-                lineHeight: Math.max(24, Math.min(30, windowWidth * 0.07)),
-              },
-            ]}
+            style={styles.heroSubtitle}
           >
-            ตรวจสอบข้อมูลหรือเพิ่มข้อมูล{'\n'}สมาชิกสัตว์เลี้ยงของคุณ
+            รวมข้อมูลสัตว์เลี้ยงของคุณไว้ในที่เดียว
           </Text>
         </View>
       </View>
@@ -137,8 +162,8 @@ export default function PetsListScreen({ navigation }: Props) {
       >
         <View style={styles.addWrap}>
           <Pressable
-            onPress={() => navigation.navigate('AddPet')}
-            android_ripple={{ color: 'rgba(255,255,255,0.25)', borderless: false }}
+            onPress={onAddPet}
+            android_ripple={RIPPLE_LIGHT}
             style={({ pressed }) => [styles.addBtn, pressed && { opacity: 0.9 }]}
           >
             <AnimatedLG
@@ -156,13 +181,21 @@ export default function PetsListScreen({ navigation }: Props) {
         </View>
 
         <View style={styles.list}>
-          {mockPets.map((pet) => (
-            <PetCard
-              key={pet.id}
-              pet={pet}
-              onPress={() => navigation.navigate('PetDetail', { petId: pet.id })}
-            />
-          ))}
+          {loading
+            ? Array.from({ length: 3 }).map((_, i) => (
+                <PetCardSkeleton
+                  key={`skeleton-${i}`}
+                  shimmerStyle={skeletonShimmerStyle}
+                />
+              ))
+            : mockPets.map((pet, idx) => (
+                <PetCard
+                  key={pet.id}
+                  pet={pet}
+                  accent={CARD_PALETTE[idx % CARD_PALETTE.length]}
+                  onOpen={onOpenPet}
+                />
+              ))}
         </View>
       </View>
       </Animated.ScrollView>
@@ -177,26 +210,98 @@ export default function PetsListScreen({ navigation }: Props) {
   );
 }
 
+type CardAccent = { bg: string; chip: string };
+const CARD_PALETTE: CardAccent[] = [
+  { bg: '#3F8FAE', chip: '#2D6F8A' }, // sky blue
+  { bg: '#D88636', chip: '#A8651E' }, // warm amber
+  { bg: '#4FA45C', chip: '#347E3F' }, // fresh mint
+  { bg: '#A85B96', chip: '#82427A' }, // pink-purple
+  { bg: '#CA5640', chip: '#9E3D2C' }, // coral
+  { bg: '#8E5DBA', chip: '#6E4196' }, // lavender
+];
+
 function formatMicrochip(id: string): string {
   const digits = id.replace(/\D/g, '');
   return digits.match(/.{1,3}/g)?.join('-') ?? id;
 }
 
-function PetCard({ pet, onPress }: { pet: Pet; onPress: () => void }) {
+function PetCardSkeleton({
+  shimmerStyle,
+}: {
+  shimmerStyle: ReturnType<typeof useAnimatedStyle>;
+}) {
+  return (
+    <View style={styles.cardShadow}>
+      <View style={[styles.card, { backgroundColor: '#E6E6E8' }]}>
+        <View style={[styles.cardTop, { backgroundColor: '#FFFFFF' }]}>
+          <View style={styles.skelLineLong} />
+        </View>
+        <View style={[styles.cardBottom, { backgroundColor: '#D7D7DB' }]}>
+          <View style={styles.statsGrid}>
+            <View style={{ flex: 1, gap: 6 }}>
+              <View style={styles.skelLineShort} />
+              <View style={styles.skelLineMid} />
+            </View>
+            <View style={{ flex: 1, gap: 6 }}>
+              <View style={styles.skelLineShort} />
+              <View style={styles.skelLineMid} />
+            </View>
+          </View>
+          <View style={{ gap: 6 }}>
+            <View style={styles.skelLineShort} />
+            <View style={styles.skelLineMid} />
+          </View>
+        </View>
+        <View style={styles.avatarWrap}>
+          <View style={[styles.avatar, { backgroundColor: '#EFEFF1' }]} />
+          <View style={[styles.genderBadge, { backgroundColor: '#EFEFF1' }]} />
+        </View>
+        <View style={styles.chipPillWrap}>
+          <View style={[styles.chipPill, { backgroundColor: '#C9C9CD' }]} />
+        </View>
+
+        {/* Animated shimmer sweep — works on both iOS and Android via Reanimated */}
+        <Animated.View
+          pointerEvents="none"
+          style={[styles.skelShimmerWrap, shimmerStyle]}
+        >
+          <LinearGradient
+            colors={[
+              'rgba(255,255,255,0)',
+              'rgba(255,255,255,0.55)',
+              'rgba(255,255,255,0)',
+            ]}
+            start={{ x: 0, y: 0.5 }}
+            end={{ x: 1, y: 0.5 }}
+            style={styles.skelShimmer}
+          />
+        </Animated.View>
+      </View>
+    </View>
+  );
+}
+
+const PetCard = memo(function PetCard({
+  pet,
+  accent,
+  onOpen,
+}: {
+  pet: Pet;
+  accent: CardAccent;
+  onOpen: (id: string) => void;
+}) {
+  const handlePress = useCallback(() => onOpen(pet.id), [onOpen, pet.id]);
   return (
     <View style={styles.cardShadow}>
       <Pressable
-        onPress={onPress}
+        onPress={handlePress}
         android_ripple={RIPPLE}
-        style={({ pressed }) => [styles.card, pressed && { opacity: 0.92 }]}
+        style={({ pressed }) => [
+          styles.card,
+          { backgroundColor: accent.bg },
+          pressed && { opacity: 0.92 },
+        ]}
       >
-        {/* Dark paw-print background fills the whole card */}
-        <Image
-          source={require('../../assets/pet-card-bg.png')}
-          style={StyleSheet.absoluteFillObject}
-          resizeMode="repeat"
-        />
-
         {/* White top strip — name */}
         <View style={styles.cardTop}>
           <Text variant="bodyStrong" style={styles.petName} numberOfLines={1}>
@@ -204,8 +309,17 @@ function PetCard({ pet, onPress }: { pet: Pet; onPress: () => void }) {
           </Text>
         </View>
 
-        {/* Bottom dark area — stats */}
+        {/* Bottom area — stats with paw-print pattern bg */}
         <View style={styles.cardBottom}>
+          <View style={styles.patternGrid} pointerEvents="none">
+            <Image
+              key={accent.bg}
+              source={PATTERN_IMAGE}
+              style={styles.patternTile}
+              resizeMode="cover"
+              fadeDuration={0}
+            />
+          </View>
           <View style={styles.statsGrid}>
             <Stat label="สายพันธุ์" value={pet.breed} />
             <Stat label="น้ำหนัก" value={`${pet.weightKg} กก.`} />
@@ -234,7 +348,7 @@ function PetCard({ pet, onPress }: { pet: Pet; onPress: () => void }) {
 
         {/* Microchip pill — sits below the avatar */}
         <View style={styles.chipPillWrap}>
-          <View style={styles.chipPill}>
+          <View style={[styles.chipPill, { backgroundColor: accent.chip }]}>
             <Text
               variant="caption"
               weight="500"
@@ -251,9 +365,9 @@ function PetCard({ pet, onPress }: { pet: Pet; onPress: () => void }) {
       </Pressable>
     </View>
   );
-}
+});
 
-function Stat({ label, value }: { label: string; value: string }) {
+const Stat = memo(function Stat({ label, value }: { label: string; value: string }) {
   return (
     <View style={styles.stat}>
       <Text variant="caption" style={styles.statLabel}>
@@ -264,7 +378,7 @@ function Stat({ label, value }: { label: string; value: string }) {
       </Text>
     </View>
   );
-}
+});
 
 const styles = StyleSheet.create({
   root: {
@@ -295,10 +409,14 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   heroTitle: {
+    fontSize: 28,
+    lineHeight: 42,
     color: '#1A1A1F',
     fontWeight: '700',
   },
   heroSubtitle: {
+    fontSize: 16,
+    lineHeight: 24,
     color: '#4A4A50',
   },
   sheet: {
@@ -367,11 +485,51 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   cardBottom: {
+    flex: 1,
     paddingLeft: 134,
     paddingRight: 16,
     paddingTop: 12,
     paddingBottom: 18,
     gap: spacing.sm,
+    overflow: 'hidden',
+    position: 'relative',
+  },
+  patternGrid: {
+    ...StyleSheet.absoluteFillObject,
+    flexDirection: 'row',
+    opacity: 0.5,
+  },
+  patternTile: {
+    flex: 1,
+    height: '100%',
+  },
+  skelLineLong: {
+    height: 16,
+    width: '60%',
+    borderRadius: 8,
+    backgroundColor: '#D7D7DB',
+  },
+  skelLineMid: {
+    height: 14,
+    width: '70%',
+    borderRadius: 7,
+    backgroundColor: 'rgba(255,255,255,0.6)',
+  },
+  skelLineShort: {
+    height: 10,
+    width: '40%',
+    borderRadius: 5,
+    backgroundColor: 'rgba(255,255,255,0.45)',
+  },
+  skelShimmerWrap: {
+    position: 'absolute',
+    top: 0,
+    bottom: 0,
+    width: 120,
+    left: 0,
+  },
+  skelShimmer: {
+    flex: 1,
   },
   chipPillWrap: {
     position: 'absolute',

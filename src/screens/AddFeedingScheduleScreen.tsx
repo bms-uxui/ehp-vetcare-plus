@@ -1,57 +1,24 @@
 import { useState } from 'react';
-import {
-  Image,
-  Pressable,
-  StyleSheet,
-  TextInput,
-  View,
-} from 'react-native';
+import { Pressable, StyleSheet, TextInput, View } from 'react-native';
 import Animated, {
   useAnimatedScrollHandler,
   useSharedValue,
 } from 'react-native-reanimated';
-import { LinearGradient } from 'expo-linear-gradient';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { RootStackParamList } from '../../App';
-import { Icon, PetAvatar, StickyAppBar, Text } from '../components';
+import {
+  FeedingTypeCard,
+  Icon,
+  PetAvatar,
+  StickyAppBar,
+  Text,
+} from '../components';
+import type { FeedingType } from '../components/FeedingTypeCard';
 import { semantic } from '../theme';
 import { mockPets } from '../data/pets';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'AddFeedingSchedule'>;
-
-type ScheduleType = 'food' | 'water';
-
-const TYPE_IMAGES: Record<ScheduleType, number> = {
-  food: require('../../assets/illustrations/cat-meal.png'),
-  water: require('../../assets/illustrations/cat-water.png'),
-};
-
-const TYPES: {
-  key: ScheduleType;
-  label: string;
-  icon: string;
-  color: string;
-  bg: string;
-  gradient: [string, string];
-}[] = [
-  {
-    key: 'food',
-    label: 'อาหาร',
-    icon: 'UtensilsCrossed',
-    color: '#D99A20',
-    bg: '#FFF6D9',
-    gradient: ['#FFE9B8', '#FFF6D9'],
-  },
-  {
-    key: 'water',
-    label: 'น้ำ',
-    icon: 'Droplet',
-    color: '#4A8FD1',
-    bg: '#E0F0FB',
-    gradient: ['#C6E4F8', '#E0F0FB'],
-  },
-];
 
 const DAYS: { key: number; label: string }[] = [
   { key: 1, label: 'จ' },
@@ -76,8 +43,7 @@ const TIME_OPTIONS = [
 
 export default function AddFeedingScheduleScreen({ navigation }: Props) {
   const insets = useSafeAreaInsets();
-  const [type, setType] = useState<ScheduleType>('food');
-  const activeTypeMeta = TYPES.find((t) => t.key === type) ?? TYPES[0];
+  const [type, setType] = useState<FeedingType>('food');
   const [selectedPetIds, setSelectedPetIds] = useState<Set<string>>(
     () => new Set(mockPets[0] ? [mockPets[0].id] : []),
   );
@@ -152,61 +118,8 @@ export default function AddFeedingScheduleScreen({ navigation }: Props) {
           </Text>
         </View>
 
-        {/* Type selector card with cat food bag illustration */}
         <View style={styles.section}>
-          <View style={styles.typeCard}>
-            <LinearGradient
-              pointerEvents="none"
-              colors={activeTypeMeta.gradient}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-              style={StyleSheet.absoluteFill}
-            />
-            <View style={styles.typeCardContent}>
-              <Text weight="500" style={styles.typeCardTitle}>
-                ประเภท
-              </Text>
-              <View style={styles.typeChipsRow}>
-                {TYPES.map((t) => {
-                  const active = type === t.key;
-                  return (
-                    <Pressable
-                      key={t.key}
-                      onPress={() => setType(t.key)}
-                      style={({ pressed }) => [
-                        styles.typeChip,
-                        active && { backgroundColor: t.color },
-                        pressed && { opacity: 0.85 },
-                      ]}
-                    >
-                      <Icon
-                        name={t.icon as any}
-                        size={14}
-                        color={active ? '#FFFFFF' : t.color}
-                        strokeWidth={2.4}
-                      />
-                      <Text
-                        weight="500"
-                        style={[
-                          styles.typeChipText,
-                          active && { color: '#FFFFFF' },
-                        ]}
-                      >
-                        {t.label}
-                      </Text>
-                    </Pressable>
-                  );
-                })}
-              </View>
-            </View>
-            <View pointerEvents="none" style={styles.typeCardImageWrap}>
-              <Image
-                source={TYPE_IMAGES[type]}
-                style={styles.typeCardImage}
-                resizeMode="contain"
-              />
-            </View>
-          </View>
+          <FeedingTypeCard value={type} onChange={setType} />
         </View>
 
         {/* Pet selector */}
@@ -413,55 +326,6 @@ const styles = StyleSheet.create({
   sectionLabel: {
     fontSize: 14,
     color: '#1A1A1A',
-  },
-
-  // Type selector card with illustration
-  typeCard: {
-    borderRadius: 24,
-    overflow: 'hidden',
-    flexDirection: 'row',
-    paddingRight: 91,
-    minHeight: 120,
-    position: 'relative',
-  },
-  typeCardContent: {
-    flex: 1,
-    padding: 16,
-    gap: 10,
-    justifyContent: 'center',
-  },
-  typeCardTitle: {
-    fontSize: 14,
-    color: '#1A1A1A',
-  },
-  typeChipsRow: {
-    flexDirection: 'row',
-    gap: 10,
-  },
-  typeChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 100,
-    backgroundColor: '#FFFFFF',
-  },
-  typeChipText: {
-    fontSize: 14,
-    color: '#1A1A1A',
-  },
-  typeCardImageWrap: {
-    position: 'absolute',
-    right: 0,
-    top: 0,
-    bottom: 0,
-    width: 100,
-    justifyContent: 'center',
-  },
-  typeCardImage: {
-    width: '100%',
-    height: '100%',
   },
 
   // Pet selector
