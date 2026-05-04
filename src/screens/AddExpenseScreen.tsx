@@ -28,6 +28,7 @@ import {
   SubPageHeader,
   Text,
 } from '../components';
+import { HEADER_HEIGHT } from '../components/SubPageHeader';
 import { radii, semantic, spacing } from '../theme';
 import { categoryMeta, ExpenseCategory } from '../data/expenses';
 import { useExpenses } from '../data/expensesContext';
@@ -153,13 +154,17 @@ export default function AddExpenseScreen({ navigation }: Props) {
       <SubPageHeader
         title="บันทึกค่าใช้จ่าย"
         onBack={() => navigation.goBack()}
+        scrollY={scrollY}
       />
 
       <Animated.ScrollView
         style={styles.flex}
         contentContainerStyle={[
           styles.scroll,
-          { paddingTop: spacing.md, paddingBottom: insets.bottom + 100 },
+          {
+            paddingTop: insets.top + HEADER_HEIGHT,
+            paddingBottom: insets.bottom + 100,
+          },
         ]}
         showsVerticalScrollIndicator={false}
         onScroll={scrollHandler}

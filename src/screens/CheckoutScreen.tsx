@@ -25,6 +25,7 @@ import {
   SubPageHeader,
   Text,
 } from '../components';
+import { HEADER_HEIGHT } from '../components/SubPageHeader';
 import { semantic, spacing } from '../theme';
 import { fmtBaht } from '../data/products';
 import { useCart, cartStore, CartItem } from '../data/cart';
@@ -282,11 +283,15 @@ export default function CheckoutScreen({ route, navigation }: Props) {
       <SubPageHeader
         title="ชำระเงิน"
         onBack={() => navigation.goBack()}
+        scrollY={scrollY}
       />
 
       <Animated.ScrollView
         style={styles.flex}
-        contentContainerStyle={[styles.scroll, { paddingTop: spacing.md, paddingBottom: 220 }]}
+        contentContainerStyle={[
+          styles.scroll,
+          { paddingTop: insets.top + HEADER_HEIGHT + spacing.md, paddingBottom: 220 },
+        ]}
         showsVerticalScrollIndicator={false}
         onScroll={scrollHandler}
         scrollEventThrottle={16}
