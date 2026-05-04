@@ -1,7 +1,13 @@
-import { Linking, ScrollView, StyleSheet, View, Pressable } from 'react-native';
+import { Linking, StyleSheet, View, Pressable } from 'react-native';
+import Animated, {
+  useAnimatedScrollHandler,
+  useSharedValue,
+} from 'react-native-reanimated';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../App';
 import { AppBackground, Card, Icon, SubPageHeader, Text } from '../components';
+import { HEADER_HEIGHT } from '../components/SubPageHeader';
 import { semantic, spacing } from '../theme';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Help'>;
@@ -40,15 +46,26 @@ const FAQ_TOPICS = [
 ];
 
 export default function HelpScreen({ navigation }: Props) {
+  const insets = useSafeAreaInsets();
+  const scrollY = useSharedValue(0);
+  const scrollHandler = useAnimatedScrollHandler((e) => {
+    scrollY.value = e.contentOffset.y;
+  });
+
   return (
     <View style={styles.root}>
       <AppBackground />
-      <SubPageHeader title="ช่วยเหลือ" onBack={() => navigation.goBack()} />
+      <SubPageHeader title="ช่วยเหลือ" onBack={() => navigation.goBack()} scrollY={scrollY} />
 
-      <ScrollView
+      <Animated.ScrollView
         style={styles.flex}
-        contentContainerStyle={[styles.scroll, { paddingTop: spacing.md }]}
+        contentContainerStyle={[
+          styles.scroll,
+          { paddingTop: insets.top + HEADER_HEIGHT + spacing.md },
+        ]}
         showsVerticalScrollIndicator={false}
+        onScroll={scrollHandler}
+        scrollEventThrottle={16}
       >
         {/* FAQ topics */}
         <SectionLabel>หัวข้อที่ถามบ่อย</SectionLabel>
@@ -135,7 +152,7 @@ export default function HelpScreen({ navigation }: Props) {
             </Text>
           </View>
         </Card>
-      </ScrollView>
+      </Animated.ScrollView>
     </View>
   );
 }

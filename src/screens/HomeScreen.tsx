@@ -59,6 +59,7 @@ export default function HomeScreen({ navigation }: Props) {
   const { width: windowWidth } = useWindowDimensions();
   const bannerPageWidth = windowWidth - spacing.xl * 2;
   const vaccineReminder = mockReminders.find((r) => r.type === 'vaccine');
+  const hasUnreadNotifications = mockReminders.some((r) => !r.read);
 
   // Pick the next upcoming appointment that belongs to a *different* pet from
   // the vaccine reminder so the two banners show different pets/avatars.
@@ -258,17 +259,22 @@ export default function HomeScreen({ navigation }: Props) {
 
         <View style={styles.bannerHeaderRow}>
           <VetCareLogo width={148} height={27} />
-          <Pressable
-            onPress={() => navigation.navigate('Notifications')}
-            android_ripple={RIPPLE}
-            style={({ pressed }) => [
-              styles.iconBtn,
-              pressed && { opacity: 0.85 },
-            ]}
-            hitSlop={8}
-          >
-            <Icon name="Mail" size={22} color={semantic.textPrimary} />
-          </Pressable>
+          <View>
+            <Pressable
+              onPress={() => navigation.navigate('Notifications')}
+              android_ripple={RIPPLE}
+              style={({ pressed }) => [
+                styles.iconBtn,
+                pressed && { opacity: 0.85 },
+              ]}
+              hitSlop={8}
+            >
+              <Icon name="Bell" size={22} color={semantic.textPrimary} />
+            </Pressable>
+            {hasUnreadNotifications && (
+              <View pointerEvents="none" style={styles.unreadDot} />
+            )}
+          </View>
         </View>
 
         {/* ── Banner text content — stacked, crossfade ── */}
@@ -647,13 +653,30 @@ const styles = StyleSheet.create({
     paddingBottom: spacing.sm,
   },
   iconBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     backgroundColor: semantic.surface,
     alignItems: 'center',
     justifyContent: 'center',
-    overflow: 'hidden',
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: 'rgba(0,0,0,0.1)',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.06,
+    shadowRadius: 2,
+    elevation: 1,
+  },
+  unreadDot: {
+    position: 'absolute',
+    top: 4,
+    right: 4,
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: '#FF3B30',
+    borderWidth: 2,
+    borderColor: '#FFFFFF',
   },
   content: {
     paddingHorizontal: spacing.xl,

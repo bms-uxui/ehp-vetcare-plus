@@ -5,6 +5,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../App';
 import { AppBackground, Button, Card, Icon, Input, SubPageHeader, Text } from '../components';
+import { HEADER_HEIGHT } from '../components/SubPageHeader';
 import { semantic, spacing } from '../theme';
 import { mockVets, statusMeta } from '../data/televet';
 
@@ -45,13 +46,17 @@ export default function BookTeleVetScreen({ navigation }: Props) {
       <SubPageHeader
         title="จองนัดปรึกษา"
         onBack={() => navigation.goBack()}
+        scrollY={scrollY}
       />
       <KeyboardAvoidingView
         style={styles.flex}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
         <Animated.ScrollView
-          contentContainerStyle={[styles.scrollContent, { paddingTop: spacing.md }]}
+          contentContainerStyle={[
+            styles.scrollContent,
+            { paddingTop: insets.top + HEADER_HEIGHT + spacing.md },
+          ]}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
           onScroll={scrollHandler}

@@ -2,6 +2,8 @@ import { memo, useCallback, useEffect, useMemo, useState } from 'react';
 import { Image, Pressable, StyleSheet, useWindowDimensions, View } from 'react-native';
 import Animated, {
   Easing,
+  Extrapolation,
+  useAnimatedScrollHandler,
   useAnimatedStyle,
   useSharedValue,
   withDelay,
@@ -9,11 +11,12 @@ import Animated, {
   withTiming,
   interpolate,
 } from 'react-native-reanimated';
+import { BlurView } from 'expo-blur';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../App';
-import { AppBackground, Icon, StickyAppBar, Text } from '../components';
+import { AppBackground, Icon, Text } from '../components';
 import DraggableFlatList, {
   RenderItemParams,
   ScaleDecorator,
@@ -25,6 +28,8 @@ type Props = NativeStackScreenProps<RootStackParamList, 'PetsList'>;
 
 const HERO_HEIGHT = 220;
 const TAB_BAR_SPACE = 110;
+const FADE_START = 30;
+const FADE_END = 90;
 const RIPPLE = { color: 'rgba(184,106,124,0.18)', borderless: false } as const;
 const RIPPLE_LIGHT = { color: 'rgba(255,255,255,0.25)', borderless: false } as const;
 const HERO_IMAGE = require('../../assets/pet-profile-hero.png');
@@ -59,8 +64,37 @@ export default function PetsListScreen({ navigation }: Props) {
 
   // ── Sticky AppBar scroll tracking ──
   const scrollY = useSharedValue(0);
-  const stickyFadeStart = HERO_HEIGHT - 40;
-  const stickyFadeEnd = HERO_HEIGHT + 10;
+  const scrollHandler = useAnimatedScrollHandler((e) => {
+    scrollY.value = e.contentOffset.y;
+  });
+
+  const barBgStyle = useAnimatedStyle(() => ({
+    opacity: interpolate(
+      scrollY.value,
+      [FADE_START, FADE_END],
+      [0, 1],
+      Extrapolation.CLAMP,
+    ),
+  }));
+
+  const titleStyle = useAnimatedStyle(() => ({
+    opacity: interpolate(
+      scrollY.value,
+      [FADE_START + 30, FADE_END],
+      [0, 1],
+      Extrapolation.CLAMP,
+    ),
+    transform: [
+      {
+        translateY: interpolate(
+          scrollY.value,
+          [FADE_START + 30, FADE_END],
+          [8, 0],
+          Extrapolation.CLAMP,
+        ),
+      },
+    ],
+  }));
 
   const onAddPet = useCallback(
     () => navigation.navigate('AddPet'),
@@ -205,13 +239,28 @@ export default function PetsListScreen({ navigation }: Props) {
         />
 
         <View style={styles.heroText}>
-          <Text variant="bodyStrong" style={styles.heroTitle}>
+          <Text
+            variant="bodyStrong"
+            style={[
+              styles.heroTitle,
+              {
+                fontSize: Math.max(22, Math.min(32, windowWidth * 0.07)),
+                lineHeight: Math.max(34, Math.min(46, windowWidth * 0.1)),
+              },
+            ]}
+          >
             สัตว์เลี้ยง
           </Text>
           <Text
             variant="caption"
             color={semantic.textSecondary}
-            style={styles.heroSubtitle}
+            style={[
+              styles.heroSubtitle,
+              {
+                fontSize: Math.max(13, Math.min(17, windowWidth * 0.04)),
+                lineHeight: Math.max(24, Math.min(30, windowWidth * 0.07)),
+              },
+            ]}
           >
             รวมข้อมูลสัตว์เลี้ยงของคุณไว้ในที่เดียว
           </Text>
@@ -309,21 +358,55 @@ export default function PetsListScreen({ navigation }: Props) {
           ListHeaderComponent={renderHeader}
           contentContainerStyle={styles.listContent}
           showsVerticalScrollIndicator={false}
-          onScrollOffsetChange={(offset) => {
-            scrollY.value = offset;
-          }}
+          onScroll={scrollHandler}
           scrollEventThrottle={16}
           renderItem={renderDraggableItem}
         />
         </View>
       )}
 
-      <StickyAppBar
-        scrollY={scrollY}
-        fadeStartAt={stickyFadeStart}
-        fadeEndAt={stickyFadeEnd}
-        title="ข้อมูลสัตว์เลี้ยง"
+      {/* Top fade — soft white wash matching Screen wrapper used by other tabs */}
+      <LinearGradient
+        pointerEvents="none"
+        colors={['#FFFDFB', 'rgba(255,253,251,0.85)', 'rgba(255,253,251,0)']}
+        locations={[0, 0.55, 1]}
+        style={[styles.topFade, { height: insets.top + 24 }]}
       />
+
+      {/* Sticky AppBar — matches PetShop / VetHub */}
+      <View
+        pointerEvents="box-none"
+        style={[
+          styles.appbar,
+          { paddingTop: insets.top, height: insets.top + 56 },
+        ]}
+      >
+        <Animated.View
+          pointerEvents="none"
+          style={[StyleSheet.absoluteFill, barBgStyle]}
+        >
+          <BlurView
+            intensity={80}
+            tint="systemChromeMaterialLight"
+            style={StyleSheet.absoluteFill}
+          />
+          <View style={[StyleSheet.absoluteFill, styles.barTint]} />
+          <View style={styles.barHairline} />
+        </Animated.View>
+
+        <View style={styles.appbarContent}>
+          <View style={styles.appbarPlaceholder} />
+          <Animated.View
+            pointerEvents="none"
+            style={[styles.appbarTitleWrap, titleStyle]}
+          >
+            <Text variant="bodyStrong" style={styles.appbarTitle} numberOfLines={1}>
+              สัตว์เลี้ยง
+            </Text>
+          </Animated.View>
+          <View style={styles.appbarPlaceholder} />
+        </View>
+      </View>
     </View>
   );
 }
@@ -527,6 +610,56 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: semantic.background,
   },
+  topFade: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+  },
+  appbar: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    zIndex: 10,
+  },
+  appbarContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: spacing.lg,
+    height: 56,
+  },
+  appbarPlaceholder: {
+    width: 44,
+    height: 44,
+  },
+  appbarTitleWrap: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    top: 0,
+    bottom: 0,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  appbarTitle: {
+    fontSize: 16,
+    color: '#1A1A1A',
+    maxWidth: '60%',
+    textAlign: 'center',
+  },
+  barTint: {
+    backgroundColor: 'rgba(255,255,255,0.4)',
+  },
+  barHairline: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: StyleSheet.hairlineWidth,
+    backgroundColor: 'rgba(0,0,0,0.08)',
+  },
   hero: {
     position: 'relative',
     overflow: 'hidden',
@@ -552,14 +685,10 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   heroTitle: {
-    fontSize: 28,
-    lineHeight: 42,
     color: '#1A1A1F',
     fontWeight: '700',
   },
   heroSubtitle: {
-    fontSize: 16,
-    lineHeight: 24,
     color: '#4A4A50',
   },
   sheet: {
