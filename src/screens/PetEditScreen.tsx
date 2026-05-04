@@ -67,6 +67,12 @@ export default function PetEditScreen({ route, navigation }: Props) {
   const [draft, setDraft] = useState<Pet | null>(
     initial ? { ...initial } : null,
   );
+  // Keep the weight input as a string locally so users can type intermediate
+  // states like "9." or "9.4" — converting to Number() on every keystroke
+  // would strip the trailing dot and trap the cursor before the decimal.
+  const [weightInput, setWeightInput] = useState<string>(
+    initial ? String(initial.weightKg) : '',
+  );
 
   if (!draft) {
     return (
@@ -249,10 +255,22 @@ export default function PetEditScreen({ route, navigation }: Props) {
           <View style={styles.fieldCol}>
             <TextField
               label="น้ำหนัก (กก.)"
-              value={String(draft.weightKg)}
+              value={weightInput}
               keyboardType="decimal-pad"
               error={errs.weightKg}
-              onChange={(v) => update('weightKg', Number(v) || 0)}
+              onChange={(v) => {
+                // Allow only digits + a single dot. Preserve the raw string so
+                // intermediate states like "9." remain typeable.
+                const cleaned = v.replace(/[^\d.]/g, '');
+                const parts = cleaned.split('.');
+                const next =
+                  parts.length > 2
+                    ? parts[0] + '.' + parts.slice(1).join('')
+                    : cleaned;
+                setWeightInput(next);
+                const parsed = parseFloat(next);
+                update('weightKg', Number.isFinite(parsed) ? parsed : 0);
+              }}
             />
           </View>
           <View style={styles.fieldCol}>
