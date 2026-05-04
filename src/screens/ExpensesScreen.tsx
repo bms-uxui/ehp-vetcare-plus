@@ -18,10 +18,12 @@ import Animated, {
   useAnimatedScrollHandler,
   useAnimatedStyle,
   useSharedValue,
+  withSequence,
   withSpring,
   withTiming,
 } from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
+import { BlurView } from 'expo-blur';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { RootStackParamList } from '../../App';
@@ -31,11 +33,11 @@ import {
   IconButton,
   PetAvatar,
   StickyAppBar,
+  SubPageHeader,
   Text,
 } from '../components';
 import { semantic, spacing } from '../theme';
 import {
-  mockExpenses,
   categoryMeta,
   sumByCategory,
   monthKey,
@@ -46,6 +48,8 @@ import {
   ExpenseCategory,
   Expense,
 } from '../data/expenses';
+import { useExpenses } from '../data/expensesContext';
+import { mockPets } from '../data/pets';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Expenses'>;
 
@@ -62,20 +66,61 @@ const CATEGORY_ILLUSTRATIONS: Record<ExpenseCategory, number> = {
 
 export default function ExpensesScreen({ navigation }: Props) {
   const insets = useSafeAreaInsets();
+  const { expenses, removeExpense } = useExpenses();
   const scrollY = useSharedValue(0);
   const scrollHandler = useAnimatedScrollHandler((e) => {
     scrollY.value = e.contentOffset.y;
   });
 
   const months = useMemo(() => {
-    const set = new Set(mockExpenses.map((e) => monthKey(e.dateISO)));
+    const set = new Set(expenses.map((e) => monthKey(e.dateISO)));
     return Array.from(set).sort((a, b) => b.localeCompare(a));
-  }, []);
+  }, [expenses]);
 
   const [selectedMonth, setSelectedMonth] = useState<string>(
     months[0] ?? '2026-04',
   );
   const [selectedExpense, setSelectedExpense] = useState<Expense | null>(null);
+  const [detailMenuOpen, setDetailMenuOpen] = useState(false);
+
+  // Morph animation: detail more-button (36×36 circle) grows into a popover
+  // (200×~120 rounded card). Same pattern as NotificationsScreen.
+  const detailMenuAnim = useSharedValue(0);
+  const DETAIL_BTN_SIZE = 36;
+  const DETAIL_MENU_W = 200;
+  const DETAIL_MENU_H = 100;
+
+  const openDetailMenu = () => {
+    setDetailMenuOpen(true);
+    detailMenuAnim.value = withSpring(1, {
+      damping: 22,
+      stiffness: 240,
+      mass: 0.8,
+    });
+  };
+  const closeDetailMenu = () => {
+    detailMenuAnim.value = withTiming(0, { duration: 220 });
+    setTimeout(() => setDetailMenuOpen(false), 220);
+  };
+
+  const detailMenuMorphStyle = useAnimatedStyle(() => {
+    const v = detailMenuAnim.value;
+    return {
+      width: DETAIL_BTN_SIZE + (DETAIL_MENU_W - DETAIL_BTN_SIZE) * v,
+      height: DETAIL_BTN_SIZE + (DETAIL_MENU_H - DETAIL_BTN_SIZE) * v,
+      borderRadius: 18 + 6 * v,
+    };
+  });
+  const detailMenuIconStyle = useAnimatedStyle(() => ({
+    opacity: 1 - Math.min(1, detailMenuAnim.value * 3),
+  }));
+  const detailMenuItemsStyle = useAnimatedStyle(() => {
+    const v = detailMenuAnim.value;
+    return {
+      opacity: v < 0.6 ? 0 : (v - 0.6) / 0.4,
+      transform: [{ translateY: (1 - v) * -4 }],
+    };
+  });
 
   // Budget is editable — tap summary card to open the sheet. Stepper inside
   // adjusts the working value by 100 baht per tap.
@@ -104,7 +149,7 @@ export default function ExpensesScreen({ navigation }: Props) {
     setBudgetInput((v) => Math.max(0, v - BUDGET_STEP));
   const incBudget = () => setBudgetInput((v) => v + BUDGET_STEP);
 
-  const expensesThisMonth = mockExpenses.filter(
+  const expensesThisMonth = expenses.filter(
     (e) => monthKey(e.dateISO) === selectedMonth,
   );
   const total = expensesThisMonth.reduce((sum, e) => sum + e.amount, 0);
@@ -186,24 +231,12 @@ export default function ExpensesScreen({ navigation }: Props) {
           contentContainerStyle={styles.chipsScroll}
         >
           {months.map((m) => (
-            <Pressable
+            <MonthChip
               key={m}
+              label={thMonth(m)}
+              active={selectedMonth === m}
               onPress={() => setSelectedMonth(m)}
-              style={({ pressed }) => [
-                styles.chip,
-                selectedMonth === m && styles.chipActive,
-                pressed && { opacity: 0.7 },
-              ]}
-            >
-              <Text
-                style={[
-                  styles.chipText,
-                  selectedMonth === m && styles.chipTextActive,
-                ]}
-              >
-                {thMonth(m)}
-              </Text>
-            </Pressable>
+            />
           ))}
         </ScrollView>
 
@@ -345,7 +378,11 @@ export default function ExpensesScreen({ navigation }: Props) {
                       `ต้องการลบ "${e.title}" ใช่ไหม?`,
                       [
                         { text: 'ยกเลิก', style: 'cancel' },
-                        { text: 'ลบ', style: 'destructive' },
+                        {
+                          text: 'ลบ',
+                          style: 'destructive',
+                          onPress: () => removeExpense(e.id),
+                        },
                       ],
                     )
                   }
@@ -495,30 +532,29 @@ export default function ExpensesScreen({ navigation }: Props) {
         </View>
       </Modal>
 
-      {/* Expense detail — iOS native pageSheet, opens when a tx row is tapped */}
+      {/* Expense detail — full-screen modal, slides in from the right
+          like a navigation push. Tap the row to open. */}
       <Modal
         visible={selectedExpense !== null}
-        presentationStyle="pageSheet"
+        presentationStyle="fullScreen"
         animationType="slide"
         onRequestClose={() => setSelectedExpense(null)}
       >
         <View style={styles.iosSheetRoot}>
-          {/* Header — title + glass X close on the right */}
-          <View style={styles.payHeader}>
-            <Text weight="500" style={styles.payHeaderTitle}>
-              รายละเอียดรายการ
-            </Text>
-            <Pressable
-              onPress={() => setSelectedExpense(null)}
-              hitSlop={8}
-              accessibilityLabel="ปิด"
-              style={styles.payHeaderClose}
-            >
-              <View style={styles.payHeaderCloseBtn}>
-                <Icon name="X" size={14} color="#1A1A1A" strokeWidth={2.6} />
-              </View>
-            </Pressable>
-          </View>
+          <AppBackground />
+          <SubPageHeader
+            title="รายละเอียดรายการ"
+            onBack={() => setSelectedExpense(null)}
+            trailing={
+              detailMenuOpen
+                ? undefined
+                : {
+                    icon: 'MoreHorizontal',
+                    onPress: openDetailMenu,
+                    accessibilityLabel: 'เพิ่มเติม',
+                  }
+            }
+          />
 
           {selectedExpense && (
             <ScrollView
@@ -543,21 +579,21 @@ export default function ExpensesScreen({ navigation }: Props) {
                       styles.detailCategoryChip,
                       {
                         backgroundColor:
-                          categoryMeta[selectedExpense.category].color + '22',
+                          categoryMeta[selectedExpense.category].color,
                       },
                     ]}
                   >
                     <Icon
                       name={categoryMeta[selectedExpense.category].icon as any}
                       size={14}
-                      color={categoryMeta[selectedExpense.category].color}
-                      strokeWidth={2.2}
+                      color="#FFFFFF"
+                      strokeWidth={2.4}
                     />
                     <Text
                       weight="600"
                       style={[
                         styles.detailCategoryLabel,
-                        { color: categoryMeta[selectedExpense.category].color },
+                        { color: '#FFFFFF' },
                       ]}
                     >
                       {categoryMeta[selectedExpense.category].label}
@@ -569,6 +605,31 @@ export default function ExpensesScreen({ navigation }: Props) {
                   <Text style={styles.detailTitle} numberOfLines={2}>
                     {selectedExpense.title}
                   </Text>
+                  {(() => {
+                    const heroPetIds: string[] =
+                      selectedExpense.petIds &&
+                      selectedExpense.petIds.length > 0
+                        ? selectedExpense.petIds
+                        : selectedExpense.petId
+                          ? [selectedExpense.petId]
+                          : [];
+                    if (heroPetIds.length === 0) return null;
+                    return (
+                      <View style={styles.detailHeroPetStack}>
+                        {heroPetIds.map((id, i) => (
+                          <View
+                            key={id}
+                            style={[
+                              styles.detailHeroPetItem,
+                              i > 0 && styles.detailHeroPetItemOverlap,
+                            ]}
+                          >
+                            <PetAvatar petId={id} size={52} />
+                          </View>
+                        ))}
+                      </View>
+                    );
+                  })()}
                 </View>
                 <View pointerEvents="none" style={styles.detailIllustrationWrap}>
                   <Image
@@ -598,26 +659,6 @@ export default function ExpensesScreen({ navigation }: Props) {
                   </View>
                 </View>
 
-                {selectedExpense.petId && (
-                  <>
-                    <View style={styles.detailDivider} />
-                    <View style={styles.detailRow}>
-                      <PetAvatar
-                        petId={selectedExpense.petId}
-                        fallbackEmoji={selectedExpense.petEmoji}
-                        size={32}
-                        backgroundColor="#F2F2F3"
-                      />
-                      <View style={styles.detailRowBody}>
-                        <Text style={styles.detailRowLabel}>สัตว์เลี้ยง</Text>
-                        <Text weight="600" style={styles.detailRowValue}>
-                          {selectedExpense.petName ?? 'ไม่ระบุ'}
-                        </Text>
-                      </View>
-                    </View>
-                  </>
-                )}
-
                 {selectedExpense.note && (
                   <>
                     <View style={styles.detailDivider} />
@@ -641,71 +682,124 @@ export default function ExpensesScreen({ navigation }: Props) {
                 )}
               </View>
 
-              {/* Action buttons — Edit + Delete */}
-              <View style={styles.detailActions}>
-                <Pressable
-                  onPress={() => {
-                    setSelectedExpense(null);
-                    navigation.navigate('AddExpense');
-                  }}
-                  style={({ pressed }) => [
-                    styles.detailActionBtn,
-                    styles.detailEditBtn,
-                    pressed && { opacity: 0.85 },
-                  ]}
-                >
-                  <Icon
-                    name="Pencil"
-                    size={16}
-                    color={semantic.primary}
-                    strokeWidth={2.2}
-                  />
-                  <Text
-                    weight="600"
-                    style={[
-                      styles.detailActionText,
-                      { color: semantic.primary },
-                    ]}
-                  >
-                    แก้ไข
-                  </Text>
-                </Pressable>
-                <Pressable
-                  onPress={() => {
-                    Alert.alert(
-                      'ลบรายการ',
-                      `ต้องการลบ "${selectedExpense.title}" ใช่ไหม?`,
-                      [
-                        { text: 'ยกเลิก', style: 'cancel' },
-                        {
-                          text: 'ลบ',
-                          style: 'destructive',
-                          onPress: () => setSelectedExpense(null),
-                        },
-                      ],
-                    );
-                  }}
-                  style={({ pressed }) => [
-                    styles.detailActionBtn,
-                    styles.detailDeleteBtn,
-                    pressed && { opacity: 0.85 },
-                  ]}
-                >
-                  <Icon
-                    name="Trash2"
-                    size={16}
-                    color="#C25450"
-                    strokeWidth={2.2}
-                  />
-                  <Text
-                    weight="600"
-                    style={[styles.detailActionText, { color: '#C25450' }]}
-                  >
-                    ลบ
-                  </Text>
-                </Pressable>
-              </View>
             </ScrollView>
+          )}
+
+          {/* More menu — morph from trailing button into popover, same
+              animation pattern as NotificationsScreen. */}
+          {detailMenuOpen && selectedExpense && (
+            <Pressable
+              style={StyleSheet.absoluteFill}
+              onPress={closeDetailMenu}
+            >
+              <Animated.View
+                pointerEvents="box-none"
+                style={[
+                  styles.detailMenuMorph,
+                  { top: insets.top + 10, right: 12 },
+                  detailMenuMorphStyle,
+                ]}
+              >
+                <Animated.View
+                  pointerEvents="box-none"
+                  style={[
+                    StyleSheet.absoluteFill,
+                    styles.detailMenuClip,
+                    detailMenuMorphStyle,
+                  ]}
+                >
+                  <BlurView
+                    intensity={90}
+                    tint="systemMaterialLight"
+                    style={StyleSheet.absoluteFill}
+                  />
+                  <View style={styles.detailMenuTint} />
+                  <View
+                    pointerEvents="none"
+                    style={[StyleSheet.absoluteFill, styles.detailMenuBorder]}
+                  />
+
+                  {/* Button icon — visible when collapsed, fades out as menu expands */}
+                  <Animated.View
+                    pointerEvents="none"
+                    style={[styles.detailMenuButtonIcon, detailMenuIconStyle]}
+                  >
+                    <Icon
+                      name="MoreHorizontal"
+                      size={18}
+                      color="#1A1A1A"
+                      strokeWidth={2.4}
+                    />
+                  </Animated.View>
+
+                  {/* Menu items — fade in once shape has expanded */}
+                  <Animated.View
+                    style={[styles.detailMenuInner, detailMenuItemsStyle]}
+                  >
+                    <Pressable
+                      onPress={() => {
+                        closeDetailMenu();
+                        setSelectedExpense(null);
+                        navigation.navigate('AddExpense');
+                      }}
+                      style={({ pressed }) => [
+                        styles.detailMenuItem,
+                        pressed && { backgroundColor: 'rgba(0,0,0,0.06)' },
+                      ]}
+                    >
+                      <Icon
+                        name="Pencil"
+                        size={18}
+                        color="#1A1A1A"
+                        strokeWidth={2.2}
+                      />
+                      <Text style={styles.detailMenuItemText}>แก้ไข</Text>
+                    </Pressable>
+                    <View style={styles.detailMenuDivider} />
+                    <Pressable
+                      onPress={() => {
+                        closeDetailMenu();
+                        Alert.alert(
+                          'ลบรายการ',
+                          `ต้องการลบ "${selectedExpense.title}" ใช่ไหม?`,
+                          [
+                            { text: 'ยกเลิก', style: 'cancel' },
+                            {
+                              text: 'ลบ',
+                              style: 'destructive',
+                              onPress: () => {
+                                const idToDelete = selectedExpense.id;
+                                setSelectedExpense(null);
+                                removeExpense(idToDelete);
+                              },
+                            },
+                          ],
+                        );
+                      }}
+                      style={({ pressed }) => [
+                        styles.detailMenuItem,
+                        pressed && { backgroundColor: 'rgba(0,0,0,0.06)' },
+                      ]}
+                    >
+                      <Icon
+                        name="Trash2"
+                        size={18}
+                        color="#C25450"
+                        strokeWidth={2.2}
+                      />
+                      <Text
+                        style={[
+                          styles.detailMenuItemText,
+                          { color: '#C25450' },
+                        ]}
+                      >
+                        ลบ
+                      </Text>
+                    </Pressable>
+                  </Animated.View>
+                </Animated.View>
+              </Animated.View>
+            </Pressable>
           )}
         </View>
       </Modal>
@@ -716,6 +810,51 @@ export default function ExpensesScreen({ navigation }: Props) {
 /* ---------- Swipeable transaction row — mirrors CartScreen pattern ---------- */
 
 const ACTIONS_W = 200; // 56 each × 3 buttons (details, edit, delete) + spacing
+
+/* ---------- Month chip — scale-bump animation on selection ---------- */
+
+function MonthChip({
+  label,
+  active,
+  onPress,
+}: {
+  label: string;
+  active: boolean;
+  onPress: () => void;
+}) {
+  const scale = useSharedValue(1);
+  useEffect(() => {
+    if (active) {
+      scale.value = withSequence(
+        withTiming(1.08, { duration: 140 }),
+        withSpring(1, { damping: 12, stiffness: 200 }),
+      );
+    }
+  }, [active, scale]);
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: scale.value }],
+  }));
+
+  return (
+    <Pressable
+      onPress={onPress}
+      style={({ pressed }) => [pressed && { opacity: 0.7 }]}
+    >
+      <Animated.View
+        style={[
+          styles.chip,
+          active && styles.chipActive,
+          animatedStyle,
+        ]}
+      >
+        <Text style={[styles.chipText, active && styles.chipTextActive]}>
+          {label}
+        </Text>
+      </Animated.View>
+    </Pressable>
+  );
+}
 
 function SwipeableExpenseRow({
   expense,
@@ -729,6 +868,23 @@ function SwipeableExpenseRow({
   onDelete: () => void;
 }) {
   const meta = categoryMeta[expense.category];
+  const petIdList: string[] =
+    expense.petIds && expense.petIds.length > 0
+      ? expense.petIds
+      : expense.petId
+        ? [expense.petId]
+        : [];
+  const petNamesLabel =
+    petIdList.length > 0
+      ? petIdList
+          .map(
+            (id) =>
+              mockPets.find((p) => p.id === id)?.name ??
+              (id === expense.petId ? expense.petName : null),
+          )
+          .filter(Boolean)
+          .join(', ')
+      : '';
   const translateX = useSharedValue(0);
   const isOpenRef = useRef(false);
 
@@ -870,48 +1026,45 @@ function SwipeableExpenseRow({
             pressed && { opacity: 0.85 },
           ]}
         >
-          <PetAvatar
-            petId={expense.petId}
-            fallbackEmoji={expense.petEmoji}
-            size={40}
-            backgroundColor="#F2F2F3"
-          />
+          <View style={styles.txIconStack}>
+            <View style={[styles.txCategoryIcon, { backgroundColor: meta.bg }]}>
+              <Icon
+                name={meta.icon as any}
+                size={20}
+                color={meta.color}
+                strokeWidth={2.2}
+              />
+            </View>
+            {petIdList.length > 0 ? (
+              <View style={styles.txPetBadgeStack}>
+                {petIdList.slice(0, 3).map((id, i) => (
+                  <View
+                    key={id}
+                    style={[
+                      styles.txPetBadge,
+                      i > 0 && styles.txPetBadgeOverlap,
+                    ]}
+                  >
+                    <PetAvatar petId={id} size={18} />
+                  </View>
+                ))}
+              </View>
+            ) : null}
+          </View>
           <View style={styles.txBody}>
             <View style={styles.txTopRow}>
-              <Text style={styles.txTitle} numberOfLines={1}>
+              <Text weight="500" style={styles.txTitle} numberOfLines={1}>
                 {expense.title}
               </Text>
-              <Text weight="600" style={styles.txAmount}>
+              <Text weight="700" style={styles.txAmount}>
                 {fmtBaht(expense.amount)}
               </Text>
             </View>
-            <View style={styles.txMetaRow}>
-              <View style={styles.txMetaItem}>
-                <Icon
-                  name="Calendar"
-                  size={11}
-                  color={semantic.textMuted}
-                  strokeWidth={2.2}
-                />
-                <Text style={styles.txMetaText}>{thDate(expense.dateISO)}</Text>
-              </View>
-              <View style={styles.txMetaItem}>
-                <Icon
-                  name={meta.icon as any}
-                  size={11}
-                  color={meta.color}
-                  strokeWidth={2.2}
-                />
-                <Text style={styles.txMetaText}>{meta.label}</Text>
-              </View>
-            </View>
+            <Text style={styles.txMetaText} numberOfLines={1}>
+              {thDate(expense.dateISO)} · {meta.label}
+              {petNamesLabel ? ` · ${petNamesLabel}` : ''}
+            </Text>
           </View>
-          <Icon
-            name="ChevronRight"
-            size={16}
-            color={semantic.textMuted}
-            strokeWidth={2}
-          />
         </Pressable>
       </Animated.View>
     </View>
@@ -1042,9 +1195,9 @@ const styles = StyleSheet.create({
   chip: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
+    gap: 6,
+    height: 40,
+    paddingHorizontal: 14,
     borderRadius: 1000,
     backgroundColor: 'rgba(118,118,128,0.12)',
   },
@@ -1052,7 +1205,8 @@ const styles = StyleSheet.create({
     backgroundColor: semantic.primary,
   },
   chipText: {
-    fontSize: 13,
+    fontSize: 15,
+    lineHeight: 20,
     color: '#3C3C43',
     letterSpacing: -0.2,
   },
@@ -1283,28 +1437,54 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
   },
+  txIconStack: {
+    width: 44,
+    height: 44,
+    position: 'relative',
+  },
+  txCategoryIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  txPetBadgeStack: {
+    position: 'absolute',
+    right: -2,
+    bottom: -2,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  txPetBadge: {
+    padding: 2,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+  },
+  txPetBadgeOverlap: {
+    marginLeft: -8,
+  },
   txTitle: {
-    fontSize: 12,
+    fontSize: 14,
+    lineHeight: 18,
     color: '#1A1A1A',
     flex: 1,
+    paddingRight: 8,
   },
   txAmount: {
-    fontSize: 12,
+    fontSize: 15,
+    lineHeight: 18,
     color: '#1A1A1A',
   },
-  txMetaRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-  },
-  txMetaItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
   txMetaText: {
-    fontSize: 10,
+    fontSize: 12,
+    lineHeight: 16,
     color: '#9A9AA0',
+  },
+  txNote: {
+    fontSize: 12,
+    lineHeight: 16,
+    color: '#6E6E74',
   },
 
   // Empty
@@ -1533,21 +1713,39 @@ const styles = StyleSheet.create({
     letterSpacing: -0.1,
   },
   detailAmount: {
-    fontSize: 36,
-    lineHeight: 44,
+    fontSize: 24,
+    lineHeight: 30,
     color: '#1A1A1A',
-    letterSpacing: -0.5,
+    letterSpacing: -0.3,
   },
   detailTitle: {
     fontSize: 16,
     lineHeight: 22,
     color: '#1A1A1A',
   },
+  detailHeroPetStack: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 8,
+  },
+  detailHeroPetItem: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    padding: 2,
+    backgroundColor: '#FFFFFF',
+    shadowColor: '#5E303C',
+    shadowOpacity: 0.12,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 3,
+  },
+  detailHeroPetItemOverlap: {
+    marginLeft: -18,
+  },
   detailGroup: {
     backgroundColor: '#FFFFFF',
     borderRadius: 16,
-    borderWidth: 1,
-    borderColor: '#EFE7E9',
     paddingHorizontal: 16,
     paddingVertical: 4,
   },
@@ -1585,31 +1783,83 @@ const styles = StyleSheet.create({
     backgroundColor: '#EFE7E9',
     marginLeft: 44,
   },
-  detailActions: {
-    flexDirection: 'row',
-    gap: 12,
+  detailPetSection: {
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    gap: 10,
   },
-  detailActionBtn: {
-    flex: 1,
+  detailPetChips: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  detailPetChip: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
     gap: 8,
-    height: 50,
-    borderRadius: 14,
-    borderWidth: 1,
+    paddingLeft: 4,
+    paddingRight: 12,
+    paddingVertical: 4,
+    borderRadius: 1000,
+    backgroundColor: '#F2F2F3',
   },
-  detailEditBtn: {
-    backgroundColor: semantic.primaryMuted,
-    borderColor: semantic.primary + '33',
+  detailPetChipText: {
+    fontSize: 14,
+    lineHeight: 18,
+    color: '#1A1A1A',
   },
-  detailDeleteBtn: {
-    backgroundColor: '#FBE9E8',
-    borderColor: '#C25450' + '33',
+  // More menu popover — outer view carries the shadow (no overflow:hidden,
+  // otherwise iOS clips the shadow). Inner clip view rounds the BlurView
+  // and tinted background.
+  detailMenuMorph: {
+    position: 'absolute',
+    backgroundColor: '#FFFFFF',
+    shadowColor: '#000',
+    shadowOpacity: 0.18,
+    shadowRadius: 22,
+    shadowOffset: { width: 0, height: 8 },
+    elevation: 10,
   },
-  detailActionText: {
-    fontSize: 15,
+  detailMenuClip: {
+    overflow: 'hidden',
+  },
+  detailMenuButtonIcon: {
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    width: 36,
+    height: 36,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  detailMenuTint: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(255,255,255,0.92)',
+  },
+  detailMenuBorder: {
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: 'rgba(0,0,0,0.08)',
+    borderRadius: 16,
+  },
+  detailMenuInner: {
+    paddingVertical: 4,
+  },
+  detailMenuItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+  },
+  detailMenuItemText: {
+    fontSize: 14,
+    lineHeight: 20,
+    color: '#1A1A1A',
     letterSpacing: -0.1,
+  },
+  detailMenuDivider: {
+    height: StyleSheet.hairlineWidth,
+    backgroundColor: 'rgba(0,0,0,0.1)',
   },
 
   // Swipe-to-reveal — outer container clips overflow, action buttons sit underneath

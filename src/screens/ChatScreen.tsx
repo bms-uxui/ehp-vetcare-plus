@@ -13,6 +13,8 @@ import {
 } from 'react-native';
 import Animated, {
   Easing,
+  FadeInLeft,
+  SlideInRight,
   useAnimatedStyle,
   useSharedValue,
   withRepeat,
@@ -22,13 +24,24 @@ import Animated, {
   cancelAnimation,
 } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
+import { LinearGradient } from 'expo-linear-gradient';
 import * as ImagePicker from 'expo-image-picker';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../App';
-import { Icon, Text } from '../components';
+import { Icon, PetAvatar, Text } from '../components';
 import { radii, semantic, spacing } from '../theme';
-import { mockConversations, mockMessages, mockVets, statusMeta, thTime, Message } from '../data/televet';
+import {
+  AI_CATEGORIES,
+  AiCategory,
+  mockConversations,
+  mockMessages,
+  mockVets,
+  statusMeta,
+  thTime,
+  Message,
+} from '../data/televet';
+import { mockPets } from '../data/pets';
 import { useCall } from '../data/callContext';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Chat'>;
@@ -53,11 +66,15 @@ const HISTORY_TEMPLATES: { fromVet: boolean; text: string }[] = [
 ];
 
 export default function ChatScreen({ route, navigation }: Props) {
-  const { conversationId, vetId } = route.params;
+  const { conversationId, vetId, aiMode, petId } = route.params;
 
   const conversation = mockConversations.find((c) => c.id === conversationId);
   const resolvedVetId = conversation?.vetId ?? vetId;
   const vet = mockVets.find((v) => v.id === resolvedVetId);
+  const isAi = !!aiMode || resolvedVetId === 'tv-ai';
+  const pet = petId ? mockPets.find((p) => p.id === petId) : undefined;
+  const petName = pet?.name ?? 'น้อง';
+  const fillTemplate = (s: string) => s.replace(/\{pet\}/g, petName);
 
   // Active video call (minimized) for THIS vet → transform header
   const callCtx = useCall();
@@ -227,6 +244,41 @@ export default function ChatScreen({ route, navigation }: Props) {
     if (!result.canceled && result.assets[0]) sendImage(result.assets[0].uri);
   };
 
+  const sendAiCategory = (cat: AiCategory) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    const userText = fillTemplate(cat.prompt);
+    const replyText = fillTemplate(cat.reply);
+    const now = new Date().toISOString();
+    setMessages((prev) => [
+      ...prev,
+      {
+        id: `local-${prev.length}`,
+        conversationId,
+        fromVet: false,
+        text: userText,
+        sentAtISO: now,
+      },
+    ]);
+    setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 50);
+    if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+    setVetTyping(true);
+    setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 100);
+    typingTimeoutRef.current = setTimeout(() => {
+      setVetTyping(false);
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: `ai-${prev.length}`,
+          conversationId,
+          fromVet: true,
+          text: replyText,
+          sentAtISO: new Date().toISOString(),
+        },
+      ]);
+      setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 50);
+    }, 1400 + Math.random() * 800);
+  };
+
   const send = () => {
     const text = input.trim();
     if (!text) return;
@@ -274,7 +326,13 @@ export default function ChatScreen({ route, navigation }: Props) {
         </Pressable>
         <View style={styles.headerVet}>
           <View style={styles.vetAvatar}>
-            {vet.avatar ? (
+            {isAi ? (
+              <Image
+                source={require('../../assets/dr-meaw.png')}
+                style={styles.vetAvatarImg}
+                resizeMode="contain"
+              />
+            ) : vet.avatar ? (
               <Image source={{ uri: vet.avatar }} style={styles.vetAvatarImg} />
             ) : (
               <Icon name="UserCircle" size={28} color={semantic.primary} strokeWidth={1.5} />
@@ -282,7 +340,11 @@ export default function ChatScreen({ route, navigation }: Props) {
           </View>
           <View style={{ flex: 1 }}>
             <Text variant="bodyStrong" numberOfLines={1}>{vet.name}</Text>
-            {isCallMinimizedForVet ? (
+            {isAi ? (
+              <Text variant="caption" color={semantic.textSecondary}>
+                {pet ? `กำลังช่วยดูแลน้อง${pet.name}` : 'ผู้ช่วย AI พร้อมตอบคำถาม'}
+              </Text>
+            ) : isCallMinimizedForVet ? (
               <Animated.View style={[styles.statusRow, blinkStyle]}>
                 <Text style={styles.statusDotInline}>●</Text>
                 <Text variant="caption" color={semantic.primary}>แตะเพื่อเปิดหน้าจอวิดีโอคอล</Text>
@@ -294,20 +356,27 @@ export default function ChatScreen({ route, navigation }: Props) {
             )}
           </View>
         </View>
-        <Pressable
-          onPress={isCallMinimizedForVet ? onMaximizeCall : () => {}}
-          style={[
-            styles.callBtn,
-            isCallMinimizedForVet && styles.callBtnActive,
-            !isCallMinimizedForVet && vet.status !== 'online' && { opacity: 0.3 },
-          ]}
-          disabled={!isCallMinimizedForVet && vet.status !== 'online'}
-        >
-          <Icon name="Video" size={20} color={semantic.primary} />
-          {isCallMinimizedForVet && (
-            <Text style={styles.callBtnTime}>{formatCallTime(callDuration)}</Text>
-          )}
-        </Pressable>
+        {!isAi && (
+          <Pressable
+            onPress={isCallMinimizedForVet ? onMaximizeCall : () => {}}
+            style={[
+              styles.callBtn,
+              isCallMinimizedForVet && styles.callBtnActive,
+              !isCallMinimizedForVet && vet.status !== 'online' && { opacity: 0.3 },
+            ]}
+            disabled={!isCallMinimizedForVet && vet.status !== 'online'}
+          >
+            <Icon name="Video" size={20} color={semantic.primary} />
+            {isCallMinimizedForVet && (
+              <Text style={styles.callBtnTime}>{formatCallTime(callDuration)}</Text>
+            )}
+          </Pressable>
+        )}
+        {isAi && pet && (
+          <View style={styles.petAvatarSlot}>
+            <PetAvatar pet={pet} size={36} />
+          </View>
+        )}
       </View>
 
       <KeyboardAvoidingView
@@ -315,9 +384,18 @@ export default function ChatScreen({ route, navigation }: Props) {
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
       >
+        <View style={styles.messagesBgWrap}>
+          <LinearGradient
+            pointerEvents="none"
+            colors={['#FFE9F1', '#FFFFFF', '#E8F4FB']}
+            locations={[0, 0.5, 1]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 0, y: 1 }}
+            style={StyleSheet.absoluteFill}
+          />
         <ScrollView
           ref={scrollRef}
-          style={styles.flex}
+          style={[styles.flex, styles.messagesScroll]}
           contentContainerStyle={styles.messages}
           refreshControl={
             <RefreshControl
@@ -331,18 +409,71 @@ export default function ChatScreen({ route, navigation }: Props) {
           }
         >
           {messages.length === 0 ? (
-            <View style={styles.emptyState}>
-              <Icon name="MessageCircle" size={48} color={semantic.textMuted} strokeWidth={1.5} />
-              <Text variant="bodyStrong">เริ่มการสนทนา</Text>
-              <Text variant="caption" color={semantic.textSecondary} align="center">
-                ถามคำถามหรือส่งรูปสัตว์เลี้ยงของคุณได้เลย
-              </Text>
-            </View>
+            isAi ? (
+              <View style={styles.aiEmpty}>
+                <Animated.View
+                  entering={FadeInLeft.delay(180).duration(420)}
+                  style={styles.aiEmptyTextWrap}
+                >
+                  <Text variant="bodyStrong" style={styles.aiEmptyTitle}>
+                    มีอะไรให้หมอเหมียวช่วย
+                  </Text>
+                  <Text variant="caption" color={semantic.textSecondary}>
+                    เลือกหัวข้อด้านล่างได้เลยค่ะ
+                  </Text>
+                </Animated.View>
+                <Animated.Image
+                  entering={SlideInRight.duration(560)}
+                  source={require('../../assets/dr-meaw-greeting.png')}
+                  style={styles.aiEmptyMascot}
+                  resizeMode="contain"
+                />
+              </View>
+            ) : (
+              <View style={styles.emptyState}>
+                <Icon name="MessageCircle" size={48} color={semantic.textMuted} strokeWidth={1.5} />
+                <Text variant="bodyStrong">เริ่มการสนทนา</Text>
+                <Text variant="caption" color={semantic.textSecondary} align="center">
+                  ถามคำถามหรือส่งรูปสัตว์เลี้ยงของคุณได้เลย
+                </Text>
+              </View>
+            )
           ) : (
             messages.map((m) => <MessageBubble key={m.id} msg={m} />)
           )}
           {vetTyping && <TypingIndicator />}
         </ScrollView>
+        </View>
+
+        {isAi && (
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            style={styles.categoryScroll}
+            contentContainerStyle={styles.categoryRow}
+          >
+            {AI_CATEGORIES.map((cat) => (
+              <Pressable
+                key={cat.key}
+                onPress={() => sendAiCategory(cat)}
+                style={({ pressed }) => [
+                  styles.categoryChip,
+                  pressed && { opacity: 0.85 },
+                ]}
+              >
+                <Icon
+                  name={cat.icon as never}
+                  size={14}
+                  color={semantic.primary}
+                  strokeWidth={2.2}
+                />
+                <Text variant="bodyStrong" style={styles.categoryChipText}>
+                  {cat.label}
+                </Text>
+              </Pressable>
+            ))}
+          </ScrollView>
+        )}
 
         {/* Composer */}
         <View style={styles.composer}>
@@ -428,7 +559,7 @@ function MessageBubble({ msg }: { msg: Message }) {
             fromMe ? styles.bubbleMine : styles.bubbleTheirs,
           ]}
         >
-          <Text variant="body" color={fromMe ? semantic.onPrimary : semantic.textPrimary}>
+          <Text variant="body" color={fromMe ? semantic.textPrimary : semantic.onPrimary}>
             {msg.text}
           </Text>
         </View>
@@ -508,6 +639,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  petAvatarSlot: {
+    width: 40,
+    height: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   callBtnActive: {
     width: 'auto',
     flexDirection: 'row',
@@ -520,6 +657,12 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontFamily: 'GoogleSans_500Medium',
   },
+  messagesBgWrap: {
+    flex: 1,
+  },
+  messagesScroll: {
+    backgroundColor: 'transparent',
+  },
   messages: {
     padding: spacing.lg,
     gap: spacing.sm,
@@ -531,6 +674,56 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: spacing.sm,
     paddingTop: spacing['5xl'],
+  },
+  aiEmpty: {
+    paddingTop: spacing['3xl'],
+    paddingLeft: spacing.xs,
+    paddingRight: 140,
+    minHeight: 280,
+    justifyContent: 'center',
+    // cancel ScrollView padding on the right so the mascot can hit the edge
+    marginRight: -spacing.lg,
+  },
+  aiEmptyTextWrap: {
+    gap: spacing.sm,
+  },
+  aiEmptyMascot: {
+    position: 'absolute',
+    right: -spacing.xl,
+    bottom: 0,
+    width: 280,
+    height: 280,
+  },
+  aiEmptyTitle: {
+    fontSize: 18,
+    color: semantic.textPrimary,
+  },
+  categoryScroll: {
+    flexGrow: 0,
+    flexShrink: 0,
+  },
+  categoryRow: {
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.sm,
+    paddingBottom: spacing.md,
+    gap: 8,
+    alignItems: 'center',
+  },
+  categoryChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    height: 36,
+    paddingHorizontal: 14,
+    borderRadius: 999,
+    backgroundColor: semantic.primaryMuted,
+    borderWidth: 1,
+    borderColor: 'rgba(159,82,102,0.18)',
+  },
+  categoryChipText: {
+    fontSize: 13,
+    color: semantic.primary,
+    fontWeight: '700',
   },
   msgRow: {
     maxWidth: '78%',
@@ -550,11 +743,11 @@ const styles = StyleSheet.create({
     borderRadius: radii.xl,
   },
   bubbleMine: {
-    backgroundColor: semantic.primary,
+    backgroundColor: semantic.surfaceMuted,
     borderBottomRightRadius: 6,
   },
   bubbleTheirs: {
-    backgroundColor: semantic.surfaceMuted,
+    backgroundColor: semantic.primary,
     borderBottomLeftRadius: 6,
   },
   imageBubble: {

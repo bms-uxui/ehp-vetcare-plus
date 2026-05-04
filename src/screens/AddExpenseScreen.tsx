@@ -6,7 +6,6 @@ import {
   Pressable,
   ScrollView,
   StyleSheet,
-  TextInput,
   View,
 } from 'react-native';
 import DateTimePicker, {
@@ -24,12 +23,14 @@ import {
   AppBackground,
   Button,
   Icon,
+  Input,
   PetAvatar,
   SubPageHeader,
   Text,
 } from '../components';
-import { semantic, spacing } from '../theme';
+import { radii, semantic, spacing } from '../theme';
 import { categoryMeta, ExpenseCategory } from '../data/expenses';
+import { useExpenses } from '../data/expensesContext';
 import { mockPets } from '../data/pets';
 import { notifyNow } from '../lib/notifications';
 
@@ -54,6 +55,7 @@ const fmtThaiDate = (d: Date) =>
 
 export default function AddExpenseScreen({ navigation }: Props) {
   const insets = useSafeAreaInsets();
+  const { addExpense } = useExpenses();
   const scrollY = useSharedValue(0);
   const scrollHandler = useAnimatedScrollHandler((e) => {
     scrollY.value = e.contentOffset.y;
@@ -92,9 +94,52 @@ export default function AddExpenseScreen({ navigation }: Props) {
 
   const onSubmit = () => {
     if (!canSubmit) return;
+    const dateISO = date.toISOString().slice(0, 10);
+    const trimmedNote = note.trim();
+    const selectedPets = mockPets.filter((p) => selectedPetIds.has(p.id));
+    const totalAmount = Number(amount);
+
+    // Create a single expense entry — multiple pets share the same record
+    // and render as a stacked avatar badge. Single pet still sets `petId`
+    // for backward compat with existing mock data.
+    if (selectedPets.length === 0) {
+      addExpense({
+        category,
+        title: title.trim(),
+        amount: totalAmount,
+        dateISO,
+        note: trimmedNote || undefined,
+      });
+    } else if (selectedPets.length === 1) {
+      const p = selectedPets[0];
+      addExpense({
+        category,
+        title: title.trim(),
+        amount: totalAmount,
+        dateISO,
+        petId: p.id,
+        petName: p.name,
+        petEmoji: p.emoji,
+        note: trimmedNote || undefined,
+      });
+    } else {
+      const first = selectedPets[0];
+      addExpense({
+        category,
+        title: title.trim(),
+        amount: totalAmount,
+        dateISO,
+        petId: first.id,
+        petName: first.name,
+        petEmoji: first.emoji,
+        petIds: selectedPets.map((p) => p.id),
+        note: trimmedNote || undefined,
+      });
+    }
+
     notifyNow({
-      title: '✅ บันทึกค่าใช้จ่ายเรียบร้อย',
-      body: `${title.trim()} · ฿${Number(amount).toLocaleString('th-TH')}`,
+      title: 'บันทึกค่าใช้จ่ายเรียบร้อย',
+      body: `${title.trim()} · ฿${totalAmount.toLocaleString('th-TH')}`,
     });
     navigation.goBack();
   };
@@ -195,13 +240,13 @@ export default function AddExpenseScreen({ navigation }: Props) {
 
         {/* Form fields — title, amount, date */}
         <View style={styles.formSection}>
-          <Field
+          <Input
             label="รายการ"
             value={title}
             onChangeText={setTitle}
             placeholder="เช่น Prescription Diet 7kg"
           />
-          <Field
+          <Input
             label="จำนวนเงิน (บาท)"
             value={amount}
             onChangeText={setAmount}
@@ -210,13 +255,16 @@ export default function AddExpenseScreen({ navigation }: Props) {
           />
           {/* Date picker — tap to open native iOS calendar */}
           <View style={styles.field}>
-            <Text weight="400" style={styles.fieldLabel}>
+            <Text
+              variant="caption"
+              color={semantic.textSecondary}
+              style={styles.dateLabel}
+            >
               วันที่
             </Text>
             <Pressable
               onPress={() => setDatePickerOpen(true)}
               style={({ pressed }) => [
-                styles.fieldInput,
                 styles.dateField,
                 pressed && { opacity: 0.7 },
               ]}
@@ -309,7 +357,7 @@ export default function AddExpenseScreen({ navigation }: Props) {
 
         {/* Note — multiline */}
         <View style={styles.formSection}>
-          <Field
+          <Input
             label="หมายเหตุ"
             value={note}
             onChangeText={setNote}
@@ -402,39 +450,6 @@ function Section({
         {title}
       </Text>
       {children}
-    </View>
-  );
-}
-
-function Field({
-  label,
-  value,
-  onChangeText,
-  placeholder,
-  keyboardType,
-  multiline,
-}: {
-  label: string;
-  value: string;
-  onChangeText: (s: string) => void;
-  placeholder?: string;
-  keyboardType?: 'default' | 'decimal-pad' | 'number-pad';
-  multiline?: boolean;
-}) {
-  return (
-    <View style={styles.field}>
-      <Text weight="400" style={styles.fieldLabel}>
-        {label}
-      </Text>
-      <TextInput
-        value={value}
-        onChangeText={onChangeText}
-        placeholder={placeholder}
-        placeholderTextColor="#9A9AA0"
-        keyboardType={keyboardType}
-        multiline={multiline}
-        style={[styles.fieldInput, multiline && styles.fieldInputMultiline]}
-      />
     </View>
   );
 }
@@ -656,32 +671,22 @@ const styles = StyleSheet.create({
     gap: 16,
   },
   field: {
-    gap: 6,
+    alignSelf: 'stretch',
   },
-  fieldLabel: {
-    fontSize: 11,
-    color: '#6E6E74',
-    letterSpacing: 0.3,
-    textTransform: 'uppercase',
-    paddingHorizontal: 4,
-  },
-  fieldInput: {
-    fontSize: 16,
-    color: '#1A1A1A',
-    backgroundColor: '#F2F2F3',
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-  },
-  fieldInputMultiline: {
-    minHeight: 100,
-    textAlignVertical: 'top',
-    paddingTop: 14,
+  dateLabel: {
+    marginBottom: spacing.xs,
+    marginLeft: spacing.xs,
   },
   dateField: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    minHeight: 52,
+    paddingHorizontal: spacing.lg,
+    backgroundColor: semantic.surface,
+    borderWidth: 1.5,
+    borderColor: semantic.border,
+    borderRadius: radii.lg,
   },
   dateValue: {
     fontSize: 16,

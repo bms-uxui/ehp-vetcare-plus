@@ -13,6 +13,7 @@ import Animated, {
   useSharedValue,
 } from 'react-native-reanimated';
 import { BlurView } from 'expo-blur';
+import { LinearGradient } from 'expo-linear-gradient';
 import { GlassView, isLiquidGlassAvailable } from '../lib/glass-effect';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -115,6 +116,8 @@ type Coupon = {
   fixed?: number;
   maxDiscount?: number;
   minSubtotal?: number;
+  /** How many copies of this coupon the user owns (defaults to 1). */
+  quantity?: number;
 };
 
 const COUPONS: Coupon[] = [
@@ -148,6 +151,7 @@ const COUPONS: Coupon[] = [
     conditionNote: 'ไม่มีเงื่อนไข',
     type: 'fixed',
     fixed: 40,
+    quantity: 2,
   },
   {
     id: 'member_20',
@@ -159,6 +163,7 @@ const COUPONS: Coupon[] = [
     type: 'percent',
     percent: 20,
     maxDiscount: 500,
+    quantity: 3,
   },
 ];
 
@@ -305,21 +310,29 @@ export default function CheckoutScreen({ route, navigation }: Props) {
               strokeWidth={2.2}
             />
           </View>
-          <Text weight="500" style={styles.addressName}>
-            {MOCK_ADDRESS.name} · {MOCK_ADDRESS.phone}
-          </Text>
+          <View style={styles.addressNameRow}>
+            <Text weight="600" style={styles.addressName}>
+              {MOCK_ADDRESS.name}
+            </Text>
+            <View style={styles.tagPill}>
+              <Text style={styles.tagText}>{MOCK_ADDRESS.tag}</Text>
+            </View>
+          </View>
           <Text style={styles.addressLine} numberOfLines={2}>
             {MOCK_ADDRESS.line}
           </Text>
-          <View style={styles.tagPill}>
-            <Text style={styles.tagText}>{MOCK_ADDRESS.tag}</Text>
-          </View>
+          <Text style={styles.addressPhone}>{MOCK_ADDRESS.phone}</Text>
         </Pressable>
 
-        {/* Product list */}
+        {/* Product list — single card with divider between rows */}
         <View style={styles.list}>
-          {checkoutItems.map((item) => (
-            <CheckoutItemRow key={item.product.id} item={item} />
+          {checkoutItems.map((item, idx) => (
+            <View key={item.product.id}>
+              <CheckoutItemRow item={item} />
+              {idx < checkoutItems.length - 1 ? (
+                <View style={styles.itemDivider} />
+              ) : null}
+            </View>
           ))}
         </View>
 
@@ -329,15 +342,31 @@ export default function CheckoutScreen({ route, navigation }: Props) {
             <Text weight="500" style={styles.cardLabel}>
               การจัดส่ง
             </Text>
-            <View style={styles.summaryRow}>
-              <Text style={styles.summaryText}>จัดส่งมาตรฐาน</Text>
-              <Text weight="600" style={styles.summaryText}>
+            <View style={styles.shippingRow}>
+              <View style={styles.shippingIconWrap}>
+                <Icon
+                  name="Truck"
+                  size={16}
+                  color={semantic.primary}
+                  strokeWidth={2.2}
+                />
+              </View>
+              <View style={styles.shippingMain}>
+                <Text weight="500" style={styles.shippingName}>
+                  จัดส่งมาตรฐาน
+                </Text>
+                <Text style={styles.shippingMeta}>
+                  ถึงภายใน {shippingFee === 0 ? '1–2 วัน' : '3–5 วัน'}
+                </Text>
+              </View>
+              <Text
+                weight="600"
+                style={[
+                  styles.shippingPrice,
+                  shippingFee === 0 && { color: '#4FB36C' },
+                ]}
+              >
                 {shippingFee === 0 ? 'ฟรี' : fmtBaht(shippingFee)}
-              </Text>
-            </View>
-            <View style={styles.smallTagPill}>
-              <Text style={styles.tagText}>
-                {shippingFee === 0 ? '1–2 วัน' : '3–5 วัน'}
               </Text>
             </View>
           </View>
@@ -349,36 +378,50 @@ export default function CheckoutScreen({ route, navigation }: Props) {
             ]}
             onPress={() => setCouponSheetOpen(true)}
           >
-            <View style={styles.cardHeaderRow}>
-              <Text weight="500" style={styles.cardLabel}>
-                คูปองส่วนลด
-              </Text>
-              <Icon
-                name="ChevronRight"
-                size={16}
-                color={semantic.textMuted}
-                strokeWidth={2.2}
-              />
-            </View>
-            <View style={styles.summaryRow}>
-              <Text style={styles.summaryText}>
-                {selectedCoupon ? selectedCoupon.title : 'เลือกคูปอง'}
-              </Text>
-              <Text
-                weight="600"
+            <Text weight="500" style={styles.cardLabel}>
+              คูปองส่วนลด
+            </Text>
+            <View style={styles.shippingRow}>
+              <View
                 style={[
-                  styles.summaryText,
-                  (couponDiscount > 0 || couponEffect.shippingDiscount > 0) && {
-                    color: '#C25450',
-                  },
+                  styles.shippingIconWrap,
+                  { backgroundColor: '#FFF6D9' },
                 ]}
               >
-                {couponDiscount > 0
-                  ? `-${fmtBaht(couponDiscount)}`
-                  : couponEffect.shippingDiscount > 0
-                  ? `-${fmtBaht(couponEffect.shippingDiscount)}`
-                  : '—'}
-              </Text>
+                <Icon
+                  name="Ticket"
+                  size={16}
+                  color="#D99A20"
+                  strokeWidth={2.2}
+                />
+              </View>
+              <View style={styles.shippingMain}>
+                <Text weight="500" style={styles.shippingName}>
+                  {selectedCoupon ? selectedCoupon.title : 'เลือกคูปอง'}
+                </Text>
+                <Text style={styles.shippingMeta}>
+                  {selectedCoupon
+                    ? 'แตะเพื่อเปลี่ยนคูปอง'
+                    : `มีคูปองให้ใช้ ${COUPONS.length} ใบ`}
+                </Text>
+              </View>
+              {couponDiscount > 0 || couponEffect.shippingDiscount > 0 ? (
+                <Text weight="600" style={styles.couponSavings}>
+                  −
+                  {fmtBaht(
+                    couponDiscount > 0
+                      ? couponDiscount
+                      : couponEffect.shippingDiscount,
+                  )}
+                </Text>
+              ) : (
+                <Icon
+                  name="ChevronRight"
+                  size={16}
+                  color={semantic.textMuted}
+                  strokeWidth={2.2}
+                />
+              )}
             </View>
           </Pressable>
 
@@ -389,28 +432,20 @@ export default function CheckoutScreen({ route, navigation }: Props) {
             ]}
             onPress={() => setPaymentSheetOpen(true)}
           >
-            <View style={styles.cardHeaderRow}>
-              <Text weight="500" style={styles.cardLabel}>
-                ช่องทางชำระเงิน
-              </Text>
-              <Icon
-                name="ChevronRight"
-                size={16}
-                color={semantic.textMuted}
-                strokeWidth={2.2}
-              />
-            </View>
-            <View style={styles.payRow}>
+            <Text weight="500" style={styles.cardLabel}>
+              ช่องทางชำระเงิน
+            </Text>
+            <View style={styles.shippingRow}>
               {selectedPayment.iconImage ? (
                 <Image
                   source={selectedPayment.iconImage}
-                  style={styles.payRowIconImage}
+                  style={styles.paymentIconImage}
                   resizeMode="cover"
                 />
               ) : (
                 <View
                   style={[
-                    styles.payRowIcon,
+                    styles.shippingIconWrap,
                     { backgroundColor: selectedPayment.iconBg },
                   ]}
                 >
@@ -422,16 +457,24 @@ export default function CheckoutScreen({ route, navigation }: Props) {
                   />
                 </View>
               )}
-              <View style={{ flex: 1 }}>
-                <Text weight="600" style={styles.payRowTitle}>
+              <View style={styles.shippingMain}>
+                <Text weight="500" style={styles.shippingName}>
                   {selectedPayment.title}
                 </Text>
-                {selectedPayment.subtitle && (
-                  <Text style={styles.payRowSub}>
+                {selectedPayment.subtitle ? (
+                  <Text style={styles.shippingMeta}>
                     {selectedPayment.subtitle}
                   </Text>
+                ) : (
+                  <Text style={styles.shippingMeta}>แตะเพื่อเปลี่ยน</Text>
                 )}
               </View>
+              <Icon
+                name="ChevronRight"
+                size={16}
+                color={semantic.textMuted}
+                strokeWidth={2.2}
+              />
             </View>
           </Pressable>
 
@@ -440,19 +483,34 @@ export default function CheckoutScreen({ route, navigation }: Props) {
             <Text weight="500" style={styles.cardLabel}>
               สรุปยอด
             </Text>
-            <BreakdownRow label="รวมค่าสินค้า" value={fmtBaht(subtotal)} />
-            <BreakdownRow
-              label="ค่าจัดส่ง"
-              value={shippingFee === 0 ? 'ฟรี' : fmtBaht(shippingFee)}
-            />
-            {couponDiscount > 0 && (
+            <View style={styles.breakdownGroup}>
               <BreakdownRow
-                label="ส่วนลด"
-                value={`-${fmtBaht(couponDiscount)}`}
-                negative
+                label={`รวมค่าสินค้า · ${checkoutItems.length} รายการ`}
+                value={fmtBaht(subtotal)}
               />
-            )}
-            <BreakdownRow label="ภาษี (7%)" value={fmtBaht(tax)} />
+              <BreakdownRow
+                label="ค่าจัดส่ง"
+                value={shippingFee === 0 ? 'ฟรี' : fmtBaht(shippingFee)}
+                positive={shippingFee === 0}
+              />
+              {couponDiscount > 0 && (
+                <BreakdownRow
+                  label="ส่วนลดคูปอง"
+                  value={`−${fmtBaht(couponDiscount)}`}
+                  negative
+                />
+              )}
+              <BreakdownRow label="ภาษี (7%)" value={fmtBaht(tax)} />
+            </View>
+            <View style={styles.breakdownDivider} />
+            <View style={styles.breakdownTotalRow}>
+              <Text weight="600" style={styles.breakdownTotalLabel}>
+                ยอดที่ต้องชำระ
+              </Text>
+              <Text weight="700" style={styles.breakdownTotalValue}>
+                {fmtBaht(total)}
+              </Text>
+            </View>
           </View>
         </View>
       </Animated.ScrollView>
@@ -521,13 +579,17 @@ export default function CheckoutScreen({ route, navigation }: Props) {
                 />
               </View>
               <View style={styles.flexBtnWrap}>
-                <Button
-                  label="ยืนยันชำระเงิน"
-                  variant="primary"
-                  uppercase={false}
+                <Pressable
                   onPress={onConfirm}
-                  style={styles.flexBtn}
-                />
+                  style={({ pressed }) => [
+                    styles.confirmBtn,
+                    pressed && { opacity: 0.85 },
+                  ]}
+                >
+                  <Text weight="600" style={styles.confirmBtnText}>
+                    ยืนยันชำระเงิน
+                  </Text>
+                </Pressable>
               </View>
             </View>
           </View>
@@ -640,22 +702,30 @@ function CouponSheet({
           contentContainerStyle={styles.payScrollContent}
           showsVerticalScrollIndicator={false}
         >
-          {/* Banner — promo / info */}
+          {/* Banner — pink gradient + lion illustration on the right */}
           <View style={styles.payBannerWrap}>
             <View style={styles.payBanner}>
-              <Icon
-                name="Ticket"
-                size={28}
-                color={semantic.primary}
-                strokeWidth={2}
+              <LinearGradient
+                pointerEvents="none"
+                colors={['#FFE9EC', '#FBF3F4']}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={StyleSheet.absoluteFill}
               />
-              <View style={{ flex: 1 }}>
+              <View style={styles.payBannerText}>
                 <Text weight="600" style={styles.payBannerTitle}>
                   เลือกคูปองได้ 1 ใบต่อออเดอร์
                 </Text>
                 <Text style={styles.payBannerSub}>
                   ระบบจะคำนวณส่วนลดให้อัตโนมัติเมื่อชำระเงิน
                 </Text>
+              </View>
+              <View pointerEvents="none" style={styles.payBannerImageWrap}>
+                <Image
+                  source={require('../../assets/illustrations/coupon-lion.png')}
+                  style={styles.payBannerImage}
+                  resizeMode="cover"
+                />
               </View>
             </View>
           </View>
@@ -739,13 +809,22 @@ function CouponSheet({
                       </View>
                     )}
                     <View style={styles.couponBodyV2}>
-                      <Text
-                        weight="600"
-                        style={styles.couponTitleV2}
-                        numberOfLines={1}
-                      >
-                        {c.title}
-                      </Text>
+                      <View style={styles.couponTitleRow}>
+                        <Text
+                          weight="600"
+                          style={styles.couponTitleV2}
+                          numberOfLines={1}
+                        >
+                          {c.title}
+                        </Text>
+                        {c.quantity && c.quantity > 1 ? (
+                          <View style={styles.couponCountBadge}>
+                            <Text style={styles.couponCountBadgeText}>
+                              x{c.quantity}
+                            </Text>
+                          </View>
+                        ) : null}
+                      </View>
                       <View style={styles.couponMetaRow}>
                         <View style={styles.couponConditionPillV2}>
                           <Text style={styles.couponConditionTextV2}>
@@ -839,22 +918,30 @@ function PaymentSheet({
           contentContainerStyle={styles.payScrollContent}
           showsVerticalScrollIndicator={false}
         >
-          {/* Banner — promotional area */}
+          {/* Banner — pink gradient + illustration on the right */}
           <View style={styles.payBannerWrap}>
             <View style={styles.payBanner}>
-              <Icon
-                name="ShieldCheck"
-                size={28}
-                color={semantic.primary}
-                strokeWidth={2}
+              <LinearGradient
+                pointerEvents="none"
+                colors={['#FFE9EC', '#FBF3F4']}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={StyleSheet.absoluteFill}
               />
-              <View style={{ flex: 1 }}>
+              <View style={styles.payBannerText}>
                 <Text weight="600" style={styles.payBannerTitle}>
                   ชำระเงินปลอดภัย 100%
                 </Text>
                 <Text style={styles.payBannerSub}>
                   เข้ารหัส SSL · รับรองโดย Bank of Thailand
                 </Text>
+              </View>
+              <View pointerEvents="none" style={styles.payBannerImageWrap}>
+                <Image
+                  source={require('../../assets/illustrations/payment-secure.png')}
+                  style={styles.payBannerImage}
+                  resizeMode="cover"
+                />
               </View>
             </View>
           </View>
@@ -928,19 +1015,23 @@ function BreakdownRow({
   label,
   value,
   negative,
+  positive,
 }: {
   label: string;
   value: string;
   negative?: boolean;
+  positive?: boolean;
 }) {
   return (
     <View style={styles.breakdownRow}>
-      <Text weight="500" style={styles.breakdownLabel}>
-        {label}
-      </Text>
+      <Text style={styles.breakdownLabel}>{label}</Text>
       <Text
-        weight="700"
-        style={[styles.breakdownValue, negative && { color: '#C25450' }]}
+        weight="600"
+        style={[
+          styles.breakdownValue,
+          negative && { color: '#C25450' },
+          positive && { color: '#4FB36C' },
+        ]}
       >
         {value}
       </Text>
@@ -978,14 +1069,17 @@ const styles = StyleSheet.create({
   // Address card
   addressCard: {
     marginHorizontal: spacing.lg,
-    marginBottom: spacing.sm,
+    marginBottom: 16,
     padding: spacing.lg,
     borderRadius: 16,
     backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: '#F5E4E7',
     gap: 8,
     alignItems: 'flex-start',
+    shadowColor: '#5E303C',
+    shadowOpacity: 0.08,
+    shadowRadius: 16,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 3,
   },
   addressHeader: {
     flexDirection: 'row',
@@ -993,8 +1087,13 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     width: '100%',
   },
+  addressNameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
   addressName: {
-    fontSize: 14,
+    fontSize: 15,
     lineHeight: 20,
     color: '#1A1A1A',
   },
@@ -1003,12 +1102,16 @@ const styles = StyleSheet.create({
     lineHeight: 20,
     color: '#1A1A1A',
   },
+  addressPhone: {
+    fontSize: 13,
+    lineHeight: 18,
+    color: '#8E8E93',
+  },
   tagPill: {
     paddingHorizontal: 10,
-    paddingVertical: 4,
+    paddingVertical: 3,
     borderRadius: 100,
     backgroundColor: '#F2F2F3',
-    marginTop: 2,
   },
   smallTagPill: {
     alignSelf: 'flex-start',
@@ -1025,18 +1128,26 @@ const styles = StyleSheet.create({
 
   // Product list — read-only items
   list: {
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.sm,
-    gap: 10,
+    marginHorizontal: spacing.lg,
+    marginBottom: 16,
+    borderRadius: 16,
+    backgroundColor: '#FFFFFF',
+    overflow: 'hidden',
+    shadowColor: '#5E303C',
+    shadowOpacity: 0.08,
+    shadowRadius: 16,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 3,
   },
   itemCard: {
     flexDirection: 'row',
     height: 96,
-    borderRadius: 16,
-    backgroundColor: '#FFFFFF',
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: '#E6E6E8',
-    overflow: 'hidden',
+    backgroundColor: 'transparent',
+  },
+  itemDivider: {
+    height: StyleSheet.hairlineWidth,
+    backgroundColor: '#EFE7E9',
+    marginLeft: 96,
   },
   itemImageWrap: {
     padding: 8,
@@ -1085,16 +1196,18 @@ const styles = StyleSheet.create({
   // Summary section
   summarySection: {
     paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.sm,
-    gap: 10,
+    gap: 16,
   },
   summaryCard: {
     padding: spacing.lg,
     borderRadius: 16,
     backgroundColor: '#FFFFFF',
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: '#E6E6E8',
     gap: 8,
+    shadowColor: '#5E303C',
+    shadowOpacity: 0.08,
+    shadowRadius: 16,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 3,
   },
   cardHeaderRow: {
     flexDirection: 'row',
@@ -1111,20 +1224,84 @@ const styles = StyleSheet.create({
     lineHeight: 20,
     color: '#1A1A1A',
   },
+  shippingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  shippingIconWrap: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#F5E4E7',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  shippingMain: {
+    flex: 1,
+    gap: 2,
+  },
+  shippingName: {
+    fontSize: 15,
+    lineHeight: 20,
+    color: '#1A1A1A',
+  },
+  shippingMeta: {
+    fontSize: 12,
+    lineHeight: 16,
+    color: '#8E8E93',
+  },
+  shippingPrice: {
+    fontSize: 15,
+    color: '#1A1A1A',
+  },
+  paymentIconImage: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+  },
+  couponSavings: {
+    fontSize: 15,
+    color: '#C25450',
+  },
+  breakdownGroup: {
+    gap: 6,
+  },
   breakdownRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
   },
   breakdownLabel: {
-    fontSize: 12,
+    fontSize: 13,
+    lineHeight: 18,
+    color: '#6E6E74',
+  },
+  breakdownValue: {
+    fontSize: 14,
     lineHeight: 18,
     color: '#1A1A1A',
   },
-  breakdownValue: {
-    fontSize: 12,
-    lineHeight: 18,
+  breakdownDivider: {
+    height: StyleSheet.hairlineWidth,
+    backgroundColor: '#EFE7E9',
+    marginVertical: 4,
+  },
+  breakdownTotalRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  breakdownTotalLabel: {
+    fontSize: 14,
+    lineHeight: 20,
     color: '#1A1A1A',
+  },
+  breakdownTotalValue: {
+    fontSize: 18,
+    lineHeight: 22,
+    color: semantic.primary,
+    letterSpacing: -0.3,
   },
 
   // Sticky bottom bar
@@ -1180,8 +1357,22 @@ const styles = StyleSheet.create({
   },
   flexBtn: {
     height: 48,
-    borderRadius: 16,
+    borderRadius: 999,
     width: '100%',
+  },
+  confirmBtn: {
+    height: 48,
+    borderRadius: 999,
+    width: '100%',
+    backgroundColor: semantic.primary,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+  },
+  confirmBtnText: {
+    fontSize: 15,
+    color: '#FFFFFF',
   },
 
   // Native iOS pageSheet content root
@@ -1429,26 +1620,39 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.sm,
   },
   payBanner: {
-    height: 96,
-    borderRadius: 16,
-    paddingHorizontal: spacing.lg,
+    height: 100,
+    borderRadius: 24,
+    overflow: 'hidden',
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.md,
-    backgroundColor: '#FBF3F4',
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: '#F5E4E7',
+    paddingRight: 91,
+    position: 'relative',
+  },
+  payBannerText: {
+    flex: 1,
+    padding: 16,
+    gap: 6,
   },
   payBannerTitle: {
-    fontSize: 14,
+    fontSize: 15,
     lineHeight: 20,
-    color: '#1A1A1A',
+    color: '#000000',
   },
   payBannerSub: {
     fontSize: 12,
     lineHeight: 16,
-    color: '#6E6E74',
-    marginTop: 2,
+    color: '#1A1A1A',
+  },
+  payBannerImageWrap: {
+    position: 'absolute',
+    right: 0,
+    bottom: 0,
+    width: 100,
+    height: 100,
+  },
+  payBannerImage: {
+    width: '100%',
+    height: '100%',
   },
 
   // Section
@@ -1575,10 +1779,28 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 8,
   },
+  couponTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
   couponTitleV2: {
+    flexShrink: 1,
     fontSize: 14,
     lineHeight: 18,
     color: '#1A1A1A',
+  },
+  couponCountBadge: {
+    paddingHorizontal: 6,
+    paddingVertical: 1,
+    borderRadius: 100,
+    backgroundColor: semantic.primary,
+  },
+  couponCountBadgeText: {
+    fontSize: 11,
+    lineHeight: 14,
+    color: '#FFFFFF',
+    fontWeight: '700',
   },
   couponDescV2: {
     fontSize: 12,

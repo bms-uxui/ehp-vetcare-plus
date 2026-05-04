@@ -3,7 +3,7 @@ import { Image, Pressable, StyleSheet } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useCall } from '../data/callContext';
 import { mockConversations, mockVets } from '../data/televet';
-import { navigationRef } from '../../App';
+import { navigationRef } from '../lib/navigationRef';
 import { semantic, spacing } from '../theme';
 import Text from './Text';
 
@@ -62,7 +62,7 @@ export default function MiniCallOverlay() {
   const onPress = () => {
     maximize();
     if (navigationRef.isReady()) {
-      navigationRef.navigate('VideoCall', { vetId: state.vetId! });
+      (navigationRef as any).navigate('VideoCall', { vetId: state.vetId! });
     }
   };
 

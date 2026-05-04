@@ -1,4 +1,6 @@
-import { Pressable, StyleSheet, View } from 'react-native';
+import { ImageSourcePropType, Pressable, StyleSheet, View } from 'react-native';
+import { Image } from 'expo-image';
+import { LinearGradient } from 'expo-linear-gradient';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { RootStackParamList } from '../../App';
@@ -12,6 +14,13 @@ type PathOption = {
   subtitle: string;
   route: keyof RootStackParamList;
   recommended?: boolean;
+  image?: ImageSourcePropType;
+  imageOffsetX?: number;
+  imageOffsetY?: number;
+  imageResizeMode?: 'cover' | 'contain';
+  imageBg?: string;
+  strokeColor?: string;
+  shadowColor?: string;
 };
 
 const OPTIONS: PathOption[] = [
@@ -21,12 +30,20 @@ const OPTIONS: PathOption[] = [
     subtitle: 'ถ่ายรูปบัตรเพื่อดึงข้อมูลอัตโนมัติ',
     route: 'AddPetScan',
     recommended: true,
+    image: require('../../assets/scan-pet-id-card-hero.png'),
+    strokeColor: '#9F5266',
+    shadowColor: '#7E3D4F',
   },
   {
     key: 'manual',
     title: 'กรอกข้อมูลเอง',
     subtitle: 'กรอกข้อมูลเอง',
     route: 'AddPetManual',
+    image: require('../../assets/manual-input-hero.png'),
+    imageOffsetX: 0,
+    imageOffsetY: 4,
+    imageResizeMode: 'contain',
+    imageBg: '#FDF6EF',
   },
 ];
 
@@ -59,27 +76,76 @@ export default function AddPetScreen({ navigation }: Props) {
             key={opt.key}
             onPress={() => navigation.navigate(opt.route as any)}
             style={({ pressed }) => [
-              styles.card,
-              pressed && { opacity: 0.9 },
+              styles.cardShadow,
+              opt.shadowColor
+                ? {
+                    shadowColor: opt.shadowColor,
+                    shadowOpacity: 0.28,
+                    shadowRadius: 22,
+                    shadowOffset: { width: 0, height: 12 },
+                    elevation: 10,
+                  }
+                : null,
+              pressed && { opacity: 0.92 },
             ]}
           >
-            <View style={styles.cardImage}>
-              {opt.recommended && (
-                <View style={styles.recommendBadge}>
-                  <Text variant="bodyStrong" style={styles.recommendText}>
-                    แนะนำ
+            <LinearGradient
+              colors={[
+                '#FFFFFF',
+                opt.strokeColor ?? '#FFD2B8',
+              ]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={[
+                styles.cardStroke,
+                opt.strokeColor ? { padding: 2.5 } : null,
+              ]}
+            >
+              <View style={styles.card}>
+                <View
+                  style={[
+                    styles.cardImage,
+                    opt.imageBg ? { backgroundColor: opt.imageBg } : null,
+                  ]}
+                >
+                  {opt.image && (
+                    <Image
+                      source={opt.image}
+                      style={[
+                        styles.cardImageInner,
+                        (opt.imageOffsetX != null || opt.imageOffsetY != null)
+                          ? {
+                              transform: [
+                                { translateX: opt.imageOffsetX ?? 0 },
+                                { translateY: opt.imageOffsetY ?? 0 },
+                                { scale: 1.05 },
+                              ],
+                            }
+                          : null,
+                      ]}
+                      contentFit={opt.imageResizeMode ?? 'cover'}
+                      transition={0}
+                      cachePolicy="memory-disk"
+                    />
+                  )}
+                  {opt.recommended && (
+                    <View style={styles.recommendBadge}>
+                      <Text variant="bodyStrong" style={styles.recommendText}>
+                        แนะนำ
+                      </Text>
+                    </View>
+                  )}
+                </View>
+                <View style={styles.cardText}>
+                  <Text variant="bodyStrong" style={styles.cardTitle}>
+                    {opt.title}
+                  </Text>
+                  <Text variant="body" style={styles.cardSubtitle}>
+                    {opt.subtitle}
                   </Text>
                 </View>
-              )}
-            </View>
-            <View style={styles.cardText}>
-              <Text variant="bodyStrong" style={styles.cardTitle}>
-                {opt.title}
-              </Text>
-              <Text variant="body" style={styles.cardSubtitle}>
-                {opt.subtitle}
-              </Text>
-            </View>
+              </View>
+            </LinearGradient>
           </Pressable>
         ))}
       </View>
@@ -119,46 +185,66 @@ const styles = StyleSheet.create({
     paddingTop: 24,
     gap: 12,
   },
+  cardShadow: {
+    borderRadius: 24,
+    shadowColor: '#7E3D4F',
+    shadowOpacity: 0.14,
+    shadowRadius: 16,
+    shadowOffset: { width: 0, height: 8 },
+    elevation: 6,
+  },
+  cardStroke: {
+    borderRadius: 24,
+    padding: 1.5,
+  },
   card: {
     height: 230,
-    borderRadius: 16,
-    backgroundColor: '#D9D9D9',
+    borderRadius: 22.5,
+    backgroundColor: '#FFFFFF',
     overflow: 'hidden',
   },
   cardImage: {
     height: 158,
-    backgroundColor: '#B2B2B2',
-    position: 'relative',
+    width: '100%',
+    backgroundColor: '#FFFFFF',
+    overflow: 'hidden',
+  },
+  cardImageInner: {
+    flex: 1,
+    width: undefined,
+    height: undefined,
+    transform: [{ scale: 1.05 }],
   },
   recommendBadge: {
     position: 'absolute',
     top: 12,
     right: 12,
-    backgroundColor: '#FFFFFF',
-    paddingHorizontal: 8,
-    paddingVertical: 2,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
     borderRadius: 100,
+    backgroundColor: '#9F5266',
   },
   recommendText: {
-    fontSize: 12,
-    lineHeight: 20,
-    color: '#000000',
-    fontWeight: '500',
+    fontSize: 11,
+    lineHeight: 16,
+    color: '#FFFFFF',
+    fontWeight: '700',
+    letterSpacing: 0.4,
   },
   cardText: {
-    paddingHorizontal: 12,
-    paddingTop: 12,
-    gap: 8,
+    paddingHorizontal: 16,
+    paddingTop: 14,
+    gap: 4,
   },
   cardTitle: {
     fontSize: 16,
-    lineHeight: 20,
+    lineHeight: 22,
     color: '#1A1A1F',
-    fontWeight: '500',
+    fontWeight: '700',
   },
   cardSubtitle: {
-    fontSize: 14,
-    lineHeight: 20,
-    color: '#4A4A50',
+    fontSize: 13,
+    lineHeight: 18,
+    color: '#6E6E74',
   },
 });

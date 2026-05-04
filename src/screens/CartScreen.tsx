@@ -27,14 +27,7 @@ import { GlassView, isLiquidGlassAvailable } from '../lib/glass-effect';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { RootStackParamList } from '../../App';
-import {
-  AppBackground,
-  Button,
-  Icon,
-  IconButton,
-  SubPageHeader,
-  Text,
-} from '../components';
+import { AppBackground, Button, Icon, Text } from '../components';
 import { semantic, spacing } from '../theme';
 import { fmtBaht } from '../data/products';
 import { useCart, cartStore, CartItem } from '../data/cart';
@@ -42,6 +35,8 @@ import { useCart, cartStore, CartItem } from '../data/cart';
 const LIQUID_GLASS = isLiquidGlassAvailable();
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Cart'>;
+
+const HEADER_HEIGHT = 56;
 
 export default function CartScreen({ navigation }: Props) {
   const insets = useSafeAreaInsets();
@@ -165,6 +160,28 @@ export default function CartScreen({ navigation }: Props) {
     scrollY.value = e.contentOffset.y;
   });
 
+  // Graduated blur for the appbar — soft layer fades in first, then heavy
+  // layer overlays. Matches the AddFeedingSchedule pattern.
+  const headerSoftBlurStyle = useAnimatedStyle(() => ({
+    opacity: interpolate(scrollY.value, [0, 80], [0, 1], Extrapolation.CLAMP),
+  }));
+  const headerHardBlurStyle = useAnimatedStyle(() => ({
+    opacity: interpolate(
+      scrollY.value,
+      [60, 160],
+      [0, 1],
+      Extrapolation.CLAMP,
+    ),
+  }));
+  const headerHairlineStyle = useAnimatedStyle(() => ({
+    opacity: interpolate(
+      scrollY.value,
+      [60, 160],
+      [0, 1],
+      Extrapolation.CLAMP,
+    ),
+  }));
+
   const onCheckout = () => {
     if (selectedCount === 0) {
       Alert.alert('ยังไม่เลือกสินค้า', 'กรุณาเลือกอย่างน้อย 1 รายการ');
@@ -179,7 +196,38 @@ export default function CartScreen({ navigation }: Props) {
     return (
       <View style={styles.emptyRoot}>
         <AppBackground />
-        <SubPageHeader title="ตะกร้าสินค้า" onBack={() => navigation.goBack()} />
+        <View
+          style={[
+            styles.header,
+            { paddingTop: insets.top, height: insets.top + HEADER_HEIGHT },
+          ]}
+        >
+          <View style={styles.headerRow}>
+            <Pressable
+              onPress={() => navigation.goBack()}
+              hitSlop={8}
+              style={({ pressed }) => [
+                styles.headerIconBtn,
+                pressed && { opacity: 0.7, transform: [{ scale: 0.96 }] },
+              ]}
+            >
+              <Icon
+                name="ChevronLeft"
+                size={20}
+                color="#1A1A1A"
+                strokeWidth={2.4}
+              />
+            </Pressable>
+            <Text
+              variant="bodyStrong"
+              numberOfLines={1}
+              style={styles.headerTitle}
+            >
+              ตะกร้าสินค้า
+            </Text>
+            <View style={styles.headerIconPlaceholder} />
+          </View>
+        </View>
         <View style={[styles.empty, { paddingTop: 80 }]}>
           <Icon
             name="ShoppingCart"
@@ -290,15 +338,81 @@ export default function CartScreen({ navigation }: Props) {
       )}
 
       {!searchOpen && (
-        <SubPageHeader
-          title="ตะกร้าสินค้า"
-          onBack={() => navigation.goBack()}
-          trailing={{
-            icon: 'Search',
-            onPress: openSearch,
-            accessibilityLabel: 'ค้นหาในตะกร้า',
-          }}
-        />
+        <View
+          style={[
+            styles.header,
+            { paddingTop: insets.top, height: insets.top + HEADER_HEIGHT },
+          ]}
+          pointerEvents="box-none"
+        >
+          {/* Soft layer — appears first as user starts scrolling */}
+          <Animated.View
+            pointerEvents="none"
+            style={[StyleSheet.absoluteFill, headerSoftBlurStyle]}
+          >
+            <BlurView
+              intensity={30}
+              tint="systemChromeMaterialLight"
+              style={StyleSheet.absoluteFill}
+            />
+          </Animated.View>
+          {/* Heavy layer — fully frosted once content scrolls under */}
+          <Animated.View
+            pointerEvents="none"
+            style={[StyleSheet.absoluteFill, headerHardBlurStyle]}
+          >
+            <BlurView
+              intensity={80}
+              tint="systemChromeMaterialLight"
+              style={StyleSheet.absoluteFill}
+            />
+          </Animated.View>
+          <Animated.View
+            pointerEvents="none"
+            style={[styles.headerHairline, headerHairlineStyle]}
+          />
+
+          <View style={styles.headerRow}>
+            <Pressable
+              onPress={() => navigation.goBack()}
+              hitSlop={8}
+              style={({ pressed }) => [
+                styles.headerIconBtn,
+                pressed && { opacity: 0.7, transform: [{ scale: 0.96 }] },
+              ]}
+            >
+              <Icon
+                name="ChevronLeft"
+                size={20}
+                color="#1A1A1A"
+                strokeWidth={2.4}
+              />
+            </Pressable>
+            <Text
+              variant="bodyStrong"
+              numberOfLines={1}
+              style={styles.headerTitle}
+            >
+              ตะกร้าสินค้า
+            </Text>
+            <Pressable
+              onPress={openSearch}
+              hitSlop={8}
+              accessibilityLabel="ค้นหาในตะกร้า"
+              style={({ pressed }) => [
+                styles.headerIconBtn,
+                pressed && { opacity: 0.7, transform: [{ scale: 0.96 }] },
+              ]}
+            >
+              <Icon
+                name="Search"
+                size={20}
+                color="#1A1A1A"
+                strokeWidth={2.2}
+              />
+            </Pressable>
+          </View>
+        </View>
       )}
 
       <Animated.ScrollView
@@ -306,7 +420,7 @@ export default function CartScreen({ navigation }: Props) {
         contentContainerStyle={[
           styles.scroll,
           {
-            paddingTop: searchOpen ? insets.top + 56 : spacing.md,
+            paddingTop: insets.top + HEADER_HEIGHT,
             paddingBottom: 220,
           },
         ]}
@@ -385,13 +499,23 @@ export default function CartScreen({ navigation }: Props) {
                 {fmtBaht(selectedSubtotal)}
               </Text>
             </View>
-            <Button
-              label="ชำระเงิน"
-              variant="primary"
-              uppercase={false}
+            <Pressable
               onPress={onCheckout}
-              style={styles.checkoutBtn}
-            />
+              style={({ pressed }) => [
+                styles.checkoutBtn,
+                pressed && { opacity: 0.85 },
+              ]}
+            >
+              <Icon
+                name="CreditCard"
+                size={18}
+                color="#FFFFFF"
+                strokeWidth={2.2}
+              />
+              <Text weight="600" style={styles.checkoutBtnText}>
+                ชำระเงิน
+              </Text>
+            </Pressable>
           </View>
         </View>
       </View>
@@ -655,21 +779,31 @@ function CartItemRow({
             )}
           </View>
           <View style={styles.qtyControls}>
-            <IconButton
-              icon="Minus"
-              size="sm"
+            <Pressable
               onPress={onDec}
+              hitSlop={6}
               accessibilityLabel="ลดจำนวน"
-            />
+              style={({ pressed }) => [
+                styles.qtyBtn,
+                pressed && { opacity: 0.7, transform: [{ scale: 0.94 }] },
+              ]}
+            >
+              <Icon name="Minus" size={14} color="#1A1A1A" strokeWidth={2.4} />
+            </Pressable>
             <Text weight="500" style={styles.qtyText}>
               {item.qty}
             </Text>
-            <IconButton
-              icon="Plus"
-              size="sm"
+            <Pressable
               onPress={onInc}
+              hitSlop={6}
               accessibilityLabel="เพิ่มจำนวน"
-            />
+              style={({ pressed }) => [
+                styles.qtyBtn,
+                pressed && { opacity: 0.7, transform: [{ scale: 0.94 }] },
+              ]}
+            >
+              <Icon name="Plus" size={14} color="#1A1A1A" strokeWidth={2.4} />
+            </Pressable>
           </View>
         </View>
       </View>
@@ -699,6 +833,54 @@ const styles = StyleSheet.create({
     gap: spacing.md,
   },
 
+  // Animated blur header — overlay at the top, blurs in on scroll
+  header: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    zIndex: 10,
+  },
+  headerHairline: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: StyleSheet.hairlineWidth,
+    backgroundColor: 'rgba(0,0,0,0.08)',
+  },
+  headerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    height: HEADER_HEIGHT,
+    paddingHorizontal: 12,
+  },
+  headerIconBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#FFFFFF',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: 'rgba(0,0,0,0.1)',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.06,
+    shadowRadius: 2,
+    elevation: 1,
+  },
+  headerIconPlaceholder: {
+    width: 36,
+    height: 36,
+  },
+  headerTitle: {
+    flex: 1,
+    marginLeft: 16,
+    fontSize: 17,
+    color: '#1A1A1A',
+  },
+
   // Hero
   hero: {
     paddingVertical: spacing.md,
@@ -718,7 +900,7 @@ const styles = StyleSheet.create({
 
   // List
   list: {
-    gap: spacing.sm,
+    gap: 16,
   },
 
   // Apple-style expanding search overlay
@@ -792,12 +974,18 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
 
-  // Swipe-to-reveal — outer container clips overflow, action buttons sit underneath
+  // Swipe-to-reveal — outer container clips overflow, action buttons sit underneath.
+  // Shadow lives here so it renders outside the clipped item card edge.
   swipeContainer: {
     height: 96,
     borderRadius: 16,
     overflow: 'hidden',
     backgroundColor: 'transparent',
+    shadowColor: '#5E303C',
+    shadowOpacity: 0.08,
+    shadowRadius: 16,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 3,
   },
   swipeActions: {
     position: 'absolute',
@@ -846,8 +1034,6 @@ const styles = StyleSheet.create({
     height: 96,
     borderRadius: 16,
     backgroundColor: '#FFFFFF',
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: '#E6E6E8',
     overflow: 'hidden',
   },
   itemImageWrap: {
@@ -922,6 +1108,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 10,
   },
+  qtyBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#F2F2F3',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   qtyText: {
     minWidth: 16,
     fontSize: 14,
@@ -977,6 +1171,15 @@ const styles = StyleSheet.create({
   checkoutBtn: {
     width: '100%',
     height: 48,
-    borderRadius: 16,
+    borderRadius: 999,
+    backgroundColor: semantic.primary,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+  },
+  checkoutBtnText: {
+    fontSize: 15,
+    color: '#FFFFFF',
   },
 });

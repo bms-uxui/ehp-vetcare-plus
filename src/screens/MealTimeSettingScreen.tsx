@@ -1,32 +1,33 @@
 import { useEffect, useMemo, useState } from 'react';
 import {
+  Image,
   Modal,
   Platform,
   Pressable,
   ScrollView,
   StyleSheet,
-  Switch,
-  TextInput,
   View,
 } from 'react-native';
-import Animated, {
-  FadeInDown,
-  FadeOutDown,
-} from 'react-native-reanimated';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 import DateTimePicker, {
   DateTimePickerEvent,
 } from '@react-native-community/datetimepicker';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../App';
-import { AppBackground, Icon, Text } from '../components';
-import { semantic } from '../theme';
+import { AppBackground, FeedingTypeCard, Icon, Text, TextField } from '../components';
 import { mockPets } from '../data/pets';
 import { FeedingSchedule, mockSchedules } from '../data/reminders';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'MealTimeSetting'>;
 
 const TIME_RE = /^([01]\d|2[0-3]):[0-5]\d$/;
+
+const PRESET_TIMES = ['06:00', '07:00', '08:00', '12:00', '15:00', '18:00'];
+
+const DAY_LABELS = ['จ', 'อ', 'พ', 'พฤ.', 'ศ', 'ส', 'อา.'];
+// daysOfWeek uses 0=Sun..6=Sat; UI presents Mon..Sun.
+const DAY_INDEXES = [1, 2, 3, 4, 5, 6, 0];
 
 function parseTime(hhmm: string): Date {
   const m = /^([01]?\d|2[0-3]):([0-5]\d)$/.exec(hhmm);
@@ -79,9 +80,34 @@ export default function MealTimeSettingScreen({ route, navigation }: Props) {
   ) => setDraft((d) => ({ ...d, [key]: value }));
 
   const errs = {
-    time: TIME_RE.test(draft.time) ? undefined : 'รูปแบบเวลาไม่ถูกต้อง (HH:MM)',
+    time: TIME_RE.test(draft.time) ? undefined : 'รูปแบบเวลาไม่ถูกต้อง',
   };
   const hasErrors = !!errs.time;
+
+  const selectPet = (id: string) => {
+    const pet = mockPets.find((p) => p.id === id);
+    if (!pet) return;
+    setDraft((d) => ({
+      ...d,
+      petId: pet.id,
+      petName: pet.name,
+      petEmoji: pet.emoji,
+    }));
+  };
+
+  const toggleDay = (dayIdx: number) => {
+    const cur = draft.daysOfWeek;
+    // Empty = every day. First tap converts to "all selected then deselect tapped".
+    const expanded = cur.length === 0 ? [0, 1, 2, 3, 4, 5, 6] : cur;
+    const next = expanded.includes(dayIdx)
+      ? expanded.filter((d) => d !== dayIdx)
+      : [...expanded, dayIdx].sort();
+    // If user re-selects all 7, store as [] (every day) for cleaner persistence.
+    update('daysOfWeek', next.length === 7 ? [] : next);
+  };
+
+  const isDayActive = (dayIdx: number) =>
+    draft.daysOfWeek.length === 0 || draft.daysOfWeek.includes(dayIdx);
 
   const save = () => {
     if (hasErrors) return;
@@ -92,10 +118,11 @@ export default function MealTimeSettingScreen({ route, navigation }: Props) {
       if (idx >= 0) mockSchedules[idx] = draft;
     }
     navigation.popTo('PetDetail', {
-      petId,
+      petId: draft.petId,
       flashMessage: 'บันทึกเรียบร้อยแล้ว',
     });
   };
+
   const remove = () => {
     if (isNew) return;
     const idx = mockSchedules.findIndex((s) => s.id === draft.id);
@@ -116,7 +143,7 @@ export default function MealTimeSettingScreen({ route, navigation }: Props) {
           <Icon name="ChevronLeft" size={20} color="#1A1A1A" strokeWidth={2.4} />
         </Pressable>
         <Text variant="bodyStrong" style={styles.appbarTitle}>
-          {isNew ? 'เพิ่มตารางให้อาหาร' : 'ตั้งเวลาให้อาหาร'}
+          {isNew ? 'เพิ่มตาราง' : 'แก้ไขตาราง'}
         </Text>
         <Pressable
           onPress={save}
@@ -124,55 +151,130 @@ export default function MealTimeSettingScreen({ route, navigation }: Props) {
           hitSlop={8}
           style={({ pressed }) => [
             styles.appbarBtn,
+            styles.appbarSaveBtn,
             hasErrors && { opacity: 0.4 },
             pressed && !hasErrors && { opacity: 0.6 },
           ]}
         >
-          <Text variant="bodyStrong" style={styles.appbarSave}>
+          <Text
+            variant="bodyStrong"
+            style={styles.appbarSave}
+            numberOfLines={1}
+          >
             บันทึก
           </Text>
         </Pressable>
       </View>
 
-      <ScrollView
+      <KeyboardAwareScrollView
+        bottomOffset={24}
         keyboardShouldPersistTaps="handled"
         keyboardDismissMode="interactive"
-        automaticallyAdjustKeyboardInsets
-        contentContainerStyle={styles.body}
+        contentContainerStyle={[
+          styles.body,
+          { paddingBottom: insets.bottom + 32 },
+        ]}
         showsVerticalScrollIndicator={false}
       >
-        <View style={styles.fieldWrap}>
-          <Text variant="caption" style={styles.fieldLabel}>
-            ประเภท
+        <FeedingTypeCard
+          value={draft.type}
+          onChange={(v) => update('type', v)}
+        />
+
+        {/* Pet selector */}
+        <View style={styles.section}>
+          <Text variant="bodyStrong" style={styles.sectionLabel}>
+            สัตว์เลี้ยง
           </Text>
-          <View style={styles.typeTileRow}>
-            {(
-              [
-                { key: 'food', label: 'อาหาร', icon: 'UtensilsCrossed' },
-                { key: 'water', label: 'น้ำดื่ม', icon: 'Droplet' },
-              ] as const
-            ).map((opt) => {
-              const active = draft.type === opt.key;
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.petRow}
+          >
+            {mockPets.map((p) => {
+              const active = p.id === draft.petId;
               return (
                 <Pressable
-                  key={opt.key}
-                  onPress={() => update('type', opt.key)}
-                  style={[styles.typeTile, active && styles.typeTileActive]}
+                  key={p.id}
+                  onPress={() => selectPet(p.id)}
+                  style={({ pressed }) => [
+                    styles.petItem,
+                    pressed && { opacity: 0.85 },
+                  ]}
                 >
-                  <Icon
-                    name={opt.icon}
-                    size={22}
-                    color={active ? '#FFFFFF' : '#9F5266'}
-                    strokeWidth={2.2}
-                  />
+                  <View
+                    style={[
+                      styles.petAvatarRing,
+                      active && styles.petAvatarRingActive,
+                    ]}
+                  >
+                    {p.photo ? (
+                      <Image source={p.photo} style={styles.petAvatarImg} />
+                    ) : (
+                      <View style={styles.petAvatarFallback}>
+                        <Text style={{ fontSize: 32 }}>{p.emoji}</Text>
+                      </View>
+                    )}
+                    {active && (
+                      <View style={styles.petCheckBadge}>
+                        <Icon
+                          name="Check"
+                          size={11}
+                          color="#FFFFFF"
+                          strokeWidth={3}
+                        />
+                      </View>
+                    )}
+                  </View>
+                  <Text
+                    variant="bodyStrong"
+                    style={[styles.petName, active && styles.petNameActive]}
+                    numberOfLines={1}
+                  >
+                    {p.name}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </ScrollView>
+        </View>
+
+        <TextField
+          label="ปริมาณ"
+          placeholder="เช่น 80 กรัม"
+          value={draft.amount}
+          onChange={(v) => update('amount', v)}
+        />
+
+        {/* Days */}
+        <View style={styles.section}>
+          <Text variant="caption" style={styles.fieldLabel}>
+            วันที่
+          </Text>
+          <View style={styles.dayRow}>
+            {DAY_LABELS.map((label, i) => {
+              const dayIdx = DAY_INDEXES[i];
+              const active = isDayActive(dayIdx);
+              return (
+                <Pressable
+                  key={label}
+                  onPress={() => toggleDay(dayIdx)}
+                  style={({ pressed }) => [
+                    styles.dayChip,
+                    active ? styles.dayChipActive : styles.dayChipInactive,
+                    pressed && { opacity: 0.85 },
+                  ]}
+                >
                   <Text
                     variant="bodyStrong"
                     style={[
-                      styles.typeTileText,
-                      active && styles.typeTileTextActive,
+                      styles.dayChipText,
+                      active
+                        ? styles.dayChipTextActive
+                        : styles.dayChipTextInactive,
                     ]}
                   >
-                    {opt.label}
+                    {label}
                   </Text>
                 </Pressable>
               );
@@ -180,58 +282,43 @@ export default function MealTimeSettingScreen({ route, navigation }: Props) {
           </View>
         </View>
 
-        <View style={styles.fieldRow}>
-          <View style={styles.fieldCol}>
-            <TimeField
-              label="เวลา"
+        {/* Time presets */}
+        <View style={styles.section}>
+          <Text variant="caption" style={styles.fieldLabel}>
+            เวลา
+          </Text>
+          <View style={styles.timeGrid}>
+            {PRESET_TIMES.map((t) => {
+              const active = draft.time === t;
+              return (
+                <Pressable
+                  key={t}
+                  onPress={() => update('time', t)}
+                  style={({ pressed }) => [
+                    styles.timeChip,
+                    active ? styles.timeChipActive : styles.timeChipInactive,
+                    pressed && { opacity: 0.85 },
+                  ]}
+                >
+                  <Text
+                    variant="bodyStrong"
+                    style={[
+                      styles.timeChipText,
+                      active && styles.timeChipTextActive,
+                    ]}
+                  >
+                    {t}
+                  </Text>
+                </Pressable>
+              );
+            })}
+            <CustomTimeChip
               value={draft.time}
-              onChange={(v) => update('time', v)}
-            />
-          </View>
-          <View style={styles.fieldCol}>
-            <EditField
-              label="ปริมาณ (กรัม)"
-              placeholder="เช่น 80"
-              keyboardType="decimal-pad"
-              value={draft.amount}
-              onChange={(v) => update('amount', v)}
+              isPreset={PRESET_TIMES.includes(draft.time)}
+              onPick={(v) => update('time', v)}
             />
           </View>
         </View>
-
-        <EditField
-          label="หมายเหตุ"
-          placeholder="ไม่มี"
-          value={draft.note ?? ''}
-          onChange={(v) => update('note', v)}
-        />
-
-        <Pressable
-          onPress={() => update('enabled', !draft.enabled)}
-          style={({ pressed }) => [
-            styles.statusCard,
-            pressed && { opacity: 0.92 },
-          ]}
-        >
-          <View style={styles.statusTextWrap}>
-            <Text variant="bodyStrong" style={styles.statusTitle}>
-              เปิดแจ้งเตือน
-            </Text>
-            <Text variant="caption" style={styles.statusSubtitle}>
-              {draft.enabled
-                ? 'แจ้งเตือนตามเวลาที่ตั้งไว้'
-                : 'ปิดการแจ้งเตือนสำหรับมื้อนี้'}
-            </Text>
-          </View>
-          <Switch
-            value={draft.enabled}
-            onValueChange={(v) => update('enabled', v)}
-            trackColor={{ false: '#E6E6E8', true: '#9F5266' }}
-            thumbColor="#FFFFFF"
-            ios_backgroundColor="#E6E6E8"
-            style={styles.statusSwitch}
-          />
-        </Pressable>
 
         {!isNew && (
           <Pressable
@@ -247,100 +334,57 @@ export default function MealTimeSettingScreen({ route, navigation }: Props) {
             </Text>
           </Pressable>
         )}
-      </ScrollView>
+      </KeyboardAwareScrollView>
     </View>
   );
 }
 
-function EditField({
-  label,
+function CustomTimeChip({
   value,
-  onChange,
-  keyboardType,
-  placeholder,
-  error,
+  isPreset,
+  onPick,
 }: {
-  label: string;
   value: string;
-  onChange: (v: string) => void;
-  keyboardType?: 'default' | 'decimal-pad' | 'number-pad';
-  placeholder?: string;
-  error?: string;
-}) {
-  const [focused, setFocused] = useState(false);
-  const showError = !!error && !focused;
-  const accent = showError ? '#C25450' : semantic.primary;
-  return (
-    <View style={styles.fieldWrap}>
-      <Text
-        variant="caption"
-        style={[
-          styles.fieldLabel,
-          (focused || showError) && { color: accent },
-        ]}
-      >
-        {label}
-      </Text>
-      <View
-        style={[
-          styles.fieldUnderline,
-          (focused || showError) && {
-            borderBottomColor: accent,
-            borderBottomWidth: 1.5,
-          },
-        ]}
-      >
-        <TextInput
-          value={value}
-          onChangeText={onChange}
-          keyboardType={keyboardType ?? 'default'}
-          placeholder={placeholder}
-          placeholderTextColor="#9A9AA0"
-          onFocus={() => setFocused(true)}
-          onBlur={() => setFocused(false)}
-          style={styles.fieldInput}
-        />
-      </View>
-      {showError && (
-        <Text variant="caption" style={styles.fieldError}>
-          {error}
-        </Text>
-      )}
-    </View>
-  );
-}
-
-function TimeField({
-  label,
-  value,
-  onChange,
-}: {
-  label: string;
-  value: string;
-  onChange: (v: string) => void;
+  isPreset: boolean;
+  onPick: (v: string) => void;
 }) {
   const [open, setOpen] = useState(false);
   const [pending, setPending] = useState<Date>(parseTime(value));
   useEffect(() => setPending(parseTime(value)), [value]);
-  const onPickerChange = (_: DateTimePickerEvent, picked?: Date) => {
+  const onChange = (_: DateTimePickerEvent, picked?: Date) => {
     if (picked) setPending(picked);
   };
   const confirm = () => {
-    onChange(formatTime(pending));
+    onPick(formatTime(pending));
     setOpen(false);
   };
+  const showCustomValue = !isPreset && !!value;
   return (
-    <View style={styles.fieldWrap}>
-      <Text variant="caption" style={styles.fieldLabel}>
-        {label}
-      </Text>
-      <Pressable onPress={() => setOpen(true)} style={styles.fieldUnderline}>
-        <View style={styles.timeRow}>
-          <Icon name="Clock" size={16} color="#6E6E74" strokeWidth={2.2} />
-          <Text variant="bodyStrong" style={styles.timeValueText}>
-            {value}
-          </Text>
-        </View>
+    <>
+      <Pressable
+        onPress={() => setOpen(true)}
+        style={({ pressed }) => [
+          styles.timeChip,
+          showCustomValue ? styles.timeChipActive : styles.timeChipInactive,
+          pressed && { opacity: 0.85 },
+        ]}
+      >
+        <Icon
+          name={showCustomValue ? 'Clock' : 'Plus'}
+          size={14}
+          color={showCustomValue ? '#FFFFFF' : '#6E6E74'}
+          strokeWidth={2.4}
+        />
+        <Text
+          variant="bodyStrong"
+          style={[
+            styles.timeChipText,
+            showCustomValue && styles.timeChipTextActive,
+            { marginLeft: 4 },
+          ]}
+        >
+          {showCustomValue ? value : 'กำหนดเอง'}
+        </Text>
       </Pressable>
       <Modal
         visible={open}
@@ -352,14 +396,14 @@ function TimeField({
         <Pressable style={styles.timeBackdrop} onPress={() => setOpen(false)}>
           <Pressable style={styles.timeCard} onPress={() => {}}>
             <Text variant="bodyStrong" style={styles.timeCardTitle}>
-              {label}
+              เลือกเวลา
             </Text>
             <DateTimePicker
               value={pending}
               mode="time"
               display={Platform.OS === 'ios' ? 'spinner' : 'spinner'}
               is24Hour
-              onChange={onPickerChange}
+              onChange={onChange}
               themeVariant="light"
               style={styles.timeSpinner}
             />
@@ -379,7 +423,7 @@ function TimeField({
           </Pressable>
         </Pressable>
       </Modal>
-    </View>
+    </>
   );
 }
 
@@ -400,127 +444,166 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   appbarTitle: { fontSize: 16, color: '#1A1A1A', flex: 1, textAlign: 'center' },
+  appbarSaveBtn: {
+    width: 'auto',
+    minWidth: 56,
+    paddingHorizontal: 8,
+  },
   appbarSave: {
     fontSize: 15,
     color: '#9F5266',
     fontWeight: '700',
   },
-  body: { paddingHorizontal: 16, paddingBottom: 32, gap: 12 },
-  fieldWrap: { gap: 4, paddingTop: 6 },
-  fieldRow: { flexDirection: 'row', gap: 16 },
-  fieldCol: { flex: 1 },
-  fieldLabel: { fontSize: 12, color: '#6E6E74', fontWeight: '500' },
-  fieldUnderline: {
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: '#D0D0D4',
+  body: { paddingHorizontal: 20, gap: 20 },
+
+  section: {
+    gap: 10,
   },
-  fieldInput: {
-    height: 40,
-    fontSize: 17,
-    color: '#1A1A1F',
-    fontWeight: '500',
-  },
-  fieldError: { fontSize: 11, color: '#C25450', marginTop: 4 },
-  timeRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    height: 40,
-  },
-  timeValueText: { fontSize: 17, color: '#1A1A1F', fontWeight: '500' },
-  typeTileRow: { flexDirection: 'row', gap: 10, marginTop: 4 },
-  typeTile: {
-    flex: 1,
-    minHeight: 64,
-    borderRadius: 12,
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: '#EBEBEF',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 4,
-    paddingVertical: 10,
-  },
-  typeTileActive: { backgroundColor: '#9F5266', borderColor: '#9F5266' },
-  typeTileText: { fontSize: 13, color: '#9F5266', fontWeight: '700' },
-  typeTileTextActive: { color: '#FFFFFF' },
-  toggleRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 4 },
-  statusCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: 12,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 14,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    marginTop: 6,
-    borderWidth: 1,
-    borderColor: 'rgba(184,106,124,0.12)',
-    shadowColor: '#7E3D4F',
-    shadowOpacity: 0.06,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 1,
-  },
-  statusTextWrap: {
-    flex: 1,
-    gap: 2,
-  },
-  statusTitle: {
+  sectionLabel: {
     fontSize: 15,
     color: '#1A1A1F',
     fontWeight: '700',
   },
-  statusSubtitle: {
-    fontSize: 12,
+  fieldLabel: {
+    fontSize: 13,
     color: '#6E6E74',
+    fontWeight: '500',
   },
-  statusSwitch: {
-    alignSelf: 'center',
+
+  petRow: {
+    gap: 16,
+    paddingVertical: 4,
+    paddingRight: 4,
   },
-  toggleChip: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 999,
+  petItem: {
+    alignItems: 'center',
+    width: 76,
+    gap: 6,
+    overflow: 'visible',
+  },
+  petAvatarRing: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    padding: 3,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 2,
+    borderColor: '#EFE0E3',
+    alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'visible',
+  },
+  petAvatarRingActive: {
+    borderColor: '#B86A7C',
+  },
+  petAvatarImg: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 32,
+  },
+  petAvatarFallback: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 32,
     backgroundColor: '#F5E4E7',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  toggleChipActive: { backgroundColor: '#9F5266' },
-  toggleChipText: { fontSize: 13, color: '#9F5266', fontWeight: '700' },
-  toggleChipTextActive: { color: '#FFFFFF' },
+  petCheckBadge: {
+    position: 'absolute',
+    right: -2,
+    bottom: -2,
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    backgroundColor: '#B86A7C',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 2,
+    borderColor: '#FBF3F4',
+  },
+  petName: {
+    fontSize: 13,
+    color: '#6E6E74',
+    fontWeight: '500',
+    textAlign: 'center',
+  },
+  petNameActive: {
+    color: '#9F5266',
+    fontWeight: '700',
+  },
+
+  dayRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: 6,
+  },
+  dayChip: {
+    flex: 1,
+    height: 44,
+    borderRadius: 999,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  dayChipActive: {
+    backgroundColor: '#A4596B',
+  },
+  dayChipInactive: {
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: 'rgba(184,106,124,0.18)',
+  },
+  dayChipText: {
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  dayChipTextActive: {
+    color: '#FFFFFF',
+  },
+  dayChipTextInactive: {
+    color: '#9F5266',
+  },
+
+  timeGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+    rowGap: 10,
+  },
+  timeChip: {
+    width: '32%',
+    height: 48,
+    borderRadius: 999,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexDirection: 'row',
+    gap: 4,
+  },
+  timeChipActive: {
+    backgroundColor: '#9F5266',
+  },
+  timeChipInactive: {
+    backgroundColor: '#EFE6DD',
+  },
+  timeChipText: {
+    fontSize: 15,
+    color: '#1A1A1F',
+    fontWeight: '600',
+  },
+  timeChipTextActive: {
+    color: '#FFFFFF',
+  },
+
   deleteBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 6,
     paddingVertical: 12,
-    marginTop: 8,
+    marginTop: 4,
   },
   deleteText: { fontSize: 14, color: '#C25450', fontWeight: '700' },
-  actions: {
-    flexDirection: 'row',
-    gap: 10,
-    paddingTop: 8,
-    paddingHorizontal: 16,
-    backgroundColor: '#FBF3F4',
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: '#F0E6E8',
-  },
-  btn: {
-    flex: 1,
-    height: 48,
-    borderRadius: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  btnSecondary: {
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1.5,
-    borderColor: '#9F5266',
-  },
-  btnSecondaryText: { fontSize: 16, color: '#9F5266' },
-  btnPrimary: { backgroundColor: '#9F5266' },
-  btnPrimaryText: { fontSize: 16, color: '#FFFFFF' },
+
   timeBackdrop: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.45)',
@@ -548,26 +631,4 @@ const styles = StyleSheet.create({
   timeConfirmText: { fontSize: 17, color: '#1A75FF', fontWeight: '600' },
   timeCancelCard: { paddingVertical: 14 },
   timeCancelText: { fontSize: 17, color: '#1A75FF', fontWeight: '600' },
-  snackbar: {
-    position: 'absolute',
-    left: 16,
-    right: 16,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    backgroundColor: '#1A1A1F',
-    borderRadius: 12,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    shadowColor: '#000',
-    shadowOpacity: 0.2,
-    shadowRadius: 12,
-    shadowOffset: { width: 0, height: 6 },
-    elevation: 6,
-  },
-  snackbarText: {
-    fontSize: 14,
-    color: '#FFFFFF',
-    fontWeight: '500',
-  },
 });

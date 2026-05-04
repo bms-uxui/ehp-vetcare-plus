@@ -1,4 +1,4 @@
-import { ReactNode, useMemo, useRef, useState } from 'react';
+import { ReactNode, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Image,
   Keyboard,
@@ -16,16 +16,20 @@ import Animated, {
   useAnimatedScrollHandler,
   useAnimatedStyle,
   useSharedValue,
+  withSequence,
+  withSpring,
+  withTiming,
 } from 'react-native-reanimated';
 import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { getProductColumns, useIsTablet } from '../lib/responsive';
 import { useNavigation } from '@react-navigation/native';
 import { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { AppTabsParamList } from '../navigation/AppTabs';
 import { RootStackParamList } from '../../App';
-import { Icon, ProductTile, Text } from '../components';
+import { Icon, PetAvatar, ProductTile, Text } from '../components';
 import { semantic, spacing } from '../theme';
 import {
   mockProducts,
@@ -42,13 +46,6 @@ type Props = BottomTabScreenProps<AppTabsParamList, 'PetShop'>;
 const SECTION_PAD = 16;
 const CARD_GAP = 10;
 
-// Responsive grid: phones get 2 cols, iPad / large screens scale up
-function getNumColumns(width: number) {
-  if (width >= 1200) return 5;
-  if (width >= 900) return 4;
-  if (width >= 600) return 3;
-  return 2;
-}
 
 // Bar fades in once the large title scrolls under the app bar
 const FADE_START = 30;
@@ -56,10 +53,11 @@ const FADE_END = 90;
 
 export default function PetShopScreen({}: Props) {
   const insets = useSafeAreaInsets();
+  const isTablet = useIsTablet();
   const rootNav = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const { count } = useCart();
   const { width: screenW } = useWindowDimensions();
-  const numColumns = getNumColumns(screenW);
+  const numColumns = getProductColumns(screenW);
   const cardWidth =
     (screenW - SECTION_PAD * 2 - CARD_GAP * (numColumns - 1)) / numColumns;
   const activeOrderCount = useMemo(
@@ -194,7 +192,7 @@ export default function PetShopScreen({}: Props) {
             resizeMode="contain"
           />
 
-          <View style={styles.heroText}>
+          <View style={[styles.heroText, isTablet && styles.heroTextTablet]}>
             <Text variant="bodyStrong" style={styles.heroTitle}>
               ร้านค้า
             </Text>
@@ -202,7 +200,7 @@ export default function PetShopScreen({}: Props) {
               variant="caption"
               color={semantic.textSecondary}
               style={styles.heroSubtitle}
-              numberOfLines={2}
+              numberOfLines={isTablet ? 1 : 2}
             >
               อาหาร ของเล่น และของจำเป็นสำหรับเพื่อนขนปุย
             </Text>
@@ -333,18 +331,36 @@ export default function PetShopScreen({}: Props) {
               </Section>
             )}
 
-            {/* Recommend for your pets */}
+            {/* Recommend for your pets — section header is a rose banner
+                with pet photos peeking from the right. */}
             {!activeCategory && recommended.length > 0 && (
-              <Section
-                title="แนะนำสำหรับสัตว์ของคุณ"
-                trailing={<PetStack />}
-              >
+              <View style={styles.section}>
+                <View style={styles.recBanner}>
+                  <LinearGradient
+                    pointerEvents="none"
+                    colors={['#FFE9EC', '#FBF3F4']}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 1 }}
+                    style={StyleSheet.absoluteFill}
+                  />
+                  <View style={styles.recBannerText}>
+                    <Text weight="600" style={styles.recBannerTitle}>
+                      แนะนำสำหรับสัตว์ของคุณ
+                    </Text>
+                    <Text style={styles.recBannerSub}>
+                      คัดมาจากความชอบของน้อง
+                    </Text>
+                  </View>
+                  <View pointerEvents="none" style={styles.recBannerPets}>
+                    <BigPetStack />
+                  </View>
+                </View>
                 <Grid
                   data={recommended.slice(0, 4)}
                   onPress={goToProduct}
                   cardWidth={cardWidth}
                 />
-              </Section>
+              </View>
             )}
 
             {/* All products / filtered */}
@@ -560,6 +576,21 @@ function PetStack() {
   );
 }
 
+function BigPetStack() {
+  return (
+    <View style={styles.bigPetStack}>
+      {mockPets.slice(0, 3).map((pet, i) => (
+        <View
+          key={pet.id}
+          style={[styles.bigPetAvatarRing, i > 0 && styles.bigPetAvatarOverlap]}
+        >
+          <PetAvatar pet={pet} size={52} backgroundColor="#FFFFFF" />
+        </View>
+      ))}
+    </View>
+  );
+}
+
 function Grid({
   data,
   onPress,
@@ -596,24 +627,38 @@ function CategoryChip({
   active: boolean;
   onPress: () => void;
 }) {
+  const scale = useSharedValue(1);
+  useEffect(() => {
+    if (active) {
+      scale.value = withSequence(
+        withTiming(1.08, { duration: 140 }),
+        withSpring(1, { damping: 12, stiffness: 200 }),
+      );
+    }
+  }, [active, scale]);
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: scale.value }],
+  }));
+
   return (
     <Pressable
       onPress={onPress}
-      style={({ pressed }) => [
-        styles.chip,
-        active && styles.chipActive,
-        pressed && { opacity: 0.7 },
-      ]}
+      style={({ pressed }) => [pressed && { opacity: 0.7 }]}
     >
-      <Icon
-        name={icon as any}
-        size={12}
-        color={active ? '#FFFFFF' : '#3C3C43'}
-        strokeWidth={2.4}
-      />
-      <Text style={[styles.chipText, active && styles.chipTextActive]}>
-        {label}
-      </Text>
+      <Animated.View
+        style={[styles.chip, active && styles.chipActive, animatedStyle]}
+      >
+        <Icon
+          name={icon as any}
+          size={16}
+          color={active ? '#FFFFFF' : '#3C3C43'}
+          strokeWidth={2.2}
+        />
+        <Text style={[styles.chipText, active && styles.chipTextActive]}>
+          {label}
+        </Text>
+      </Animated.View>
     </Pressable>
   );
 }
@@ -731,6 +776,9 @@ const styles = StyleSheet.create({
     width: 220,
     gap: spacing.sm,
   },
+  heroTextTablet: {
+    width: 480,
+  },
   heroTitle: {
     fontSize: 28,
     lineHeight: 36,
@@ -813,9 +861,9 @@ const styles = StyleSheet.create({
   chip: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
+    gap: 6,
+    height: 40,
+    paddingHorizontal: 14,
     borderRadius: 1000,
     backgroundColor: 'rgba(118,118,128,0.12)',
   },
@@ -823,7 +871,8 @@ const styles = StyleSheet.create({
     backgroundColor: semantic.primary,
   },
   chipText: {
-    fontSize: 13,
+    fontSize: 15,
+    lineHeight: 20,
     color: '#3C3C43',
     letterSpacing: -0.2,
   },
@@ -868,6 +917,59 @@ const styles = StyleSheet.create({
   },
   petAvatarEmoji: {
     fontSize: 14,
+  },
+
+  // Recommend banner — pink gradient + bigger pet stack peeking from the right
+  recBanner: {
+    height: 100,
+    borderRadius: 24,
+    overflow: 'hidden',
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingRight: 110,
+    marginBottom: 12,
+    position: 'relative',
+  },
+  recBannerText: {
+    flex: 1,
+    paddingHorizontal: 16,
+    gap: 4,
+  },
+  recBannerTitle: {
+    fontSize: 16,
+    lineHeight: 22,
+    color: '#1A1A1A',
+  },
+  recBannerSub: {
+    fontSize: 12,
+    lineHeight: 16,
+    color: '#5C4A4F',
+  },
+  recBannerPets: {
+    position: 'absolute',
+    right: 16,
+    top: 0,
+    bottom: 0,
+    justifyContent: 'center',
+  },
+  bigPetStack: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  bigPetAvatarRing: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: '#FFFFFF',
+    padding: 2,
+    shadowColor: '#5E303C',
+    shadowOpacity: 0.12,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 3,
+  },
+  bigPetAvatarOverlap: {
+    marginLeft: -18,
   },
 
   // Grid
