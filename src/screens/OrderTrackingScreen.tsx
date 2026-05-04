@@ -23,6 +23,7 @@ import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { RootStackParamList } from '../../App';
 import { AppBackground, Icon, SubPageHeader, Text } from '../components';
+import { HEADER_HEIGHT } from '../components/SubPageHeader';
 import { semantic, spacing } from '../theme';
 import { fmtBaht, categoryMeta } from '../data/products';
 import {
@@ -125,6 +126,7 @@ export default function OrderTrackingScreen({ navigation }: Props) {
       <SubPageHeader
         title="ติดตามคำสั่งซื้อ"
         onBack={() => navigation.goBack()}
+        scrollY={scrollY}
         trailing={{
           icon: searchOpen ? 'X' : 'Search',
           onPress: () => {
@@ -139,7 +141,10 @@ export default function OrderTrackingScreen({ navigation }: Props) {
 
       <Animated.ScrollView
         style={styles.flex}
-        contentContainerStyle={[styles.scroll, { paddingBottom: 120 }]}
+        contentContainerStyle={[
+          styles.scroll,
+          { paddingTop: insets.top + HEADER_HEIGHT, paddingBottom: 120 },
+        ]}
         showsVerticalScrollIndicator={false}
         onScroll={scrollHandler}
         scrollEventThrottle={16}

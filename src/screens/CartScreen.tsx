@@ -2,7 +2,6 @@ import { useRef, useState } from 'react';
 import {
   Alert,
   Image,
-  Keyboard,
   PanResponder,
   Pressable,
   StyleSheet,
@@ -12,22 +11,18 @@ import {
 import Animated, {
   Extrapolation,
   interpolate,
-  runOnJS,
   useAnimatedScrollHandler,
   useAnimatedStyle,
   useSharedValue,
   withSpring,
-  withTiming,
 } from 'react-native-reanimated';
-import { Dimensions } from 'react-native';
-
-const SCREEN_W = Dimensions.get('window').width;
 import { BlurView } from 'expo-blur';
 import { GlassView, isLiquidGlassAvailable } from '../lib/glass-effect';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { RootStackParamList } from '../../App';
-import { AppBackground, Button, Icon, Text } from '../components';
+import { AppBackground, Button, Icon, SubPageHeader, Text } from '../components';
+import { HEADER_HEIGHT } from '../components/SubPageHeader';
 import { semantic, spacing } from '../theme';
 import { fmtBaht } from '../data/products';
 import { useCart, cartStore, CartItem } from '../data/cart';
@@ -35,8 +30,6 @@ import { useCart, cartStore, CartItem } from '../data/cart';
 const LIQUID_GLASS = isLiquidGlassAvailable();
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Cart'>;
-
-const HEADER_HEIGHT = 56;
 
 export default function CartScreen({ navigation }: Props) {
   const insets = useSafeAreaInsets();
@@ -47,68 +40,13 @@ export default function CartScreen({ navigation }: Props) {
   const [favoriteIds, setFavoriteIds] = useState<Set<string>>(() => new Set());
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const searchInputRef = useRef<TextInput>(null);
-  const searchAnim = useSharedValue(0); // 0 closed, 1 open
 
-  const openSearch = () => {
-    setSearchOpen(true);
-    searchAnim.value = withSpring(1, { damping: 22, stiffness: 200, mass: 0.8 });
-    // Auto-focus on next tick so input is mounted
-    setTimeout(() => searchInputRef.current?.focus(), 100);
+  const toggleSearch = () => {
+    if (searchOpen) {
+      setSearchQuery('');
+    }
+    setSearchOpen((v) => !v);
   };
-  const closeSearch = () => {
-    Keyboard.dismiss();
-    searchAnim.value = withTiming(0, { duration: 220 }, (finished) => {
-      if (finished) {
-        runOnJS(setSearchOpen)(false);
-        runOnJS(setSearchQuery)('');
-      }
-    });
-  };
-
-  // Morph animation: pill grows from 44px (icon button) to full row width
-  const FIELD_MIN_W = 44;
-  const CANCEL_W = 60;
-  const CANCEL_GAP = 12;
-  const TOOLBAR_PAD = 16;
-  const FIELD_MAX_W = SCREEN_W - TOOLBAR_PAD * 2 - CANCEL_W - CANCEL_GAP;
-
-  const fieldStyle = useAnimatedStyle(() => ({
-    width: interpolate(
-      searchAnim.value,
-      [0, 1],
-      [FIELD_MIN_W, FIELD_MAX_W],
-    ),
-  }));
-
-  const fieldContentStyle = useAnimatedStyle(() => ({
-    opacity: interpolate(
-      searchAnim.value,
-      [0.4, 0.9],
-      [0, 1],
-      Extrapolation.CLAMP,
-    ),
-  }));
-
-  const cancelStyle = useAnimatedStyle(() => ({
-    opacity: interpolate(
-      searchAnim.value,
-      [0.55, 1],
-      [0, 1],
-      Extrapolation.CLAMP,
-    ),
-    transform: [
-      {
-        translateX: interpolate(
-          searchAnim.value,
-          [0.55, 1],
-          [24, 0],
-          Extrapolation.CLAMP,
-        ),
-      },
-    ],
-    width: interpolate(searchAnim.value, [0, 0.55, 1], [0, 0, CANCEL_W]),
-  }));
 
   const toggleFavorite = (id: string) => {
     setFavoriteIds((prev) => {
@@ -160,28 +98,6 @@ export default function CartScreen({ navigation }: Props) {
     scrollY.value = e.contentOffset.y;
   });
 
-  // Graduated blur for the appbar — soft layer fades in first, then heavy
-  // layer overlays. Matches the AddFeedingSchedule pattern.
-  const headerSoftBlurStyle = useAnimatedStyle(() => ({
-    opacity: interpolate(scrollY.value, [0, 80], [0, 1], Extrapolation.CLAMP),
-  }));
-  const headerHardBlurStyle = useAnimatedStyle(() => ({
-    opacity: interpolate(
-      scrollY.value,
-      [60, 160],
-      [0, 1],
-      Extrapolation.CLAMP,
-    ),
-  }));
-  const headerHairlineStyle = useAnimatedStyle(() => ({
-    opacity: interpolate(
-      scrollY.value,
-      [60, 160],
-      [0, 1],
-      Extrapolation.CLAMP,
-    ),
-  }));
-
   const onCheckout = () => {
     if (selectedCount === 0) {
       Alert.alert('ยังไม่เลือกสินค้า', 'กรุณาเลือกอย่างน้อย 1 รายการ');
@@ -196,39 +112,16 @@ export default function CartScreen({ navigation }: Props) {
     return (
       <View style={styles.emptyRoot}>
         <AppBackground />
+        <SubPageHeader
+          title="ตะกร้าสินค้า"
+          onBack={() => navigation.goBack()}
+        />
         <View
           style={[
-            styles.header,
-            { paddingTop: insets.top, height: insets.top + HEADER_HEIGHT },
+            styles.empty,
+            { paddingTop: insets.top + HEADER_HEIGHT + 80 },
           ]}
         >
-          <View style={styles.headerRow}>
-            <Pressable
-              onPress={() => navigation.goBack()}
-              hitSlop={8}
-              style={({ pressed }) => [
-                styles.headerIconBtn,
-                pressed && { opacity: 0.7, transform: [{ scale: 0.96 }] },
-              ]}
-            >
-              <Icon
-                name="ChevronLeft"
-                size={20}
-                color="#1A1A1A"
-                strokeWidth={2.4}
-              />
-            </Pressable>
-            <Text
-              variant="bodyStrong"
-              numberOfLines={1}
-              style={styles.headerTitle}
-            >
-              ตะกร้าสินค้า
-            </Text>
-            <View style={styles.headerIconPlaceholder} />
-          </View>
-        </View>
-        <View style={[styles.empty, { paddingTop: 80 }]}>
           <Icon
             name="ShoppingCart"
             size={72}
@@ -253,181 +146,63 @@ export default function CartScreen({ navigation }: Props) {
     <View style={styles.root}>
       <AppBackground />
 
-      {/* Morph search overlay — Search icon pill expands into a search field, Cancel slides in from right */}
-      {searchOpen && (
-        <View
-          pointerEvents="box-none"
-          style={[
-            styles.searchOverlay,
-            { paddingTop: insets.top, height: insets.top + 56 },
-          ]}
-        >
-          <View style={styles.searchMorphRow}>
-            <Animated.View style={[styles.searchMorphField, fieldStyle]}>
-              {/* Liquid Glass material — same as IconButton */}
-              {LIQUID_GLASS ? (
-                <GlassView
-                  glassEffectStyle="regular"
-                  colorScheme="light"
-                  style={StyleSheet.absoluteFill}
-                />
-              ) : (
-                <>
-                  <BlurView
-                    intensity={70}
-                    tint="systemThinMaterialLight"
-                    style={StyleSheet.absoluteFill}
-                  />
-                  <View
-                    pointerEvents="none"
-                    style={[StyleSheet.absoluteFill, styles.searchMorphTint]}
-                  />
-                </>
-              )}
-              <View
-                pointerEvents="none"
-                style={[StyleSheet.absoluteFill, styles.searchMorphHairline]}
-              />
-              <Icon
-                name="Search"
-                size={18}
-                color="#1A1A1A"
-                strokeWidth={2.2}
-              />
-              <Animated.View
-                style={[styles.searchMorphInner, fieldContentStyle]}
-              >
-                <TextInput
-                  ref={searchInputRef}
-                  style={styles.searchInput}
-                  value={searchQuery}
-                  onChangeText={setSearchQuery}
-                  placeholder="ค้นหาสินค้าในตะกร้า"
-                  placeholderTextColor={semantic.textMuted}
-                  returnKeyType="search"
-                  autoCorrect={false}
-                  autoCapitalize="none"
-                />
-                {searchQuery.length > 0 && (
-                  <Pressable
-                    onPress={() => setSearchQuery('')}
-                    hitSlop={8}
-                    accessibilityLabel="ล้างคำค้น"
-                  >
-                    <View style={styles.searchClear}>
-                      <Icon
-                        name="X"
-                        size={11}
-                        color="#FFFFFF"
-                        strokeWidth={3}
-                      />
-                    </View>
-                  </Pressable>
-                )}
-              </Animated.View>
-            </Animated.View>
-            <Animated.View style={cancelStyle}>
-              <Pressable onPress={closeSearch} hitSlop={8}>
-                <Text weight="500" style={styles.searchCancel}>
-                  ยกเลิก
-                </Text>
-              </Pressable>
-            </Animated.View>
-          </View>
-        </View>
-      )}
-
-      {!searchOpen && (
-        <View
-          style={[
-            styles.header,
-            { paddingTop: insets.top, height: insets.top + HEADER_HEIGHT },
-          ]}
-          pointerEvents="box-none"
-        >
-          {/* Soft layer — appears first as user starts scrolling */}
-          <Animated.View
-            pointerEvents="none"
-            style={[StyleSheet.absoluteFill, headerSoftBlurStyle]}
-          >
-            <BlurView
-              intensity={30}
-              tint="systemChromeMaterialLight"
-              style={StyleSheet.absoluteFill}
-            />
-          </Animated.View>
-          {/* Heavy layer — fully frosted once content scrolls under */}
-          <Animated.View
-            pointerEvents="none"
-            style={[StyleSheet.absoluteFill, headerHardBlurStyle]}
-          >
-            <BlurView
-              intensity={80}
-              tint="systemChromeMaterialLight"
-              style={StyleSheet.absoluteFill}
-            />
-          </Animated.View>
-          <Animated.View
-            pointerEvents="none"
-            style={[styles.headerHairline, headerHairlineStyle]}
-          />
-
-          <View style={styles.headerRow}>
-            <Pressable
-              onPress={() => navigation.goBack()}
-              hitSlop={8}
-              style={({ pressed }) => [
-                styles.headerIconBtn,
-                pressed && { opacity: 0.7, transform: [{ scale: 0.96 }] },
-              ]}
-            >
-              <Icon
-                name="ChevronLeft"
-                size={20}
-                color="#1A1A1A"
-                strokeWidth={2.4}
-              />
-            </Pressable>
-            <Text
-              variant="bodyStrong"
-              numberOfLines={1}
-              style={styles.headerTitle}
-            >
-              ตะกร้าสินค้า
-            </Text>
-            <Pressable
-              onPress={openSearch}
-              hitSlop={8}
-              accessibilityLabel="ค้นหาในตะกร้า"
-              style={({ pressed }) => [
-                styles.headerIconBtn,
-                pressed && { opacity: 0.7, transform: [{ scale: 0.96 }] },
-              ]}
-            >
-              <Icon
-                name="Search"
-                size={20}
-                color="#1A1A1A"
-                strokeWidth={2.2}
-              />
-            </Pressable>
-          </View>
-        </View>
-      )}
+      <SubPageHeader
+        title="ตะกร้าสินค้า"
+        onBack={() => navigation.goBack()}
+        scrollY={scrollY}
+        trailing={{
+          icon: searchOpen ? 'X' : 'Search',
+          onPress: toggleSearch,
+          accessibilityLabel: searchOpen ? 'ปิดการค้นหา' : 'ค้นหาในตะกร้า',
+        }}
+      />
 
       <Animated.ScrollView
         style={styles.flex}
         contentContainerStyle={[
           styles.scroll,
           {
-            paddingTop: insets.top + HEADER_HEIGHT,
+            paddingTop: insets.top + HEADER_HEIGHT + spacing.md,
             paddingBottom: 220,
           },
         ]}
         showsVerticalScrollIndicator={false}
         onScroll={scrollHandler}
         scrollEventThrottle={16}
+        keyboardShouldPersistTaps="handled"
       >
+        {searchOpen ? (
+          <View style={styles.searchField}>
+            <Icon
+              name="Search"
+              size={16}
+              color={semantic.textMuted}
+              strokeWidth={2.2}
+            />
+            <TextInput
+              autoFocus
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+              placeholder="ค้นหาสินค้าในตะกร้า"
+              placeholderTextColor={semantic.textMuted}
+              style={styles.searchInput}
+            />
+            {searchQuery ? (
+              <Pressable
+                onPress={() => setSearchQuery('')}
+                hitSlop={6}
+                accessibilityLabel="ล้างคำค้น"
+              >
+                <Icon
+                  name="X"
+                  size={14}
+                  color={semantic.textMuted}
+                  strokeWidth={2.4}
+                />
+              </Pressable>
+            ) : null}
+          </View>
+        ) : null}
 
         {/* Cart items list */}
         <View style={styles.list}>
@@ -833,54 +608,6 @@ const styles = StyleSheet.create({
     gap: spacing.md,
   },
 
-  // Animated blur header — overlay at the top, blurs in on scroll
-  header: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    zIndex: 10,
-  },
-  headerHairline: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    height: StyleSheet.hairlineWidth,
-    backgroundColor: 'rgba(0,0,0,0.08)',
-  },
-  headerRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    height: HEADER_HEIGHT,
-    paddingHorizontal: 12,
-  },
-  headerIconBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: '#FFFFFF',
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: 'rgba(0,0,0,0.1)',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.06,
-    shadowRadius: 2,
-    elevation: 1,
-  },
-  headerIconPlaceholder: {
-    width: 36,
-    height: 36,
-  },
-  headerTitle: {
-    flex: 1,
-    marginLeft: 16,
-    fontSize: 17,
-    color: '#1A1A1A',
-  },
-
   // Hero
   hero: {
     paddingVertical: spacing.md,
@@ -903,70 +630,23 @@ const styles = StyleSheet.create({
     gap: 16,
   },
 
-  // Apple-style expanding search overlay
-  searchOverlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    zIndex: 11, // above StickyAppBar (10)
-  },
-  // Morph search field — animates width / height / borderRadius
-  searchMorphRow: {
+  // Inline search field — same pattern as OrderTracking
+  searchField: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'flex-end',
-    gap: spacing.md,
-    paddingHorizontal: spacing.lg,
-    height: 56,
-  },
-  searchMorphField: {
+    gap: 8,
     height: 44,
-    borderRadius: 22,
-    flexDirection: 'row',
-    alignItems: 'center',
     paddingHorizontal: 14,
-    backgroundColor: 'transparent',
-    overflow: 'hidden',
-    // Drop shadow matching IconButton
-    shadowColor: '#000',
-    shadowOpacity: 0.12,
-    shadowRadius: 20,
-    shadowOffset: { width: 0, height: 8 },
-    elevation: 6,
-  },
-  searchMorphTint: {
-    backgroundColor: 'rgba(255,255,255,0.55)',
-  },
-  searchMorphHairline: {
-    borderRadius: 22,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: 'rgba(255,255,255,0.55)',
-  },
-  searchMorphInner: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-    marginLeft: spacing.sm,
+    borderRadius: 1000,
+    backgroundColor: 'rgba(118,118,128,0.12)',
+    marginTop: 8,
+    marginBottom: 4,
   },
   searchInput: {
     flex: 1,
     fontSize: 15,
     color: '#1A1A1A',
     paddingVertical: 0,
-  },
-  searchClear: {
-    width: 18,
-    height: 18,
-    borderRadius: 9,
-    backgroundColor: '#9A9AA0',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  searchCancel: {
-    fontSize: 15,
-    color: semantic.primary,
   },
   searchEmpty: {
     paddingVertical: spacing['2xl'],

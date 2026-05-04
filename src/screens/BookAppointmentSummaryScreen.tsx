@@ -10,6 +10,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../App';
 import { AppBackground, Card, Icon, StepProgress, SubPageHeader, Text } from '../components';
+import { HEADER_HEIGHT } from '../components/SubPageHeader';
 import { semantic, spacing } from '../theme';
 import { mockPets } from '../data/pets';
 import { mockVets } from '../data/televet';
@@ -60,26 +61,35 @@ export default function BookAppointmentSummaryScreen({ navigation, route }: Prop
   return (
     <View style={styles.root}>
       <AppBackground />
-      <SubPageHeader title="ตรวจสอบข้อมูลการจอง" onBack={() => navigation.goBack()} />
-      <StepProgress
-        currentStep={1}
-        steps={[
-          { icon: 'CalendarPlus' },
-          { icon: 'ClipboardCheck' },
-          { icon: 'CircleCheck' },
-        ]}
+      <SubPageHeader
+        title="ตรวจสอบข้อมูลการจอง"
+        onBack={() => navigation.goBack()}
+        scrollY={scrollY}
       />
 
       <Animated.ScrollView
         style={styles.flex}
         contentContainerStyle={[
           styles.scroll,
-          { paddingTop: spacing.md, paddingBottom: insets.bottom + 120 },
+          {
+            paddingTop: insets.top + HEADER_HEIGHT,
+            paddingBottom: insets.bottom + 120,
+          },
         ]}
         showsVerticalScrollIndicator={false}
         onScroll={scrollHandler}
         scrollEventThrottle={16}
       >
+        <View style={styles.stepWrap}>
+          <StepProgress
+            currentStep={1}
+            steps={[
+              { icon: 'CalendarPlus' },
+              { icon: 'ClipboardCheck' },
+              { icon: 'CircleCheck' },
+            ]}
+          />
+        </View>
         <Text variant="caption" color={semantic.textSecondary} style={styles.intro}>
           กรุณาตรวจสอบรายละเอียดการนัดหมายให้ถูกต้องก่อนยืนยัน
         </Text>
@@ -238,6 +248,10 @@ const styles = StyleSheet.create({
   flex: { flex: 1 },
   scroll: {
     paddingHorizontal: spacing.xl,
+  },
+  stepWrap: {
+    marginHorizontal: -spacing.xl,
+    marginBottom: spacing.md,
   },
   intro: {
     fontSize: 13,
