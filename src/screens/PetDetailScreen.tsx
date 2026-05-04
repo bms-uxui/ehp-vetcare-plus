@@ -22,6 +22,12 @@ import Animated, {
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
+import {
+  BottomSheetModal,
+  BottomSheetView,
+  BottomSheetBackdrop,
+  BottomSheetBackdropProps,
+} from '@gorhom/bottom-sheet';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useFocusEffect } from '@react-navigation/native';
 import { useCallback } from 'react';
@@ -71,6 +77,26 @@ const petAgeFull = (birthDate: string): string => {
 export default function PetDetailScreen({ route, navigation }: Props) {
   const { petId, flashMessage } = route.params;
   const [toast, setToast] = useState<string | null>(null);
+  const neuterSheetRef = useRef<BottomSheetModal>(null);
+  const openNeuterSheet = useCallback(
+    () => neuterSheetRef.current?.present(),
+    [],
+  );
+  const closeNeuterSheet = useCallback(
+    () => neuterSheetRef.current?.dismiss(),
+    [],
+  );
+  const renderBackdrop = useCallback(
+    (props: BottomSheetBackdropProps) => (
+      <BottomSheetBackdrop
+        {...props}
+        appearsOnIndex={0}
+        disappearsOnIndex={-1}
+        pressBehavior="close"
+      />
+    ),
+    [],
+  );
   const lastFlashRef = useRef<string | undefined>(undefined);
   const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => {
@@ -135,7 +161,12 @@ export default function PetDetailScreen({ route, navigation }: Props) {
     pagerRef.current?.scrollTo({ x: tabIndex * windowWidth, animated: true });
   }, [tabIndex, windowWidth]);
   const onPagerEnd = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
+    // Android fires onMomentumScrollEnd for programmatic scrollTo, which would
+    // race with our setTab from the tab tap. Only sync the tab back if the
+    // user actually dragged the pager.
+    const wasDragging = pagerDragging.current;
     pagerDragging.current = false;
+    if (!wasDragging) return;
     const idx = Math.round(e.nativeEvent.contentOffset.x / windowWidth);
     const key = TAB_KEYS[idx];
     if (key && key !== tab) setTab(key);
@@ -164,24 +195,68 @@ export default function PetDetailScreen({ route, navigation }: Props) {
           <InfoRow label="วันเกิด" value={thDate(pet.birthDate)} />
           <InfoRow label="สายพันธุ์" value={pet.breed} />
           <InfoRow label="น้ำหนัก" value={`${pet.weightKg} กก.`} />
-          <InfoRow label="สี" value={pet.color} />
+          <InfoRow label="สี" value={pet.color?.trim() || 'ไม่ระบุ'} />
           <InfoRow label="เพศ" value={pet.gender === 'male' ? 'ผู้' : 'เมีย'} />
           {pet.microchipId && <InfoRow label="ไมโครชิป" value={pet.microchipId} />}
         </View>
 
-        <View style={styles.neuterCard}>
+        <Pressable
+          onPress={pet.neutered ? openNeuterSheet : undefined}
+          android_ripple={
+            pet.neutered ? RIPPLE : undefined
+          }
+          style={({ pressed }) => [
+            styles.neuterCard,
+            pressed && pet.neutered && { opacity: 0.92 },
+          ]}
+          accessibilityRole={pet.neutered ? 'button' : undefined}
+          accessibilityLabel={pet.neutered ? 'ดูที่มาของข้อมูล' : undefined}
+        >
+          {pet.neutered && (
+            <View style={styles.neuterInfoBtn} pointerEvents="none">
+              <Icon
+                name="Info"
+                size={18}
+                color="#9F5266"
+                fill="#FFFFFF"
+                strokeWidth={2.2}
+              />
+            </View>
+          )}
           <View style={styles.neuterBody}>
             <Text variant="caption" style={styles.subtleLabel}>
               ประวัติการทำหมัน
             </Text>
-            <Text variant="bodyStrong" style={styles.neuterTitle}>
-              {pet.neutered ? 'ทำหมันแล้ว' : 'ยังไม่ได้ทำหมัน'}
-            </Text>
+            <View style={styles.neuterTitleRow}>
+              <Text
+                variant="bodyStrong"
+                style={[
+                  styles.neuterTitle,
+                  pet.neutered && styles.neuterTitleDone,
+                ]}
+              >
+                {pet.neutered ? 'ทำหมันแล้ว' : 'ยังไม่ได้ทำหมัน'}
+              </Text>
+              {pet.neutered && (
+                <Icon
+                  name="CircleCheck"
+                  size={18}
+                  color="#FFFFFF"
+                  fill="#4FB36C"
+                  strokeWidth={2.4}
+                />
+              )}
+            </View>
             {pet.neutered && pet.neuteredDate && (
               <Text variant="caption" style={styles.subtleLabel}>
                 เมื่อ {thDate(pet.neuteredDate)}
               </Text>
             )}
+            <Image
+              source={require('../../assets/pet-neuter.png')}
+              style={styles.neuterIllus}
+              resizeMode="contain"
+            />
           </View>
           {pet.neutered && (
             <View style={styles.neuterFooter}>
@@ -190,7 +265,7 @@ export default function PetDetailScreen({ route, navigation }: Props) {
               </Text>
             </View>
           )}
-        </View>
+        </Pressable>
 
         <View style={styles.infoCard}>
           <View style={styles.conditionWrap}>
@@ -521,7 +596,7 @@ export default function PetDetailScreen({ route, navigation }: Props) {
           </Animated.View>
         </Animated.View>
 
-        {/* ── TABS (horizontal scroll, overflow visible to the right) ── */}
+        {/* ── TABS (horizontal scroll, edge-to-edge) ── */}
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
@@ -533,16 +608,14 @@ export default function PetDetailScreen({ route, navigation }: Props) {
               <Pressable
                 key={key}
                 onPress={() => setTab(key)}
-                android_ripple={RIPPLE}
-                style={({ pressed }) => [
+                style={[
                   styles.tab,
-                  active ? styles.tabActive : styles.tabInactive,
-                  pressed && { opacity: 0.85 },
+                  { backgroundColor: active ? '#9F5266' : '#F5E4E7' },
                 ]}
               >
                 <Text
                   variant="bodyStrong"
-                  color={active ? semantic.onPrimary : '#9F5266'}
+                  color={active ? '#FFFFFF' : '#9F5266'}
                   style={styles.tabText}
                   numberOfLines={1}
                 >
@@ -616,6 +689,42 @@ export default function PetDetailScreen({ route, navigation }: Props) {
           </Text>
         </Animated.View>
       )}
+
+      <BottomSheetModal
+        ref={neuterSheetRef}
+        enableDynamicSizing
+        backdropComponent={renderBackdrop}
+        handleIndicatorStyle={styles.sheetGrabber}
+      >
+        <BottomSheetView
+          style={[styles.sheetCard, { paddingBottom: insets.bottom + 16 }]}
+        >
+          <View style={styles.sheetIconCircle}>
+            <Icon name="Info" size={22} color="#1B5A77" strokeWidth={2.2} />
+          </View>
+          <Text variant="bodyStrong" style={styles.sheetTitle}>
+            ที่มาของข้อมูล
+          </Text>
+          <Text variant="caption" style={styles.sheetBody}>
+            ข้อมูลการทำหมันนี้ดึงมาจากคลินิกพันธมิตรของน้อง{pet.name}{'\n\n'}
+            คลินิก: ปุกปุยสัตวแพทย์ PUKPUI Rabbit & Exotic Pet Clinic
+            {pet.neuteredDate
+              ? `\nวันที่ทำหมัน: ${thDate(pet.neuteredDate)}`
+              : ''}
+          </Text>
+          <Pressable
+            onPress={closeNeuterSheet}
+            style={({ pressed }) => [
+              styles.sheetCta,
+              pressed && { opacity: 0.85 },
+            ]}
+          >
+            <Text variant="bodyStrong" style={styles.sheetCtaText}>
+              เข้าใจแล้ว
+            </Text>
+          </Pressable>
+        </BottomSheetView>
+      </BottomSheetModal>
     </View>
   );
 }
@@ -952,6 +1061,10 @@ function WeightTrendCard({ pet }: { pet: Pet }) {
           { label: 'ปัจจุบัน', sub: 'ปัจจุบัน', kg: pet.weightKg },
         ];
   const [selected, setSelected] = useState(points.length - 1);
+  // Clamp against current points length — `selected` state can outlive a
+  // change in `points` (e.g. pet prop swap), so the raw index may exceed
+  // the new array bounds.
+  const safeSelected = Math.min(Math.max(selected, 0), points.length - 1);
   const max = Math.max(...points.map((p) => p.kg));
   const min = Math.min(...points.map((p) => p.kg));
   const chartHeight = 110;
@@ -959,8 +1072,8 @@ function WeightTrendCard({ pet }: { pet: Pet }) {
     const range = max - min || 1;
     return chartHeight * (0.3 + 0.7 * ((kg - min) / range));
   };
-  const sel = points[selected];
-  const prev = selected > 0 ? points[selected - 1] : null;
+  const sel = points[safeSelected];
+  const prev = safeSelected > 0 ? points[safeSelected - 1] : null;
   const delta = prev ? +(sel.kg - prev.kg).toFixed(1) : 0;
   const deltaLabel = !prev
     ? '—'
@@ -997,7 +1110,7 @@ function WeightTrendCard({ pet }: { pet: Pet }) {
 
       <View style={styles.chartArea}>
         {points.map((p, i) => {
-          const isSelected = i === selected;
+          const isSelected = i === safeSelected;
           return (
             <Pressable
               key={i}
@@ -1120,6 +1233,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.xl,
     paddingTop: spacing.sm,
     paddingBottom: spacing.lg,
+    alignItems: 'center',
   },
   tab: {
     paddingVertical: 8,
@@ -1190,14 +1304,94 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.md,
+    paddingRight: 100,
     gap: 4,
+  },
+  neuterIllus: {
+    position: 'absolute',
+    right: 8,
+    bottom: -8,
+    width: 96,
+    height: 96,
+  },
+  neuterTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
   },
   neuterTitle: {
     fontSize: 16,
     fontWeight: '700',
     color: '#1A1A1F',
   },
+  neuterTitleDone: {
+    color: '#4FB36C',
+  },
+  neuterInfoBtn: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 1,
+  },
+  sheetBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.45)',
+    justifyContent: 'flex-end',
+  },
+  sheetCard: {
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    paddingHorizontal: 24,
+    paddingTop: 8,
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  sheetIconCircle: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: '#E1ECF5',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: spacing.sm,
+  },
+  sheetTitle: {
+    fontSize: 17,
+    fontWeight: '700',
+    color: '#1A1A1F',
+    marginTop: spacing.xs,
+  },
+  sheetBody: {
+    fontSize: 13,
+    color: '#4A4A50',
+    textAlign: 'center',
+    lineHeight: 19,
+    paddingHorizontal: spacing.sm,
+  },
+  sheetCta: {
+    alignSelf: 'stretch',
+    height: 48,
+    borderRadius: 14,
+    backgroundColor: '#9F5266',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: spacing.md,
+  },
+  sheetCtaText: {
+    fontSize: 15,
+    color: '#FFFFFF',
+    fontWeight: '700',
+  },
   neuterFooter: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
     backgroundColor: '#F5E4E7',
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
@@ -1205,6 +1399,7 @@ const styles = StyleSheet.create({
     borderTopColor: 'rgba(184,106,124,0.18)',
   },
   clinicText: {
+    flex: 1,
     fontSize: 12,
     color: '#9F5266',
     fontWeight: '500',
