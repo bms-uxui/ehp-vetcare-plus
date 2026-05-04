@@ -9,10 +9,13 @@ import {
   View,
 } from 'react-native';
 import Animated, {
-  interpolateColor,
+  FadeIn,
+  FadeOut,
+  LinearTransition,
   useAnimatedScrollHandler,
   useAnimatedStyle,
   useSharedValue,
+  withSequence,
   withSpring,
   withTiming,
 } from 'react-native-reanimated';
@@ -26,19 +29,26 @@ import {
   Button,
   Card,
   Icon,
+  PetAvatar,
   StickyAppBar,
   Text,
 } from '../components';
 import { radii, semantic, spacing } from '../theme';
 import {
   mockReminders,
-  mockSchedules,
   reminderMeta,
   relativeTime,
   Reminder,
   FeedingSchedule,
 } from '../data/reminders';
-import { notifyNow, scheduleLocal } from '../lib/notifications';
+import { useSchedules } from '../data/schedulesContext';
+import { useNotifyPrefs } from '../data/notifyPrefsContext';
+import {
+  notifyNow,
+  scheduleLocal,
+  FEEDING_FOOD_CATEGORY,
+  FEEDING_WATER_CATEGORY,
+} from '../lib/notifications';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Notifications'>;
 
@@ -50,29 +60,72 @@ type FilterKey =
   | 'contact'
   | 'order';
 
-const FILTERS: { key: FilterKey; label: string; icon: string }[] = [
-  { key: 'all', label: 'ทั้งหมด', icon: 'Bell' },
-  { key: 'feeding', label: 'ให้อาหาร', icon: 'UtensilsCrossed' },
-  { key: 'appointment', label: 'นัดหมาย', icon: 'Calendar' },
-  { key: 'vaccine', label: 'วัคซีน', icon: 'Syringe' },
-  { key: 'contact', label: 'ติดต่อ', icon: 'MessageCircle' },
-  { key: 'order', label: 'การสั่งซื้อ', icon: 'Package' },
+const FILTERS: {
+  key: FilterKey;
+  label: string;
+  icon: string;
+  activeBg: string;
+  /** [lighter top, base/darker bottom] for the active chip background. */
+  activeGradient: [string, string];
+}[] = [
+  {
+    key: 'all',
+    label: 'ทั้งหมด',
+    icon: 'Bell',
+    activeBg: semantic.primary,
+    activeGradient: ['#C77E91', '#9F5266'],
+  },
+  {
+    key: 'feeding',
+    label: 'ให้อาหาร',
+    icon: 'UtensilsCrossed',
+    activeBg: '#D99A20',
+    activeGradient: ['#E5B048', '#C8881A'],
+  },
+  {
+    key: 'appointment',
+    label: 'นัดหมาย',
+    icon: 'Calendar',
+    activeBg: '#B86A7C',
+    activeGradient: ['#C77E91', '#A75D6F'],
+  },
+  {
+    key: 'vaccine',
+    label: 'วัคซีน',
+    icon: 'Syringe',
+    activeBg: '#4FB36C',
+    activeGradient: ['#5EC57C', '#42A35E'],
+  },
+  {
+    key: 'contact',
+    label: 'ติดต่อ',
+    icon: 'MessageCircle',
+    activeBg: '#4A8FD1',
+    activeGradient: ['#5BA3E2', '#3D7AB8'],
+  },
+  {
+    key: 'order',
+    label: 'การสั่งซื้อ',
+    icon: 'Package',
+    activeBg: '#D17A4A',
+    activeGradient: ['#E08D5E', '#B96A3F'],
+  },
 ];
 
 export default function NotificationsScreen({ navigation }: Props) {
   const insets = useSafeAreaInsets();
+  const { schedules, toggleSchedule } = useSchedules();
+  const {
+    preAppointment,
+    setPreAppointment,
+    preVaccine,
+    setPreVaccine,
+    preTreatment,
+    setPreTreatment,
+  } = useNotifyPrefs();
   const [filter, setFilter] = useState<FilterKey>('all');
-  const [schedules, setSchedules] = useState(mockSchedules);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [schedulesOpen, setSchedulesOpen] = useState(false);
-
-  const [preAppointment, setPreAppointment] = useState({
-    week: true,
-    day: true,
-    hour: true,
-  });
-  const [preVaccine, setPreVaccine] = useState(true);
-  const [preTreatment, setPreTreatment] = useState(true);
   const [readIds, setReadIds] = useState<Set<string>>(
     () => new Set(mockReminders.filter((r) => r.read).map((r) => r.id)),
   );
@@ -96,14 +149,30 @@ export default function NotificationsScreen({ navigation }: Props) {
     return remindersWithRead.filter((r) => r.type === filter);
   }, [filter, remindersWithRead]);
 
+  // Unread count per filter chip — drives the dot indicator on the chip.
+  const unreadByFilter = useMemo(() => {
+    const map: Record<FilterKey, number> = {
+      all: 0,
+      feeding: 0,
+      appointment: 0,
+      vaccine: 0,
+      contact: 0,
+      order: 0,
+    };
+    for (const r of remindersWithRead) {
+      if (r.read) continue;
+      map.all += 1;
+      if (r.type === 'chat' || r.type === 'call') map.contact += 1;
+      else if (r.type === 'feeding') map.feeding += 1;
+      else if (r.type === 'appointment') map.appointment += 1;
+      else if (r.type === 'vaccine') map.vaccine += 1;
+      else if (r.type === 'order') map.order += 1;
+    }
+    return map;
+  }, [remindersWithRead]);
+
   const markAllRead = () => {
     setReadIds(new Set(mockReminders.map((r) => r.id)));
-  };
-
-  const toggleSchedule = (id: string) => {
-    setSchedules((prev) =>
-      prev.map((s) => (s.id === id ? { ...s, enabled: !s.enabled } : s)),
-    );
   };
 
   const [menuOpen, setMenuOpen] = useState(false);
@@ -132,7 +201,7 @@ export default function NotificationsScreen({ navigation }: Props) {
     return {
       width: BTN_SIZE + (MENU_W - BTN_SIZE) * v,
       height: BTN_SIZE + (MENU_H - BTN_SIZE) * v,
-      borderRadius: 22 - 6 * v,
+      borderRadius: 22 + 2 * v,
     };
   });
   const morphIconStyle = useAnimatedStyle(() => ({
@@ -211,30 +280,15 @@ export default function NotificationsScreen({ navigation }: Props) {
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={styles.chipsScroll}
         >
-          {FILTERS.map((f) => {
-            const active = filter === f.key;
-            return (
-              <Pressable
-                key={f.key}
-                onPress={() => setFilter(f.key)}
-                style={({ pressed }) => [
-                  styles.chip,
-                  active && styles.chipActive,
-                  pressed && { opacity: 0.7 },
-                ]}
-              >
-                <Icon
-                  name={f.icon as any}
-                  size={12}
-                  color={active ? '#FFFFFF' : '#3C3C43'}
-                  strokeWidth={2.4}
-                />
-                <Text style={[styles.chipText, active && styles.chipTextActive]}>
-                  {f.label}
-                </Text>
-              </Pressable>
-            );
-          })}
+          {FILTERS.map((f) => (
+            <FilterChip
+              key={f.key}
+              filter={f}
+              active={filter === f.key}
+              hasUnread={unreadByFilter[f.key] > 0}
+              onPress={() => setFilter(f.key)}
+            />
+          ))}
         </ScrollView>
 
         {/* Content — list of reminders filtered by chip */}
@@ -416,27 +470,39 @@ function RemindersContent({ reminders }: { reminders: Reminder[] }) {
       {reminders.map((r) => {
         const meta = reminderMeta[r.type];
         return (
-          <Card key={r.id} variant="elevated" padding="lg">
+          <View key={r.id} style={styles.reminderCard}>
             <View style={styles.reminderRow}>
-              <View style={[styles.iconCircle, { backgroundColor: meta.bg }]}>
-                <Icon name={meta.icon as any} size={20} color={meta.fg} />
+              <View style={styles.iconStack}>
+                <View
+                  style={[styles.iconCircle, { backgroundColor: meta.bg }]}
+                >
+                  <Icon name={meta.icon as any} size={20} color={meta.fg} />
+                </View>
+                {r.petName ? (
+                  <View style={styles.iconPetBadge}>
+                    <PetAvatar
+                      petId={r.petId}
+                      fallbackEmoji={r.petEmoji}
+                      size={16}
+                    />
+                  </View>
+                ) : null}
               </View>
               <View style={styles.reminderBody}>
                 <View style={styles.reminderTopRow}>
-                  <Text variant="overline" color={meta.fg}>
-                    {meta.label}
+                  <Text variant="bodyStrong" style={styles.reminderTitle}>
+                    {r.title}
                   </Text>
                   <Text variant="caption" color={semantic.textMuted}>
                     {relativeTime(r.dueISO)}
                   </Text>
                 </View>
-                <Text variant="bodyStrong">{r.title}</Text>
                 <Text variant="caption" color={semantic.textSecondary}>
                   {r.description}
                 </Text>
                 {r.petName && (
                   <Text variant="caption" color={semantic.textMuted}>
-                    {r.petEmoji} {r.petName}
+                    {r.petName}
                     {r.leadTimeLabel ? ` · ${r.leadTimeLabel}` : ''}
                   </Text>
                 )}
@@ -481,7 +547,7 @@ function RemindersContent({ reminders }: { reminders: Reminder[] }) {
               </View>
               {!r.read && <View style={styles.unreadDot} />}
             </View>
-          </Card>
+          </View>
         );
       })}
     </View>
@@ -558,7 +624,155 @@ function SchedulesContent({
   );
 }
 
+/* ---------- Filter chip — morph + scale-bump animation ---------- */
+
+function FilterChip({
+  filter: f,
+  active,
+  hasUnread,
+  onPress,
+}: {
+  filter: (typeof FILTERS)[number];
+  active: boolean;
+  hasUnread: boolean;
+  onPress: () => void;
+}) {
+  // Bump scale (1 → 1.08 → 1) every time the chip flips to active so the
+  // selection feels responsive on top of the LinearTransition width morph.
+  const scale = useSharedValue(1);
+  useEffect(() => {
+    if (active) {
+      scale.value = withSequence(
+        withTiming(1.08, { duration: 140 }),
+        withSpring(1, { damping: 12, stiffness: 200 }),
+      );
+    }
+  }, [active, scale]);
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: scale.value }],
+  }));
+
+  return (
+    <Pressable
+      onPress={onPress}
+      style={({ pressed }) => [pressed && { opacity: 0.7 }]}
+    >
+      <Animated.View
+        layout={LinearTransition.springify()
+          .mass(0.55)
+          .damping(22)
+          .stiffness(180)}
+        style={[
+          styles.chip,
+          active
+            ? [
+                styles.chipActive,
+                { backgroundColor: f.activeBg, shadowColor: f.activeBg },
+              ]
+            : styles.chipCompact,
+          animatedStyle,
+        ]}
+      >
+        {active ? (
+          <Animated.View
+            entering={FadeIn.duration(180)}
+            exiting={FadeOut.duration(100)}
+            style={styles.chipGradient}
+          >
+            <LinearGradient
+              pointerEvents="none"
+              colors={f.activeGradient}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 0, y: 1 }}
+              style={styles.chipGradient}
+            />
+          </Animated.View>
+        ) : null}
+        <Icon
+          name={f.icon as any}
+          size={16}
+          color={active ? '#FFFFFF' : '#3C3C43'}
+          strokeWidth={2.2}
+        />
+        {active ? (
+          <Animated.Text
+            entering={FadeIn.duration(240).delay(80)}
+            exiting={FadeOut.duration(120)}
+            style={[styles.chipText, styles.chipTextActive]}
+          >
+            {f.label}
+          </Animated.Text>
+        ) : null}
+        {hasUnread ? (
+          <View
+            style={[styles.chipDotFloating, active && styles.chipDotActive]}
+          />
+        ) : null}
+      </Animated.View>
+    </Pressable>
+  );
+}
+
 /* ---------- Schedules sheet ---------- */
+
+const DAY_LABELS_TH = ['อา.', 'จ.', 'อ.', 'พ.', 'พฤ.', 'ศ.', 'ส.'];
+
+function isSameLocalDay(iso: string, ref: Date = new Date()): boolean {
+  const d = new Date(iso);
+  return (
+    d.getFullYear() === ref.getFullYear() &&
+    d.getMonth() === ref.getMonth() &&
+    d.getDate() === ref.getDate()
+  );
+}
+
+function formatHHMM(iso: string): string {
+  const d = new Date(iso);
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+function formatDays(daysOfWeek: number[]): string {
+  if (!daysOfWeek || daysOfWeek.length === 0 || daysOfWeek.length === 7) {
+    return 'ทุกวัน';
+  }
+  const sorted = [...daysOfWeek].sort((a, b) => a - b);
+  const weekdays = [1, 2, 3, 4, 5];
+  const weekend = [0, 6];
+  const isWeekdays =
+    sorted.length === 5 && sorted.every((d, i) => d === weekdays[i]);
+  if (isWeekdays) return 'จันทร์–ศุกร์';
+  const isWeekend =
+    sorted.length === 2 && sorted.every((d, i) => d === weekend[i]);
+  if (isWeekend) return 'เสาร์–อาทิตย์';
+  return sorted.map((d) => DAY_LABELS_TH[d]).join(' ');
+}
+
+function groupSchedulesByPet(schedules: FeedingSchedule[]) {
+  const groups = new Map<
+    string,
+    { petId: string; petName: string; petEmoji: string; items: FeedingSchedule[] }
+  >();
+  for (const s of schedules) {
+    const g = groups.get(s.petId);
+    if (g) {
+      g.items.push(s);
+    } else {
+      groups.set(s.petId, {
+        petId: s.petId,
+        petName: s.petName,
+        petEmoji: s.petEmoji,
+        items: [s],
+      });
+    }
+  }
+  // Sort each group's items by time
+  for (const g of groups.values()) {
+    g.items.sort((a, b) => a.time.localeCompare(b.time));
+  }
+  return Array.from(groups.values());
+}
 
 function SchedulesSheet({
   schedules,
@@ -571,6 +785,8 @@ function SchedulesSheet({
   onAdd: () => void;
   onClose: () => void;
 }) {
+  const grouped = groupSchedulesByPet(schedules);
+  const enabledCount = schedules.filter((s) => s.enabled).length;
   return (
     <View style={styles.sheetRoot}>
       <View style={styles.sheetHeader}>
@@ -628,62 +844,141 @@ function SchedulesSheet({
           </View>
         </View>
 
-        {/* Section: ตารางให้อาหาร */}
+        {/* Section: ตารางให้อาหาร — grouped per pet */}
         <View style={styles.settingsSection}>
-          <Text weight="500" style={styles.settingsSectionLabel}>
-            ตารางให้อาหาร
-          </Text>
-          <View style={styles.settingsOptionCard}>
-            {schedules.map((s, idx) => {
-              const isFood = s.type === 'food';
-              const isLast = idx === schedules.length - 1;
-              return (
-                <View key={s.id}>
-                  <View style={styles.scheduleRowV2}>
-                    <View style={styles.scheduleRowTop}>
-                      <View style={styles.scheduleRowLeft}>
-                        <View
-                          style={[
-                            styles.scheduleIcon,
-                            { backgroundColor: '#FFFFFF' },
+          <View style={styles.scheduleSectionHeader}>
+            <Text weight="500" style={styles.settingsSectionLabel}>
+              ตารางให้อาหาร
+            </Text>
+            {schedules.length > 0 ? (
+              <Text style={styles.scheduleSectionMeta}>
+                เปิดอยู่ {enabledCount}/{schedules.length} รายการ
+              </Text>
+            ) : null}
+          </View>
+
+          {grouped.length === 0 ? (
+            <View style={styles.scheduleEmpty}>
+              <Text weight="500" style={styles.scheduleEmptyTitle}>
+                ยังไม่มีตาราง
+              </Text>
+              <Text style={styles.scheduleEmptyDesc}>
+                กด “เพิ่มเลย” ด้านบนเพื่อสร้างตารางให้อาหารมื้อแรก
+              </Text>
+            </View>
+          ) : (
+            grouped.map((group) => (
+              <View key={group.petId} style={styles.schedulePetGroup}>
+                <View style={styles.schedulePetHeader}>
+                  <PetAvatar
+                    petId={group.petId}
+                    fallbackEmoji={group.petEmoji}
+                    size={32}
+                  />
+                  <View style={{ flex: 1 }}>
+                    <Text weight="500" style={styles.schedulePetHeaderName}>
+                      {group.petName}
+                    </Text>
+                    <Text style={styles.schedulePetHeaderMeta}>
+                      {group.items.length} มื้อ
+                    </Text>
+                  </View>
+                </View>
+                <View style={styles.settingsOptionCard}>
+                  {group.items.map((s, idx) => {
+                    const isFood = s.type === 'food';
+                    const isLast = idx === group.items.length - 1;
+                    const tintBg = isFood ? '#FFF6D9' : '#E0F0FB';
+                    const tintFg = isFood ? '#D99A20' : '#4A8FD1';
+                    const typeLabel = isFood ? 'อาหาร' : 'น้ำ';
+                    return (
+                      <View key={s.id}>
+                        <Pressable
+                          onPress={() => onToggle(s.id)}
+                          style={({ pressed }) => [
+                            pressed && { opacity: 0.7 },
                           ]}
                         >
-                          <Icon
-                            name={isFood ? 'UtensilsCrossed' : 'Droplet'}
-                            size={14}
-                            color={isFood ? '#D99A20' : '#4A8FD1'}
-                            strokeWidth={2.2}
-                          />
-                        </View>
-                        <Text weight="500" style={styles.scheduleTime}>
-                          {s.time}
-                        </Text>
+                          <View style={styles.scheduleRowV2}>
+                            <View style={styles.scheduleRowTop}>
+                              <View style={styles.scheduleRowLeft}>
+                                <View
+                                  style={[
+                                    styles.scheduleIcon,
+                                    { backgroundColor: tintBg },
+                                  ]}
+                                >
+                                  <Icon
+                                    name={
+                                      isFood ? 'UtensilsCrossed' : 'Droplet'
+                                    }
+                                    size={16}
+                                    color={tintFg}
+                                    strokeWidth={2.2}
+                                  />
+                                </View>
+                                <View style={styles.scheduleTimeBlock}>
+                                  <Text
+                                    weight="500"
+                                    style={styles.scheduleTime}
+                                  >
+                                    {s.time}
+                                  </Text>
+                                  <Text style={styles.scheduleFreq}>
+                                    {typeLabel} · {formatDays(s.daysOfWeek)}
+                                  </Text>
+                                </View>
+                              </View>
+                              <Switch
+                                value={s.enabled}
+                                onValueChange={() => onToggle(s.id)}
+                                trackColor={{
+                                  false: '#E9E9EA',
+                                  true: semantic.primary,
+                                }}
+                                ios_backgroundColor="#E9E9EA"
+                              />
+                            </View>
+                            <View style={styles.scheduleRowBottom}>
+                              <Text style={styles.scheduleAmount}>
+                                {s.amount}
+                              </Text>
+                              {s.note ? (
+                                <Text
+                                  style={styles.scheduleNote}
+                                  numberOfLines={1}
+                                >
+                                  {s.note}
+                                </Text>
+                              ) : null}
+                            </View>
+                            {s.lastConfirmedAt &&
+                            isSameLocalDay(s.lastConfirmedAt) ? (
+                              <View style={styles.scheduleConfirmedRow}>
+                                <Icon
+                                  name="CheckCircle2"
+                                  size={12}
+                                  color="#4FB36C"
+                                  strokeWidth={2.4}
+                                />
+                                <Text style={styles.scheduleConfirmedText}>
+                                  {isFood ? 'ให้แล้ว' : 'เปลี่ยนน้ำแล้ว'} ·{' '}
+                                  {formatHHMM(s.lastConfirmedAt)}
+                                </Text>
+                              </View>
+                            ) : null}
+                          </View>
+                        </Pressable>
+                        {!isLast && (
+                          <View style={styles.settingsOptionDivider} />
+                        )}
                       </View>
-                      <View style={styles.scheduleRowRight}>
-                        <Text style={styles.scheduleFreq}>ทุกวัน</Text>
-                        <Switch
-                          value={s.enabled}
-                          onValueChange={() => onToggle(s.id)}
-                          trackColor={{
-                            false: '#E9E9EA',
-                            true: semantic.primary,
-                          }}
-                          ios_backgroundColor="#E9E9EA"
-                        />
-                      </View>
-                    </View>
-                    <View style={styles.scheduleRowBottom}>
-                      <Text style={styles.scheduleAmount}>{s.amount}</Text>
-                      <View style={styles.schedulePetRow}>
-                        <Text style={styles.schedulePetEmoji}>{s.petEmoji}</Text>
-                      </View>
-                    </View>
-                  </View>
-                  {!isLast && <View style={styles.settingsOptionDivider} />}
+                    );
+                  })}
                 </View>
-              );
-            })}
-          </View>
+              </View>
+            ))
+          )}
         </View>
       </ScrollView>
     </View>
@@ -709,6 +1004,13 @@ function SettingsSheet({
   setPreTreatment: (v: boolean) => void;
   onClose: () => void;
 }) {
+  // Pull the first food / water schedule so the test feeding notification
+  // carries a real scheduleId — tapping the action button will then update
+  // that real schedule's `lastConfirmedAt` and the chip will appear in the
+  // SchedulesSheet.
+  const { schedules } = useSchedules();
+  const firstFoodSchedule = schedules.find((s) => s.type === 'food');
+  const firstWaterSchedule = schedules.find((s) => s.type === 'water');
   return (
     <View style={styles.sheetRoot}>
       <View style={styles.sheetHeader}>
@@ -813,47 +1115,128 @@ function SettingsSheet({
           </View>
         </View>
 
-        {/* Section: test notification */}
+        {/* Section: test notification — fire each banner type after 5 seconds
+            so the user can lock the screen and see the banner with action
+            buttons. Feeding/water tests carry a real scheduleId so confirming
+            updates the SchedulesSheet's "ให้แล้ว HH:MM" chip. */}
         <View style={styles.settingsSection}>
           <Text weight="500" style={styles.settingsSectionLabel}>
             ทดสอบการแจ้งเตือน
           </Text>
-          <Pressable
+          <TestRow
+            label="ทดสอบ: ให้อาหาร (5 วินาที)"
+            onPress={() =>
+              scheduleLocal({
+                title: 'ถึงเวลาให้อาหาร',
+                body: firstFoodSchedule
+                  ? `${firstFoodSchedule.petName} · ${firstFoodSchedule.amount}`
+                  : 'ข้าวปั้น · 80 กรัม',
+                seconds: 5,
+                categoryIdentifier: FEEDING_FOOD_CATEGORY,
+                data: {
+                  kind: 'feeding',
+                  type: 'food',
+                  scheduleId: firstFoodSchedule?.id,
+                },
+              })
+            }
+          />
+          <TestRow
+            label="ทดสอบ: เปลี่ยนน้ำ (5 วินาที)"
+            onPress={() =>
+              scheduleLocal({
+                title: 'ถึงเวลาเปลี่ยนน้ำ',
+                body: firstWaterSchedule
+                  ? `${firstWaterSchedule.petName} · ${firstWaterSchedule.amount}`
+                  : 'ข้าวปั้น · 1 ชาม',
+                seconds: 5,
+                categoryIdentifier: FEEDING_WATER_CATEGORY,
+                data: {
+                  kind: 'feeding',
+                  type: 'water',
+                  scheduleId: firstWaterSchedule?.id,
+                },
+              })
+            }
+          />
+          <TestRow
+            label="ทดสอบ: นัดหมาย (5 วินาที)"
+            onPress={() =>
+              scheduleLocal({
+                title: 'ใกล้ถึงวันนัดแล้ว',
+                body: 'ตรวจสุขภาพประจำปี · ข้าวปั้น · พรุ่งนี้ 14:30',
+                seconds: 5,
+                data: { kind: 'appointment-test' },
+              })
+            }
+          />
+          <TestRow
+            label="ทดสอบ: วัคซีน (5 วินาที)"
+            onPress={() =>
+              scheduleLocal({
+                title: 'วัคซีนใกล้ครบกำหนด',
+                body: 'มะลิ · วัคซีนรวม 5 โรค ครบกำหนด 15 มี.ค.',
+                seconds: 5,
+                data: { kind: 'vaccine-test' },
+              })
+            }
+          />
+          <TestRow
+            label="ทดสอบ: ให้ยา (5 วินาที)"
+            onPress={() =>
+              scheduleLocal({
+                title: 'ใกล้เวลาให้ยา',
+                body: 'ข้าวปั้น · Apoquel 5.4mg · มื้อเย็น',
+                seconds: 5,
+                data: { kind: 'medication-test' },
+              })
+            }
+          />
+          <TestRow
+            label="ทดสอบ: คำสั่งซื้อ (5 วินาที)"
+            onPress={() =>
+              scheduleLocal({
+                title: 'คำสั่งซื้อจัดส่งแล้ว',
+                body: 'Order #ORD-2025 · Prescription Diet 7kg · ถึงภายใน 2 วัน',
+                seconds: 5,
+                data: { kind: 'order-test' },
+              })
+            }
+          />
+          <TestRow
+            label="ส่งแจ้งเตือนเดี๋ยวนี้ (no delay)"
             onPress={() =>
               notifyNow({
-                title: '🐾 EHP VetCare',
+                title: 'ระบบแจ้งเตือนพร้อมใช้งาน',
                 body: 'ระบบแจ้งเตือนพร้อมใช้งานแล้ว!',
               })
             }
-            style={({ pressed }) => [
-              styles.settingsTestBtn,
-              pressed && { opacity: 0.85 },
-            ]}
-          >
-            <Text weight="500" style={styles.settingsTestBtnText}>
-              ส่งแจ้งเตือนเดี๋ยวนี้
-            </Text>
-          </Pressable>
-          <Pressable
-            onPress={() =>
-              scheduleLocal({
-                title: '⏰ ครบกำหนด',
-                seconds: 5,
-                body: 'นี่คือตัวอย่างแจ้งเตือนที่ตั้งล่วงหน้า — ทำงานแม้ปิดหน้าจอ',
-              })
-            }
-            style={({ pressed }) => [
-              styles.settingsTestBtn,
-              pressed && { opacity: 0.85 },
-            ]}
-          >
-            <Text weight="500" style={styles.settingsTestBtnText}>
-              แจ้งเตือนใน 5 วินาที (ลองล็อกหน้าจอดู)
-            </Text>
-          </Pressable>
+          />
         </View>
       </ScrollView>
     </View>
+  );
+}
+
+function TestRow({
+  label,
+  onPress,
+}: {
+  label: string;
+  onPress: () => void;
+}) {
+  return (
+    <Pressable
+      onPress={onPress}
+      style={({ pressed }) => [
+        styles.settingsTestBtn,
+        pressed && { opacity: 0.85 },
+      ]}
+    >
+      <Text weight="500" style={styles.settingsTestBtnText}>
+        {label}
+      </Text>
+    </Pressable>
   );
 }
 
@@ -882,60 +1265,13 @@ function SettingsOption({
           {label}
         </Text>
       </View>
-      <AppleToggle value={value} onChange={onChange} />
+      <Switch
+        value={value}
+        onValueChange={onChange}
+        trackColor={{ false: '#E9E9EA', true: semantic.primary }}
+        ios_backgroundColor="#E9E9EA"
+      />
     </View>
-  );
-}
-
-/* ---------- AppleToggle — visually matches iOS Switch (51×31, white knob 27)
-   without relying on UISwitch's tintColor which can desync on Fabric. */
-
-const TOGGLE_W = 51;
-const TOGGLE_H = 31;
-const KNOB_SIZE = 27;
-const TOGGLE_PAD = 2;
-const KNOB_TRAVEL = TOGGLE_W - KNOB_SIZE - TOGGLE_PAD * 2;
-
-function AppleToggle({
-  value,
-  onChange,
-}: {
-  value: boolean;
-  onChange: (v: boolean) => void;
-}) {
-  const anim = useSharedValue(value ? 1 : 0);
-
-  useEffect(() => {
-    anim.value = withSpring(value ? 1 : 0, {
-      damping: 24,
-      stiffness: 320,
-      mass: 0.6,
-    });
-  }, [value, anim]);
-
-  const trackStyle = useAnimatedStyle(() => ({
-    backgroundColor: interpolateColor(
-      anim.value,
-      [0, 1],
-      ['#E9E9EA', semantic.primary],
-    ),
-  }));
-
-  const knobStyle = useAnimatedStyle(() => ({
-    transform: [{ translateX: anim.value * KNOB_TRAVEL }],
-  }));
-
-  return (
-    <Pressable
-      onPress={() => onChange(!value)}
-      hitSlop={6}
-      accessibilityRole="switch"
-      accessibilityState={{ checked: value }}
-      style={styles.toggleTrack}
-    >
-      <Animated.View style={[StyleSheet.absoluteFill, styles.toggleBg, trackStyle]} />
-      <Animated.View style={[styles.toggleKnob, knobStyle]} />
-    </Pressable>
   );
 }
 
@@ -992,23 +1328,61 @@ const styles = StyleSheet.create({
   // Filter chips
   chipsScroll: {
     paddingHorizontal: 16,
-    paddingVertical: spacing.sm,
+    paddingTop: 6,
+    paddingBottom: 16,
     gap: 8,
   },
   chip: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
+    gap: 6,
+    height: 40,
+    paddingHorizontal: 14,
     borderRadius: 1000,
     backgroundColor: 'rgba(118,118,128,0.12)',
   },
   chipActive: {
     backgroundColor: semantic.primary,
+    shadowOpacity: 0.28,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 3 },
+    elevation: 3,
+  },
+  chipGradient: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    borderRadius: 1000,
+  },
+  chipCompact: {
+    width: 40,
+    paddingHorizontal: 0,
+    justifyContent: 'center',
+  },
+  chipDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: semantic.primary,
+    marginLeft: 2,
+  },
+  chipDotFloating: {
+    position: 'absolute',
+    top: 6,
+    right: 6,
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: semantic.primary,
+  },
+  chipDotActive: {
+    backgroundColor: '#FFFFFF',
   },
   chipText: {
-    fontSize: 13,
+    fontSize: 15,
+    lineHeight: 20,
     color: '#3C3C43',
     letterSpacing: -0.2,
   },
@@ -1026,10 +1400,38 @@ const styles = StyleSheet.create({
   },
 
   // Reminder card
+  reminderCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: radii.xl,
+    padding: spacing.lg,
+  },
   reminderRow: {
     flexDirection: 'row',
     alignItems: 'flex-start',
     gap: spacing.md,
+  },
+  reminderTitle: {
+    flex: 1,
+    paddingRight: 8,
+  },
+  reminderPetRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginTop: 2,
+  },
+  iconStack: {
+    width: 44,
+    height: 44,
+    position: 'relative',
+  },
+  iconPetBadge: {
+    position: 'absolute',
+    right: -2,
+    bottom: -2,
+    padding: 2,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
   },
   reminderBody: {
     flex: 1,
@@ -1221,7 +1623,7 @@ const styles = StyleSheet.create({
   morphBorder: {
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: 'rgba(0,0,0,0.08)',
-    borderRadius: 16,
+    borderRadius: 24,
   },
   morphIcon: {
     position: 'absolute',
@@ -1424,8 +1826,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  scheduleTimeBlock: {
+    gap: 2,
+  },
   scheduleTime: {
-    fontSize: 14,
+    fontSize: 16,
+    lineHeight: 20,
     color: '#1A1A1A',
   },
   scheduleRowRight: {
@@ -1434,7 +1840,8 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   scheduleFreq: {
-    fontSize: 10,
+    fontSize: 11,
+    lineHeight: 14,
     color: '#9A9AA0',
   },
   scheduleRowBottom: {
@@ -1447,12 +1854,73 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#1A1A1A',
   },
-  schedulePetRow: {
+  scheduleNote: {
+    fontSize: 11,
+    lineHeight: 14,
+    color: '#9A9AA0',
+    flexShrink: 1,
+    textAlign: 'right',
+  },
+  scheduleConfirmedRow: {
     flexDirection: 'row',
     alignItems: 'center',
+    gap: 4,
+    paddingLeft: 42,
+    marginTop: 2,
   },
-  schedulePetEmoji: {
+  scheduleConfirmedText: {
+    fontSize: 11,
+    lineHeight: 14,
+    color: '#4FB36C',
+  },
+  scheduleSectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    justifyContent: 'space-between',
+  },
+  scheduleSectionMeta: {
+    fontSize: 11,
+    lineHeight: 14,
+    color: '#9A9AA0',
+  },
+  schedulePetGroup: {
+    gap: 8,
+  },
+  schedulePetHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    paddingHorizontal: 4,
+    marginTop: 4,
+  },
+  schedulePetHeaderName: {
     fontSize: 14,
+    lineHeight: 18,
+    color: '#1A1A1A',
+  },
+  schedulePetHeaderMeta: {
+    fontSize: 11,
+    lineHeight: 14,
+    color: '#9A9AA0',
+  },
+  scheduleEmpty: {
+    backgroundColor: '#FAFAFA',
+    borderRadius: 24,
+    paddingVertical: 28,
+    paddingHorizontal: 20,
+    alignItems: 'center',
+    gap: 4,
+  },
+  scheduleEmptyTitle: {
+    fontSize: 14,
+    lineHeight: 18,
+    color: '#1A1A1A',
+  },
+  scheduleEmptyDesc: {
+    fontSize: 12,
+    lineHeight: 18,
+    color: '#9A9AA0',
+    textAlign: 'center',
   },
 
   reminderTopRow: {
@@ -1462,29 +1930,6 @@ const styles = StyleSheet.create({
     marginBottom: 2,
   },
 
-  // iOS Switch lookalike (51×31)
-  toggleTrack: {
-    width: TOGGLE_W,
-    height: TOGGLE_H,
-    borderRadius: TOGGLE_H / 2,
-    padding: TOGGLE_PAD,
-    justifyContent: 'center',
-    overflow: 'hidden',
-  },
-  toggleBg: {
-    borderRadius: TOGGLE_H / 2,
-  },
-  toggleKnob: {
-    width: KNOB_SIZE,
-    height: KNOB_SIZE,
-    borderRadius: KNOB_SIZE / 2,
-    backgroundColor: '#FFFFFF',
-    shadowColor: '#000',
-    shadowOpacity: 0.16,
-    shadowRadius: 4,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 3,
-  },
 });
 // Reference radii constant to avoid unused import warning when downstream
 // theming changes simplify this file.

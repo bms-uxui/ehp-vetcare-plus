@@ -1,14 +1,24 @@
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   Image,
   Pressable,
+  ScrollView,
   StyleSheet,
+  TextInput,
   View,
 } from 'react-native';
 import Animated, {
+  FadeIn,
+  FadeOut,
+  LinearTransition,
   useAnimatedScrollHandler,
+  useAnimatedStyle,
   useSharedValue,
+  withSequence,
+  withSpring,
+  withTiming,
 } from 'react-native-reanimated';
+import { LinearGradient } from 'expo-linear-gradient';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { RootStackParamList } from '../../App';
@@ -28,12 +38,85 @@ import {
 
 type Props = NativeStackScreenProps<RootStackParamList, 'OrderTracking'>;
 
+type FilterKey = 'all' | 'placed' | 'packing' | 'shipping' | 'delivered' | 'cancelled';
+
+const FILTERS: {
+  key: FilterKey;
+  label: string;
+  icon: string;
+  activeBg: string;
+  activeGradient: [string, string];
+}[] = [
+  {
+    key: 'all',
+    label: 'ทั้งหมด',
+    icon: 'List',
+    activeBg: semantic.primary,
+    activeGradient: ['#C77E91', '#9F5266'],
+  },
+  {
+    key: 'placed',
+    label: 'รับคำสั่งซื้อ',
+    icon: 'Receipt',
+    activeBg: '#6E8FAE',
+    activeGradient: ['#86A3BD', '#587B9C'],
+  },
+  {
+    key: 'packing',
+    label: 'เตรียมสินค้า',
+    icon: 'Package',
+    activeBg: '#C97A3F',
+    activeGradient: ['#D89358', '#B5662F'],
+  },
+  {
+    key: 'shipping',
+    label: 'กำลังจัดส่ง',
+    icon: 'Truck',
+    activeBg: '#3B7BB5',
+    activeGradient: ['#5092C8', '#2D6A9E'],
+  },
+  {
+    key: 'delivered',
+    label: 'จัดส่งสำเร็จ',
+    icon: 'PackageCheck',
+    activeBg: '#2E8049',
+    activeGradient: ['#42985E', '#236A39'],
+  },
+  {
+    key: 'cancelled',
+    label: 'ยกเลิก',
+    icon: 'XCircle',
+    activeBg: '#A63A35',
+    activeGradient: ['#BC504C', '#902B27'],
+  },
+];
+
 export default function OrderTrackingScreen({ navigation }: Props) {
   const insets = useSafeAreaInsets();
   const scrollY = useSharedValue(0);
   const scrollHandler = useAnimatedScrollHandler((e) => {
     scrollY.value = e.contentOffset.y;
   });
+  const [filter, setFilter] = useState<FilterKey>('all');
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+
+  const filteredOrders = useMemo(() => {
+    let list =
+      filter === 'all'
+        ? mockOrders
+        : mockOrders.filter((o) => o.status === filter);
+    const q = searchQuery.trim().toLowerCase();
+    if (q) {
+      list = list.filter((o) => {
+        if (o.id.toLowerCase().includes(q)) return true;
+        return getOrderProducts(o).some(({ product }) =>
+          product.name.toLowerCase().includes(q),
+        );
+      });
+    }
+    return list;
+  }, [filter, searchQuery]);
 
   return (
     <View style={styles.root}>
@@ -42,16 +125,75 @@ export default function OrderTrackingScreen({ navigation }: Props) {
       <SubPageHeader
         title="ติดตามคำสั่งซื้อ"
         onBack={() => navigation.goBack()}
+        trailing={{
+          icon: searchOpen ? 'X' : 'Search',
+          onPress: () => {
+            if (searchOpen) {
+              setSearchQuery('');
+            }
+            setSearchOpen((v) => !v);
+          },
+          accessibilityLabel: searchOpen ? 'ปิดการค้นหา' : 'ค้นหาคำสั่งซื้อ',
+        }}
       />
 
       <Animated.ScrollView
         style={styles.flex}
-        contentContainerStyle={[styles.scroll, { paddingTop: spacing.md, paddingBottom: 120 }]}
+        contentContainerStyle={[styles.scroll, { paddingBottom: 120 }]}
         showsVerticalScrollIndicator={false}
         onScroll={scrollHandler}
         scrollEventThrottle={16}
+        keyboardShouldPersistTaps="handled"
       >
-        {mockOrders.length === 0 ? (
+        {searchOpen ? (
+          <View style={styles.searchField}>
+            <Icon
+              name="Search"
+              size={16}
+              color={semantic.textMuted}
+              strokeWidth={2.2}
+            />
+            <TextInput
+              autoFocus
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+              placeholder="ค้นหาเลขออเดอร์หรือชื่อสินค้า"
+              placeholderTextColor={semantic.textMuted}
+              style={styles.searchInput}
+            />
+            {searchQuery ? (
+              <Pressable
+                onPress={() => setSearchQuery('')}
+                hitSlop={6}
+                accessibilityLabel="ล้างคำค้น"
+              >
+                <Icon
+                  name="X"
+                  size={14}
+                  color={semantic.textMuted}
+                  strokeWidth={2.4}
+                />
+              </Pressable>
+            ) : null}
+          </View>
+        ) : null}
+
+        {/* Filter chips — morph compact icon → expanded pill on activation */}
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.chipsScroll}
+        >
+          {FILTERS.map((f) => (
+            <FilterChip
+              key={f.key}
+              filter={f}
+              active={filter === f.key}
+              onPress={() => setFilter(f.key)}
+            />
+          ))}
+        </ScrollView>
+        {filteredOrders.length === 0 ? (
           <View style={styles.empty}>
             <Icon
               name="Package"
@@ -59,14 +201,20 @@ export default function OrderTrackingScreen({ navigation }: Props) {
               color={semantic.textMuted}
               strokeWidth={1.5}
             />
-            <Text variant="bodyStrong">ยังไม่มีคำสั่งซื้อ</Text>
+            <Text variant="bodyStrong">
+              {mockOrders.length === 0
+                ? 'ยังไม่มีคำสั่งซื้อ'
+                : 'ไม่มีรายการในหมวดนี้'}
+            </Text>
             <Text variant="caption" color={semantic.textSecondary} align="center">
-              คำสั่งซื้อของคุณจะแสดงที่นี่
+              {mockOrders.length === 0
+                ? 'คำสั่งซื้อของคุณจะแสดงที่นี่'
+                : 'ลองเลือกตัวกรองอื่นดู'}
             </Text>
           </View>
         ) : (
           <View style={styles.list}>
-            {mockOrders.map((order) => (
+            {filteredOrders.map((order) => (
               <OrderCard key={order.id} order={order} />
             ))}
           </View>
@@ -77,6 +225,87 @@ export default function OrderTrackingScreen({ navigation }: Props) {
 }
 
 /* ---------- Order card ---------- */
+
+/* ---------- Filter chip — morph + scale-bump animation ---------- */
+
+function FilterChip({
+  filter: f,
+  active,
+  onPress,
+}: {
+  filter: (typeof FILTERS)[number];
+  active: boolean;
+  onPress: () => void;
+}) {
+  const scale = useSharedValue(1);
+  useEffect(() => {
+    if (active) {
+      scale.value = withSequence(
+        withTiming(1.08, { duration: 140 }),
+        withSpring(1, { damping: 12, stiffness: 200 }),
+      );
+    }
+  }, [active, scale]);
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: scale.value }],
+  }));
+
+  return (
+    <Pressable
+      onPress={onPress}
+      style={({ pressed }) => [pressed && { opacity: 0.7 }]}
+    >
+      <Animated.View
+        layout={LinearTransition.springify()
+          .mass(0.55)
+          .damping(22)
+          .stiffness(180)}
+        style={[
+          styles.chip,
+          active
+            ? [
+                styles.chipActive,
+                { backgroundColor: f.activeBg, shadowColor: f.activeBg },
+              ]
+            : styles.chipCompact,
+          animatedStyle,
+        ]}
+      >
+        {active ? (
+          <Animated.View
+            entering={FadeIn.duration(180)}
+            exiting={FadeOut.duration(100)}
+            style={styles.chipGradient}
+          >
+            <LinearGradient
+              pointerEvents="none"
+              colors={f.activeGradient}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 0, y: 1 }}
+              style={styles.chipGradient}
+            />
+          </Animated.View>
+        ) : null}
+        <Icon
+          name={f.icon as any}
+          size={16}
+          color={active ? '#FFFFFF' : '#3C3C43'}
+          strokeWidth={2.2}
+        />
+        {active ? (
+          <Animated.Text
+            entering={FadeIn.duration(240).delay(80)}
+            exiting={FadeOut.duration(120)}
+            style={[styles.chipText, styles.chipTextActive]}
+          >
+            {f.label}
+          </Animated.Text>
+        ) : null}
+      </Animated.View>
+    </Pressable>
+  );
+}
 
 function OrderCard({ order }: { order: Order }) {
   const [expanded, setExpanded] = useState(false);
@@ -293,6 +522,70 @@ const styles = StyleSheet.create({
   flex: { flex: 1 },
   scroll: {
     paddingHorizontal: 16,
+  },
+
+  // Search field — appears above chips when search is open
+  searchField: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    height: 44,
+    paddingHorizontal: 14,
+    borderRadius: 1000,
+    backgroundColor: 'rgba(118,118,128,0.12)',
+    marginTop: 8,
+    marginBottom: 4,
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: 15,
+    color: '#1A1A1A',
+    paddingVertical: 0,
+  },
+
+  // Filter chips — morph compact circle ↔ expanded pill, matching Notifications
+  chipsScroll: {
+    paddingTop: 6,
+    paddingBottom: 16,
+    gap: 8,
+  },
+  chip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    height: 40,
+    paddingHorizontal: 14,
+    borderRadius: 1000,
+    backgroundColor: 'rgba(118,118,128,0.12)',
+  },
+  chipActive: {
+    backgroundColor: semantic.primary,
+    shadowOpacity: 0.28,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 3 },
+    elevation: 3,
+  },
+  chipCompact: {
+    width: 40,
+    paddingHorizontal: 0,
+    justifyContent: 'center',
+  },
+  chipGradient: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    borderRadius: 1000,
+  },
+  chipText: {
+    fontSize: 15,
+    lineHeight: 20,
+    color: '#3C3C43',
+    letterSpacing: -0.2,
+  },
+  chipTextActive: {
+    color: '#FFFFFF',
   },
   hero: {
     paddingTop: spacing.sm,

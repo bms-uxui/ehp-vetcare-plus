@@ -6,9 +6,12 @@ export type Expense = {
   title: string;
   amount: number;
   dateISO: string;
+  /** Single pet — kept for backward compatibility. New entries set `petIds`. */
   petId?: string;
   petName?: string;
   petEmoji?: string;
+  /** Multiple pets sharing this expense (e.g. shopping for the whole household). */
+  petIds?: string[];
   note?: string;
 };
 
@@ -31,6 +34,10 @@ export const mockExpenses: Expense[] = [
   { id: 'e8', category: 'food', title: 'อาหารเม็ด 15kg', amount: 1650, dateISO: '2026-03-20', petId: 'p1', petName: 'ข้าวปั้น', petEmoji: '🐕', note: 'ซื้อจาก PetLover Online — มีโปรลด 10%' },
   { id: 'e9', category: 'treatment', title: 'ฉีดวัคซีนรวม + พิษสุนัขบ้า', amount: 900, dateISO: '2026-03-15', petId: 'p1', petName: 'ข้าวปั้น', petEmoji: '🐕', note: 'นัดถัดไป มี.ค. 2570' },
   { id: 'e10', category: 'grooming', title: 'อาบน้ำ', amount: 350, dateISO: '2026-03-12', petId: 'p2', petName: 'มะลิ', petEmoji: '🐈' },
+  // Multi-pet expenses — render as stacked pet badge
+  { id: 'e11', category: 'supplies', title: 'แชมพูสมุนไพรครอบครัว', amount: 890, dateISO: '2026-04-22', petId: 'p1', petName: 'ข้าวปั้น', petEmoji: '🐕', petIds: ['p1', 'p2'], note: 'ใช้ร่วมกันได้ทั้งหมา-แมว' },
+  { id: 'e12', category: 'treatment', title: 'หยอดเห็บหมัด 3 ตัว', amount: 1290, dateISO: '2026-04-12', petId: 'p1', petName: 'ข้าวปั้น', petEmoji: '🐕', petIds: ['p1', 'p2', 'p3'], note: 'Frontline Plus — ทุกตัวพร้อมกัน' },
+  { id: 'e13', category: 'food', title: 'ขนมตัวเล็กให้น้องทุกตัว', amount: 480, dateISO: '2026-04-08', petId: 'p1', petName: 'ข้าวปั้น', petEmoji: '🐕', petIds: ['p1', 'p2'] },
 ];
 
 export const DEFAULT_MONTHLY_BUDGET = 8000;

@@ -9,7 +9,16 @@ import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
 import { View } from 'react-native';
 import { useFonts } from 'expo-font';
 import { useEffect } from 'react';
-import { ensurePermission } from './src/lib/notifications';
+import * as Notifications from 'expo-notifications';
+import {
+  ensurePermission,
+  setupNotificationCategories,
+  snoozeFromResponse,
+  ACTION_CONFIRM_FEED,
+  ACTION_CONFIRM_WATER,
+  ACTION_SNOOZE_5MIN,
+} from './src/lib/notifications';
+import { confirmScheduleFromExternal } from './src/data/schedulesContext';
 import {
   GoogleSans_400Regular,
   GoogleSans_500Medium,
@@ -37,6 +46,14 @@ import ChatScreen from './src/screens/ChatScreen';
 import ChatListScreen from './src/screens/ChatListScreen';
 import VideoCallScreen from './src/screens/VideoCallScreen';
 import { CallProvider } from './src/data/callContext';
+import { ExpensesProvider } from './src/data/expensesContext';
+import { SchedulesProvider } from './src/data/schedulesContext';
+import {
+  NotifyPrefsProvider,
+  useNotifyPrefs,
+} from './src/data/notifyPrefsContext';
+import { mockReminders } from './src/data/reminders';
+import { syncReminderNotifications } from './src/lib/reminderScheduler';
 import MiniCallOverlay from './src/components/MiniCallOverlay';
 import BookTeleVetScreen from './src/screens/BookTeleVetScreen';
 import VetDetailScreen from './src/screens/VetDetailScreen';
@@ -158,6 +175,23 @@ const transparentHeader = {
   headerTintColor: semantic.primary,
 };
 
+/**
+ * Drives one-shot iOS notification scheduling for appointments / vaccines /
+ * medications: re-runs whenever prefs change so toggling "ล่วงหน้า 1 วัน" off
+ * cancels every appointment's day-ahead reminder, etc.
+ */
+function ReminderSyncBridge() {
+  const { preAppointment, preVaccine, preTreatment } = useNotifyPrefs();
+  useEffect(() => {
+    syncReminderNotifications(mockReminders, {
+      preAppointment,
+      preVaccine,
+      preTreatment,
+    }).catch(() => {});
+  }, [preAppointment, preVaccine, preTreatment]);
+  return null;
+}
+
 export default function App() {
   const [fontsLoaded] = useFonts({
     GoogleSans_400Regular,
@@ -166,9 +200,32 @@ export default function App() {
     GoogleSans_700Bold,
   });
 
-  // Request notification permission once at app start (async, non-blocking).
+  // Request notification permission + register iOS notification categories
+  // (banner action buttons) once at app start. Also subscribe to taps on the
+  // "ให้อาหารแล้ว" / "เปลี่ยนน้ำแล้ว" buttons so we can mark the schedule as
+  // confirmed even if the user never opens the app.
   useEffect(() => {
     ensurePermission().catch(() => {});
+    setupNotificationCategories().catch(() => {});
+    const sub = Notifications.addNotificationResponseReceivedListener(
+      (response) => {
+        const action = response.actionIdentifier;
+        if (action === ACTION_SNOOZE_5MIN) {
+          snoozeFromResponse(response).catch(() => {});
+          return;
+        }
+        if (
+          action === ACTION_CONFIRM_FEED ||
+          action === ACTION_CONFIRM_WATER
+        ) {
+          const data = response.notification.request.content.data as
+            | { scheduleId?: string }
+            | null;
+          if (data?.scheduleId) confirmScheduleFromExternal(data.scheduleId);
+        }
+      },
+    );
+    return () => sub.remove();
   }, []);
 
   if (!fontsLoaded) {
@@ -182,6 +239,10 @@ export default function App() {
       <BottomSheetModalProvider>
       <StatusBar style="dark" />
       <CallProvider>
+       <ExpensesProvider>
+        <SchedulesProvider>
+         <NotifyPrefsProvider>
+          <ReminderSyncBridge />
         <NavigationContainer ref={navigationRef} theme={navTheme}>
           <Stack.Navigator initialRouteName="Login">
           <Stack.Screen
@@ -361,6 +422,9 @@ export default function App() {
           />
           </Stack.Navigator>
         </NavigationContainer>
+         </NotifyPrefsProvider>
+        </SchedulesProvider>
+       </ExpensesProvider>
         <MiniCallOverlay />
       </CallProvider>
       </BottomSheetModalProvider>
