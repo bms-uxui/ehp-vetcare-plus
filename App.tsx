@@ -4,6 +4,8 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { KeyboardProvider } from 'react-native-keyboard-controller';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
 import { View } from 'react-native';
 import { useFonts } from 'expo-font';
 import { useEffect } from 'react';
@@ -174,8 +176,10 @@ export default function App() {
   }
 
   return (
+    <GestureHandlerRootView style={{ flex: 1 }}>
     <SafeAreaProvider>
       <KeyboardProvider>
+      <BottomSheetModalProvider>
       <StatusBar style="dark" />
       <CallProvider>
         <NavigationContainer ref={navigationRef} theme={navTheme}>
@@ -359,7 +363,9 @@ export default function App() {
         </NavigationContainer>
         <MiniCallOverlay />
       </CallProvider>
+      </BottomSheetModalProvider>
       </KeyboardProvider>
     </SafeAreaProvider>
+    </GestureHandlerRootView>
   );
 }

@@ -116,10 +116,11 @@ export default function StickyAppBar({
         style={[StyleSheet.absoluteFill, barBgStyle]}
       >
         <BlurView
-          intensity={30}
-          tint="light"
+          intensity={80}
+          tint="systemChromeMaterialLight"
           style={StyleSheet.absoluteFill}
         />
+        <View style={[StyleSheet.absoluteFill, styles.barTint]} />
         <View style={styles.barHairline} />
       </Animated.View>
 
@@ -200,6 +201,9 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     height: '40%',
+  },
+  barTint: {
+    backgroundColor: 'rgba(255,255,255,0.4)',
   },
   barHairline: {
     position: 'absolute',
