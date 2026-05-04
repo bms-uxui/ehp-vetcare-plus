@@ -161,7 +161,12 @@ export default function PetDetailScreen({ route, navigation }: Props) {
     pagerRef.current?.scrollTo({ x: tabIndex * windowWidth, animated: true });
   }, [tabIndex, windowWidth]);
   const onPagerEnd = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
+    // Android fires onMomentumScrollEnd for programmatic scrollTo, which would
+    // race with our setTab from the tab tap. Only sync the tab back if the
+    // user actually dragged the pager.
+    const wasDragging = pagerDragging.current;
     pagerDragging.current = false;
+    if (!wasDragging) return;
     const idx = Math.round(e.nativeEvent.contentOffset.x / windowWidth);
     const key = TAB_KEYS[idx];
     if (key && key !== tab) setTab(key);
@@ -591,7 +596,7 @@ export default function PetDetailScreen({ route, navigation }: Props) {
           </Animated.View>
         </Animated.View>
 
-        {/* ── TABS (horizontal scroll, overflow visible to the right) ── */}
+        {/* ── TABS (horizontal scroll, edge-to-edge) ── */}
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
@@ -603,16 +608,14 @@ export default function PetDetailScreen({ route, navigation }: Props) {
               <Pressable
                 key={key}
                 onPress={() => setTab(key)}
-                android_ripple={RIPPLE}
-                style={({ pressed }) => [
+                style={[
                   styles.tab,
-                  active ? styles.tabActive : styles.tabInactive,
-                  pressed && { opacity: 0.85 },
+                  { backgroundColor: active ? '#9F5266' : '#F5E4E7' },
                 ]}
               >
                 <Text
                   variant="bodyStrong"
-                  color={active ? semantic.onPrimary : '#9F5266'}
+                  color={active ? '#FFFFFF' : '#9F5266'}
                   style={styles.tabText}
                   numberOfLines={1}
                 >
@@ -1230,6 +1233,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.xl,
     paddingTop: spacing.sm,
     paddingBottom: spacing.lg,
+    alignItems: 'center',
   },
   tab: {
     paddingVertical: 8,
