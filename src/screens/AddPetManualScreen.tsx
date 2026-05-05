@@ -18,7 +18,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../App';
-import { AppBackground, DropdownField, Icon, Text } from '../components';
+import { AppBackground, DropdownField, Icon, StepProgress, Text } from '../components';
 import { semantic } from '../theme';
 import { breedOptions } from '../data/breeds';
 import { mockPets, Pet } from '../data/pets';
@@ -173,20 +173,14 @@ export default function AddPetManualScreen({ navigation, route }: Props) {
         </Text>
       </View>
 
-      <View style={styles.stepperCard}>
-        {(
-          [
-            { icon: 'PawPrint' as const },
-            { icon: 'Pencil' as const },
-            { icon: 'ClipboardCheck' as const },
-          ]
-        ).map((s, i) => (
-          <View key={i} style={[styles.stepCell, i < 2 && { flex: 1 }]}>
-            <StepDot index={i} progress={progress} icon={s.icon} />
-            {i < 2 && <StepLine index={i} progress={progress} />}
-          </View>
-        ))}
-      </View>
+      <StepProgress
+        steps={[
+          { icon: 'PawPrint' },
+          { icon: 'Pencil' },
+          { icon: 'ClipboardCheck' },
+        ]}
+        currentStep={stepIndex}
+      />
 
       <KeyboardAwareScrollView
         ref={scrollRef}
@@ -438,71 +432,6 @@ export default function AddPetManualScreen({ navigation, route }: Props) {
   );
 }
 
-function StepDot({
-  index,
-  progress,
-  icon,
-}: {
-  index: number;
-  progress: ReturnType<typeof useSharedValue<number>>;
-  icon: 'PawPrint' | 'Pencil' | 'ClipboardCheck';
-}) {
-  const dotStyle = useAnimatedStyle(() => {
-    const t = Math.max(0, Math.min(1, progress.value - index + 0.5));
-    return {
-      backgroundColor: interpolateColor(
-        t,
-        [0, 1],
-        ['#E6E6E8', '#9F5266'],
-      ),
-    };
-  });
-  const iconColorStyle = useAnimatedStyle(() => {
-    const t = Math.max(0, Math.min(1, progress.value - index + 0.5));
-    return {
-      opacity: 0.5 + t * 0.5,
-    };
-  });
-  // Icon color we cross-fade by stacking idle gray + active white via opacity
-  return (
-    <Animated.View style={[styles.stepDot, dotStyle]}>
-      <View style={StyleSheet.absoluteFill} pointerEvents="none">
-        <View style={styles.stepIconCenter}>
-          <Icon name={icon} size={12} color="#9A9AA0" strokeWidth={2.4} />
-        </View>
-      </View>
-      <Animated.View
-        style={[StyleSheet.absoluteFill, iconColorStyle]}
-        pointerEvents="none"
-      >
-        <View style={styles.stepIconCenter}>
-          <Icon name={icon} size={12} color="#FFFFFF" strokeWidth={2.4} />
-        </View>
-      </Animated.View>
-    </Animated.View>
-  );
-}
-
-function StepLine({
-  index,
-  progress,
-}: {
-  index: number;
-  progress: ReturnType<typeof useSharedValue<number>>;
-}) {
-  const lineStyle = useAnimatedStyle(() => {
-    const t = Math.max(0, Math.min(1, progress.value - index));
-    return {
-      backgroundColor: interpolateColor(
-        t,
-        [0, 1],
-        ['#E6E6E8', '#9F5266'],
-      ),
-    };
-  });
-  return <Animated.View style={[styles.stepLine, lineStyle]} />;
-}
-
 function FormField({
   label,
   value,
@@ -591,52 +520,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#1A1A1F',
     fontWeight: '500',
-  },
-  stepperCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: '#D9D9D9',
-    borderRadius: 999,
-    marginHorizontal: 16,
-    marginTop: 12,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-  },
-  stepCell: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  stepDot: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-    overflow: 'hidden',
-  },
-  stepIconCenter: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  stepDotIdle: {
-    backgroundColor: '#E6E6E8',
-  },
-  stepDotActive: {
-    backgroundColor: '#9F5266',
-  },
-  stepLine: {
-    flex: 1,
-    height: 1.5,
-    marginHorizontal: 4,
-  },
-  stepLineIdle: {
-    backgroundColor: '#E6E6E8',
-  },
-  stepLineActive: {
-    backgroundColor: '#9F5266',
   },
   body: {
     paddingHorizontal: 16,

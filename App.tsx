@@ -260,7 +260,7 @@ export default function App() {
           <Stack.Screen
             name="Signup"
             component={SignupScreen}
-            options={transparentHeader}
+            options={{ headerShown: false }}
           />
           <Stack.Screen
             name="Main"
