@@ -1,15 +1,29 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   Modal,
+  PanResponder,
   Pressable,
   StyleSheet,
   useWindowDimensions,
   View,
 } from 'react-native';
+import Animated, {
+  FadeIn,
+  FadeOut,
+  runOnJS,
+  SlideInDown,
+  SlideOutDown,
+  useAnimatedStyle,
+  useSharedValue,
+  withSpring,
+  withTiming,
+} from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Icon from './Icon';
 import Text from './Text';
 import { semantic, spacing } from '../theme';
+
+const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
 type Props = {
   visible: boolean;
@@ -137,18 +151,62 @@ export default function CalendarSheet({
       ? `${yearGridStart} - ${yearGridStart + 11}`
       : monthLabel;
 
+  // Manual translateY — controls both entry/exit and pan-to-dismiss.
+  // Avoids fighting Reanimated layout animations.
+  const SHEET_HIDDEN = 800;
+  const ty = useSharedValue(SHEET_HIDDEN);
+  useEffect(() => {
+    if (visible) {
+      ty.value = withSpring(0, { damping: 22, stiffness: 200, mass: 0.9 });
+    } else {
+      ty.value = SHEET_HIDDEN;
+    }
+  }, [visible, ty]);
+  const sheetAnimStyle = useAnimatedStyle(() => ({
+    transform: [{ translateY: ty.value }],
+  }));
+  const panResponder = useMemo(
+    () =>
+      PanResponder.create({
+        onMoveShouldSetPanResponder: (_, g) =>
+          g.dy > 6 && Math.abs(g.dy) > Math.abs(g.dx),
+        onPanResponderMove: (_, g) => {
+          if (g.dy > 0) ty.value = g.dy;
+        },
+        onPanResponderRelease: (_, g) => {
+          if (g.dy > 120 || g.vy > 0.6) {
+            ty.value = withTiming(SHEET_HIDDEN, { duration: 220 }, (done) => {
+              if (done) runOnJS(onClose)();
+            });
+          } else {
+            ty.value = withSpring(0, { damping: 22, stiffness: 200 });
+          }
+        },
+      }),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [],
+  );
+
   return (
     <Modal
       visible={visible}
       transparent
-      animationType={isTablet ? 'fade' : 'slide'}
+      animationType="none"
       onRequestClose={onClose}
       statusBarTranslucent
     >
-      <Pressable
+      <AnimatedPressable
+        entering={FadeIn.duration(200)}
+        exiting={FadeOut.duration(180)}
         style={[styles.backdrop, isTablet && styles.backdropTablet]}
         onPress={onClose}
       >
+        <Animated.View
+          entering={isTablet ? FadeIn.duration(200) : undefined}
+          exiting={isTablet ? FadeOut.duration(180) : undefined}
+          style={!isTablet && sheetAnimStyle}
+          {...(isTablet ? {} : panResponder.panHandlers)}
+        >
         <Pressable
           onPress={() => {}}
           style={[
@@ -267,7 +325,8 @@ export default function CalendarSheet({
           </View>
           )}
         </Pressable>
-      </Pressable>
+        </Animated.View>
+      </AnimatedPressable>
     </Modal>
   );
 }

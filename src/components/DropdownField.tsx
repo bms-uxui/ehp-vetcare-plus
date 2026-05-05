@@ -71,7 +71,7 @@ export default function DropdownField({
       <Modal
         visible={open}
         presentationStyle="pageSheet"
-        animationType="slide"
+        animationType="fade"
         onRequestClose={() => {
           setOpen(false);
           setFocused(false);

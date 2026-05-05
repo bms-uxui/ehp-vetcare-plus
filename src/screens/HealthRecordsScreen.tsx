@@ -1,8 +1,19 @@
+import { useEffect, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../App';
-import { Card, Icon, PetAvatar, Screen, Text, WeightChart } from '../components';
-import { semantic, spacing } from '../theme';
+import {
+  Card,
+  Icon,
+  PetAvatar,
+  Screen,
+  SkeletonBox,
+  SkeletonShimmer,
+  Text,
+  WeightChart,
+  useSkeletonShimmer,
+} from '../components';
+import { radii, semantic, spacing } from '../theme';
 import { mockPets } from '../data/pets';
 import { visitsForPet, thDate } from '../data/visits';
 
@@ -15,6 +26,12 @@ export default function HealthRecordsScreen({ route, navigation }: Props) {
   const { petId } = route.params;
   const pet = mockPets.find((p) => p.id === petId);
   const visits = visitsForPet(petId);
+  const shimmerStyle = useSkeletonShimmer();
+  const [loading, setLoading] = useState(true);
+  useEffect(() => {
+    const t = setTimeout(() => setLoading(false), 700);
+    return () => clearTimeout(t);
+  }, []);
 
   if (!pet) {
     return (
@@ -48,15 +65,38 @@ export default function HealthRecordsScreen({ route, navigation }: Props) {
       <Text variant="overline" color={semantic.textSecondary} style={styles.sectionLabel}>
         พัฒนาการน้ำหนัก
       </Text>
-      <Card variant="elevated" padding="lg" style={styles.chartCard}>
-        <WeightChart points={weightPoints} />
-      </Card>
+      {loading ? (
+        <View style={[styles.skelChart, { overflow: 'hidden' }]}>
+          <SkeletonBox width="100%" height={140} radius={12} />
+          <SkeletonShimmer shimmerStyle={shimmerStyle} />
+        </View>
+      ) : (
+        <Card variant="elevated" padding="lg" style={styles.chartCard}>
+          <WeightChart points={weightPoints} />
+        </Card>
+      )}
 
       <Text variant="overline" color={semantic.textSecondary} style={styles.sectionLabel}>
         ประวัติการเข้ารับบริการ
       </Text>
 
-      {visits.length === 0 ? (
+      {loading ? (
+        <View style={styles.list}>
+          {Array.from({ length: 3 }).map((_, i) => (
+            <View key={`v-${i}`} style={[styles.skelVisit, { overflow: 'hidden' }]}>
+              <View style={styles.visitRow}>
+                <SkeletonBox width={44} height={44} radius={22} />
+                <View style={{ flex: 1, gap: 6 }}>
+                  <SkeletonBox width={90} height={10} />
+                  <SkeletonBox width="70%" height={13} />
+                  <SkeletonBox width="50%" height={10} />
+                </View>
+              </View>
+              <SkeletonShimmer shimmerStyle={shimmerStyle} />
+            </View>
+          ))}
+        </View>
+      ) : visits.length === 0 ? (
         <Card variant="elevated" padding="2xl">
           <View style={styles.empty}>
             <Icon name="ClipboardList" size={40} color={semantic.textMuted} strokeWidth={1.5} />
@@ -149,5 +189,26 @@ const styles = StyleSheet.create({
   empty: {
     alignItems: 'center',
     gap: spacing.sm,
+  },
+  skelChart: {
+    backgroundColor: semantic.surface,
+    borderRadius: radii.xl,
+    padding: spacing.lg,
+    marginBottom: spacing.xl,
+    shadowColor: '#000',
+    shadowOpacity: 0.06,
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 2,
+  },
+  skelVisit: {
+    backgroundColor: semantic.surface,
+    borderRadius: radii.xl,
+    padding: spacing.lg,
+    shadowColor: '#000',
+    shadowOpacity: 0.06,
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 2,
   },
 });

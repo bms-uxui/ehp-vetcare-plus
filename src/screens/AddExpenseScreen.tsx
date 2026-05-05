@@ -13,9 +13,15 @@ import DateTimePicker, {
 } from '@react-native-community/datetimepicker';
 import { LinearGradient } from 'expo-linear-gradient';
 import Animated, {
+  FadeIn,
+  FadeOut,
+  SlideInDown,
+  SlideOutDown,
   useAnimatedScrollHandler,
   useSharedValue,
 } from 'react-native-reanimated';
+
+const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { RootStackParamList } from '../../App';
@@ -393,14 +399,20 @@ export default function AddExpenseScreen({ navigation }: Props) {
         <Modal
           visible
           transparent
-          animationType="slide"
+          animationType="none"
           onRequestClose={() => setDatePickerOpen(false)}
           statusBarTranslucent
         >
-          <Pressable
+          <AnimatedPressable
+            entering={FadeIn.duration(200)}
+            exiting={FadeOut.duration(180)}
             style={styles.dateBackdrop}
             onPress={() => setDatePickerOpen(false)}
           >
+            <Animated.View
+              entering={SlideInDown.duration(280)}
+              exiting={SlideOutDown.duration(220)}
+            >
             <Pressable
               style={[
                 styles.dateSheet,
@@ -433,7 +445,8 @@ export default function AddExpenseScreen({ navigation }: Props) {
                 style={styles.dateSheetPicker}
               />
             </Pressable>
-          </Pressable>
+            </Animated.View>
+          </AnimatedPressable>
         </Modal>
       )}
     </View>

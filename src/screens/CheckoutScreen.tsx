@@ -269,7 +269,9 @@ export default function CheckoutScreen({ route, navigation }: Props) {
           onPress: () => {
             // Remove the checked-out items from cart
             checkoutItems.forEach((i) => cartStore.setQty(i.product.id, 0));
-            navigation.popToTop();
+            // Pop back to the tabs container — popToTop would unwind to Login
+            // since that's the stack's initial route.
+            navigation.popTo('Main');
           },
         },
       ],
@@ -681,7 +683,7 @@ function CouponSheet({
     <Modal
       visible={visible}
       presentationStyle="pageSheet"
-      animationType="slide"
+      animationType="fade"
       onRequestClose={onClose}
     >
       <View style={styles.iosSheetRoot}>
@@ -897,7 +899,7 @@ function PaymentSheet({
     <Modal
       visible={visible}
       presentationStyle="pageSheet"
-      animationType="slide"
+      animationType="fade"
       onRequestClose={onClose}
     >
       <View style={styles.iosSheetRoot}>

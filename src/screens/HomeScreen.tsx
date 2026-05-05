@@ -25,7 +25,8 @@ import VetCareLogo from '../../assets/vet-care-plus.svg';
 import VaccinationIllus from '../../assets/vaccination-appointment.svg';
 import { radii, semantic, shadows, spacing } from '../theme';
 import { mockPets } from '../data/pets';
-import { mockAppointments, typeMeta, thWeekday, thDateShort } from '../data/appointments';
+import { typeMeta, thWeekday, thDateShort } from '../data/appointments';
+import { useAppointments } from '../data/appointmentsContext';
 import { mockProducts, categoryMeta, fmtBaht } from '../data/products';
 import {
   mockExpenses,
@@ -59,11 +60,12 @@ export default function HomeScreen({ navigation }: Props) {
   const { width: windowWidth } = useWindowDimensions();
   const bannerPageWidth = windowWidth - spacing.xl * 2;
   const vaccineReminder = mockReminders.find((r) => r.type === 'vaccine');
+  const { appointments } = useAppointments();
   const hasUnreadNotifications = mockReminders.some((r) => !r.read);
 
   // Pick the next upcoming appointment that belongs to a *different* pet from
   // the vaccine reminder so the two banners show different pets/avatars.
-  const upcomingAppts = mockAppointments
+  const upcomingAppts = appointments
     .filter((a) => a.status === 'upcoming')
     .sort((a, b) => a.dateISO.localeCompare(b.dateISO));
   const nextAppt =

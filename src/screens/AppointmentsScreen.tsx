@@ -4,7 +4,8 @@ import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../App';
 import { Button, Card, Icon, Screen, Text } from '../components';
 import { radii, semantic, spacing } from '../theme';
-import { mockAppointments, Appointment, typeMeta, thWeekday, thDateShort } from '../data/appointments';
+import { Appointment, typeMeta, thWeekday, thDateShort } from '../data/appointments';
+import { useAppointments } from '../data/appointmentsContext';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Vet'>;
 
@@ -12,8 +13,9 @@ type Tab = 'upcoming' | 'past';
 
 export default function AppointmentsScreen({ navigation }: Props) {
   const [tab, setTab] = useState<Tab>('upcoming');
+  const { appointments } = useAppointments();
 
-  const items = mockAppointments
+  const items = appointments
     .filter((a) => (tab === 'upcoming' ? a.status === 'upcoming' : a.status !== 'upcoming'))
     .sort((a, b) => (tab === 'upcoming' ? a.dateISO.localeCompare(b.dateISO) : b.dateISO.localeCompare(a.dateISO)));
 

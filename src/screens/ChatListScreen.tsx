@@ -1,4 +1,4 @@
-import { ComponentProps } from 'react';
+import { ComponentProps, useEffect, useState } from 'react';
 import { Image, StyleSheet, View } from 'react-native';
 import Animated, {
   useAnimatedScrollHandler,
@@ -7,7 +7,16 @@ import Animated, {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../App';
-import { AppBackground, Card, Icon, SubPageHeader, Text } from '../components';
+import {
+  AppBackground,
+  Card,
+  Icon,
+  SkeletonBox,
+  SkeletonShimmer,
+  SubPageHeader,
+  Text,
+  useSkeletonShimmer,
+} from '../components';
 import { HEADER_HEIGHT } from '../components/SubPageHeader';
 import { semantic, spacing } from '../theme';
 import { mockConversations, mockVets } from '../data/televet';
@@ -20,6 +29,12 @@ export default function ChatListScreen({ navigation }: Props) {
   const scrollHandler = useAnimatedScrollHandler((e) => {
     scrollY.value = e.contentOffset.y;
   });
+  const shimmerStyle = useSkeletonShimmer();
+  const [loading, setLoading] = useState(true);
+  useEffect(() => {
+    const t = setTimeout(() => setLoading(false), 700);
+    return () => clearTimeout(t);
+  }, []);
 
   return (
     <View style={styles.root}>
@@ -43,7 +58,13 @@ export default function ChatListScreen({ navigation }: Props) {
         onScroll={scrollHandler}
         scrollEventThrottle={16}
       >
-        {mockConversations.length === 0 ? (
+        {loading ? (
+          <View style={styles.list}>
+            {Array.from({ length: 5 }).map((_, i) => (
+              <ChatRowSkeleton key={`skel-${i}`} shimmerStyle={shimmerStyle} />
+            ))}
+          </View>
+        ) : mockConversations.length === 0 ? (
           <Card variant="elevated" padding="2xl">
             <View style={styles.empty}>
               <Icon name="MessageCircle" size={48} color={semantic.textMuted} strokeWidth={1.5} />
@@ -112,6 +133,32 @@ export default function ChatListScreen({ navigation }: Props) {
           </View>
         )}
       </Animated.ScrollView>
+    </View>
+  );
+}
+
+function ChatRowSkeleton({
+  shimmerStyle,
+}: {
+  shimmerStyle: ReturnType<typeof useSkeletonShimmer>;
+}) {
+  return (
+    <View style={styles.skelCard}>
+      <View style={styles.row}>
+        <View style={[styles.avatar, { backgroundColor: '#E6E6E8' }]} />
+        <View style={{ flex: 1, gap: 8 }}>
+          <SkeletonBox width="55%" height={14} />
+          <View style={{ flexDirection: 'row', gap: 10 }}>
+            <SkeletonBox width={70} height={10} />
+            <SkeletonBox width={50} height={10} />
+            <SkeletonBox width={80} height={10} />
+          </View>
+        </View>
+      </View>
+      <View style={[styles.statusBox, { backgroundColor: '#EFEFF1' }]}>
+        <SkeletonBox width="80%" height={12} />
+      </View>
+      <SkeletonShimmer shimmerStyle={shimmerStyle} />
     </View>
   );
 }
@@ -224,5 +271,16 @@ const styles = StyleSheet.create({
   empty: {
     alignItems: 'center',
     gap: spacing.sm,
+  },
+  skelCard: {
+    backgroundColor: semantic.surface,
+    borderRadius: 16,
+    padding: spacing.md,
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOpacity: 0.06,
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 2,
   },
 });

@@ -54,7 +54,10 @@ export default function BookAppointmentSummaryScreen({ navigation, route }: Prop
     setToast('บันทึกการจองนัดของคุณแล้ว');
     if (navTimerRef.current) clearTimeout(navTimerRef.current);
     navTimerRef.current = setTimeout(() => {
-      navigation.popToTop();
+      // Pop back to the tabs container (Vet/Home/etc.) — using popToTop here
+      // would unwind all the way to the Login screen, since Login is the root
+      // initial route in the stack.
+      navigation.popTo('Main');
     }, 1500);
   };
 
@@ -86,7 +89,6 @@ export default function BookAppointmentSummaryScreen({ navigation, route }: Prop
             steps={[
               { icon: 'CalendarPlus' },
               { icon: 'ClipboardCheck' },
-              { icon: 'CircleCheck' },
             ]}
           />
         </View>
