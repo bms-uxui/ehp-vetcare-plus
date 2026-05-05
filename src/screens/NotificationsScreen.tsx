@@ -408,7 +408,7 @@ export default function NotificationsScreen({ navigation }: Props) {
       <Modal
         visible={settingsOpen}
         presentationStyle="pageSheet"
-        animationType="slide"
+        animationType="fade"
         onRequestClose={() => setSettingsOpen(false)}
       >
         <SettingsSheet
@@ -426,7 +426,7 @@ export default function NotificationsScreen({ navigation }: Props) {
       <Modal
         visible={schedulesOpen}
         presentationStyle="pageSheet"
-        animationType="slide"
+        animationType="fade"
         onRequestClose={() => setSchedulesOpen(false)}
       >
         <SchedulesSheet

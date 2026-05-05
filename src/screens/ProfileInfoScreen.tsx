@@ -1,8 +1,9 @@
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   Image,
   KeyboardAvoidingView,
   Modal,
+  PanResponder,
   Platform,
   Pressable,
   ScrollView,
@@ -10,8 +11,20 @@ import {
   TextInput,
   View,
 } from 'react-native';
+import Animated, {
+  FadeIn,
+  FadeOut,
+  runOnJS,
+  useAnimatedStyle,
+  useSharedValue,
+  withSpring,
+  withTiming,
+} from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as ImagePicker from 'expo-image-picker';
+
+const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
+const SHEET_HIDDEN = 800;
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../App';
 import { AppBackground, CalendarSheet, Card, Icon, SubPageHeader, Text } from '../components';
@@ -95,6 +108,75 @@ export default function ProfileInfoScreen({ navigation }: Props) {
     address: { title: 'แก้ไขที่อยู่จัดส่ง', placeholder: 'ที่อยู่...', multiline: true },
   };
   const meta = editingField ? editingMeta[editingField] : null;
+
+  // Edit sheet animations + pan-to-dismiss
+  const editTy = useSharedValue(SHEET_HIDDEN);
+  useEffect(() => {
+    if (editingField) {
+      editTy.value = withSpring(0, { damping: 22, stiffness: 200, mass: 0.9 });
+    } else {
+      editTy.value = SHEET_HIDDEN;
+    }
+  }, [editingField, editTy]);
+  const editSheetStyle = useAnimatedStyle(() => ({
+    transform: [{ translateY: editTy.value }],
+  }));
+  const editPan = useMemo(
+    () =>
+      PanResponder.create({
+        onMoveShouldSetPanResponder: (_, g) =>
+          g.dy > 6 && Math.abs(g.dy) > Math.abs(g.dx),
+        onPanResponderMove: (_, g) => {
+          if (g.dy > 0) editTy.value = g.dy;
+        },
+        onPanResponderRelease: (_, g) => {
+          if (g.dy > 120 || g.vy > 0.6) {
+            editTy.value = withTiming(SHEET_HIDDEN, { duration: 220 }, (done) => {
+              if (done) runOnJS(cancelEdit)();
+            });
+          } else {
+            editTy.value = withSpring(0, { damping: 22, stiffness: 200 });
+          }
+        },
+      }),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [],
+  );
+
+  // Gender sheet animations + pan-to-dismiss
+  const genderTy = useSharedValue(SHEET_HIDDEN);
+  useEffect(() => {
+    if (genderSheetOpen) {
+      genderTy.value = withSpring(0, { damping: 22, stiffness: 200, mass: 0.9 });
+    } else {
+      genderTy.value = SHEET_HIDDEN;
+    }
+  }, [genderSheetOpen, genderTy]);
+  const genderSheetStyle = useAnimatedStyle(() => ({
+    transform: [{ translateY: genderTy.value }],
+  }));
+  const closeGender = () => setGenderSheetOpen(false);
+  const genderPan = useMemo(
+    () =>
+      PanResponder.create({
+        onMoveShouldSetPanResponder: (_, g) =>
+          g.dy > 6 && Math.abs(g.dy) > Math.abs(g.dx),
+        onPanResponderMove: (_, g) => {
+          if (g.dy > 0) genderTy.value = g.dy;
+        },
+        onPanResponderRelease: (_, g) => {
+          if (g.dy > 120 || g.vy > 0.6) {
+            genderTy.value = withTiming(SHEET_HIDDEN, { duration: 220 }, (done) => {
+              if (done) runOnJS(closeGender)();
+            });
+          } else {
+            genderTy.value = withSpring(0, { damping: 22, stiffness: 200 });
+          }
+        },
+      }),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [],
+  );
 
   return (
     <View style={styles.root}>
@@ -197,34 +279,20 @@ export default function ProfileInfoScreen({ navigation }: Props) {
         <SectionLabel>บัญชีที่เชื่อมต่อ</SectionLabel>
         <Card variant="elevated" padding={0} style={styles.card}>
           <ConnectedRow
-            icon="Facebook"
-            iconBg="#E8F0FE"
-            iconColor="#1877F2"
+            logo={require('../../assets/Facebook logo.png')}
             label="Facebook"
             connectedValue="Joe Tester"
             connected
           />
           <Divider />
           <ConnectedRow
-            icon="Chrome"
-            iconBg="#FEF1E6"
-            iconColor="#EA4335"
+            logo={require('../../assets/Google logo.png')}
             label="Google"
             connected={false}
           />
           <Divider />
           <ConnectedRow
-            icon="Apple"
-            iconBg="#F2F2F3"
-            iconColor="#1A1A1A"
-            label="Apple ID"
-            connected={false}
-          />
-          <Divider />
-          <ConnectedRow
-            icon="MessageCircle"
-            iconBg="#E6F7E6"
-            iconColor="#06C755"
+            logo={require('../../assets/Line logo.png')}
             label="LINE"
             connected={false}
           />
@@ -238,7 +306,7 @@ export default function ProfileInfoScreen({ navigation }: Props) {
         <Modal
           visible
           transparent
-          animationType="slide"
+          animationType="none"
           onRequestClose={cancelEdit}
           statusBarTranslucent
         >
@@ -246,7 +314,13 @@ export default function ProfileInfoScreen({ navigation }: Props) {
             behavior={Platform.OS === 'ios' ? 'padding' : undefined}
             style={styles.editBackdropWrap}
           >
-            <Pressable style={styles.editBackdrop} onPress={cancelEdit}>
+            <AnimatedPressable
+              entering={FadeIn.duration(200)}
+              exiting={FadeOut.duration(180)}
+              style={styles.editBackdrop}
+              onPress={cancelEdit}
+            >
+              <Animated.View style={editSheetStyle} {...editPan.panHandlers}>
               <Pressable
                 onPress={() => {}}
                 style={[styles.editSheet, { paddingBottom: spacing.lg }]}
@@ -290,7 +364,8 @@ export default function ProfileInfoScreen({ navigation }: Props) {
                   </Pressable>
                 </View>
               </Pressable>
-            </Pressable>
+              </Animated.View>
+            </AnimatedPressable>
           </KeyboardAvoidingView>
         </Modal>
       ) : null}
@@ -308,11 +383,17 @@ export default function ProfileInfoScreen({ navigation }: Props) {
         <Modal
           visible
           transparent
-          animationType="slide"
+          animationType="none"
           onRequestClose={() => setGenderSheetOpen(false)}
           statusBarTranslucent
         >
-          <Pressable style={styles.editBackdrop} onPress={() => setGenderSheetOpen(false)}>
+          <AnimatedPressable
+            entering={FadeIn.duration(200)}
+            exiting={FadeOut.duration(180)}
+            style={styles.editBackdrop}
+            onPress={() => setGenderSheetOpen(false)}
+          >
+            <Animated.View style={genderSheetStyle} {...genderPan.panHandlers}>
             <Pressable
               onPress={() => {}}
               style={[styles.editSheet, { paddingBottom: spacing.lg }]}
@@ -343,7 +424,8 @@ export default function ProfileInfoScreen({ navigation }: Props) {
                 );
               })}
             </Pressable>
-          </Pressable>
+            </Animated.View>
+          </AnimatedPressable>
         </Modal>
       )}
     </View>
@@ -423,24 +505,20 @@ function Row({
 }
 
 function ConnectedRow({
-  icon,
-  iconBg,
-  iconColor,
+  logo,
   label,
   connectedValue,
   connected,
 }: {
-  icon: string;
-  iconBg: string;
-  iconColor: string;
+  logo: number;
   label: string;
   connectedValue?: string;
   connected: boolean;
 }) {
   return (
     <View style={styles.row}>
-      <View style={[styles.rowIcon, { backgroundColor: iconBg }]}>
-        <Icon name={icon as never} size={18} color={iconColor} strokeWidth={2.2} />
+      <View style={styles.rowLogoWrap}>
+        <Image source={logo} style={styles.rowLogo} resizeMode="contain" />
       </View>
       <View style={styles.rowMain}>
         <Text variant="bodyStrong" style={styles.rowValue}>
@@ -563,6 +641,16 @@ const styles = StyleSheet.create({
     backgroundColor: semantic.primaryMuted,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  rowLogoWrap: {
+    width: 36,
+    height: 36,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  rowLogo: {
+    width: 32,
+    height: 32,
   },
   rowMain: {
     flex: 1,

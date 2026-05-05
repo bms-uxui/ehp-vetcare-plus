@@ -82,7 +82,7 @@ export default function AddPetManualScreen({ navigation, route }: Props) {
   const isLast = stepIndex === STEPS.length - 1;
 
   const progress = useSharedValue(stepIndex);
-  const scrollRef = useRef<ScrollView>(null);
+  const scrollRef = useRef<React.ComponentRef<typeof KeyboardAwareScrollView>>(null);
   useEffect(() => {
     progress.value = withTiming(stepIndex, {
       duration: 320,
