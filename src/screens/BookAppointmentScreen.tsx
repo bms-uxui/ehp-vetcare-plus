@@ -5,6 +5,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../App';
 import { AppBackground, CalendarSheet, Card, ConfirmModal, Icon, Input, StepProgress, SubPageHeader, Text } from '../components';
+import { HEADER_HEIGHT } from '../components/SubPageHeader';
 import { colors, semantic, spacing } from '../theme';
 import { mockPets } from '../data/pets';
 import { typeMeta, AppointmentType, MOCK_VETS } from '../data/appointments';
@@ -168,25 +169,31 @@ export default function BookAppointmentScreen({ navigation, route }: Props) {
       <SubPageHeader
         title="จองนัดหมาย"
         onBack={() => navigation.goBack()}
-      />
-      <StepProgress
-        currentStep={0}
-        steps={[
-          { icon: 'CalendarPlus' },
-          { icon: 'ClipboardCheck' },
-        ]}
+        scrollY={scrollY}
       />
       <KeyboardAvoidingView
         style={styles.flex}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
         <Animated.ScrollView
-          contentContainerStyle={[styles.scrollContent, { paddingTop: spacing.md }]}
+          contentContainerStyle={[
+            styles.scrollContent,
+            { paddingTop: insets.top + HEADER_HEIGHT },
+          ]}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
           onScroll={scrollHandler}
           scrollEventThrottle={16}
         >
+          <View style={styles.stepWrap}>
+            <StepProgress
+              currentStep={0}
+              steps={[
+                { icon: 'CalendarPlus' },
+                { icon: 'ClipboardCheck' },
+              ]}
+            />
+          </View>
           {/* Pet */}
           <Section label="สัตว์เลี้ยง">
             <View style={styles.petsRow}>
@@ -517,6 +524,10 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingHorizontal: spacing.xl,
     paddingBottom: spacing['3xl'],
+  },
+  stepWrap: {
+    marginHorizontal: -spacing.xl,
+    marginBottom: spacing.md,
   },
   title: {
     marginTop: spacing.sm,

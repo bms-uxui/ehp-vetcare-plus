@@ -39,6 +39,7 @@ import {
   Text,
   useSkeletonShimmer,
 } from '../components';
+import { HEADER_HEIGHT } from '../components/SubPageHeader';
 import { semantic, spacing } from '../theme';
 import {
   categoryMeta,
@@ -73,6 +74,11 @@ export default function ExpensesScreen({ navigation }: Props) {
   const scrollY = useSharedValue(0);
   const scrollHandler = useAnimatedScrollHandler((e) => {
     scrollY.value = e.contentOffset.y;
+  });
+
+  const detailScrollY = useSharedValue(0);
+  const detailScrollHandler = useAnimatedScrollHandler((e) => {
+    detailScrollY.value = e.contentOffset.y;
   });
 
   const months = useMemo(() => {
@@ -562,6 +568,7 @@ export default function ExpensesScreen({ navigation }: Props) {
           <SubPageHeader
             title="รายละเอียดรายการ"
             onBack={() => setSelectedExpense(null)}
+            scrollY={detailScrollY}
             trailing={
               detailMenuOpen
                 ? undefined
@@ -574,9 +581,14 @@ export default function ExpensesScreen({ navigation }: Props) {
           />
 
           {selectedExpense && (
-            <ScrollView
-              contentContainerStyle={styles.detailScroll}
+            <Animated.ScrollView
+              contentContainerStyle={[
+                styles.detailScroll,
+                { paddingTop: insets.top + HEADER_HEIGHT + 4 },
+              ]}
               showsVerticalScrollIndicator={false}
+              onScroll={detailScrollHandler}
+              scrollEventThrottle={16}
             >
               {/* Hero — amount + category chip + illustration */}
               <View style={styles.detailAmountCard}>
@@ -699,7 +711,7 @@ export default function ExpensesScreen({ navigation }: Props) {
                 )}
               </View>
 
-            </ScrollView>
+            </Animated.ScrollView>
           )}
 
           {/* More menu — morph from trailing button into popover, same

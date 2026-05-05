@@ -207,13 +207,28 @@ export default function PetShopScreen({}: Props) {
           />
 
           <View style={[styles.heroText, isTablet && styles.heroTextTablet]}>
-            <Text variant="bodyStrong" style={styles.heroTitle}>
+            <Text
+              variant="bodyStrong"
+              style={[
+                styles.heroTitle,
+                {
+                  fontSize: Math.max(22, Math.min(32, screenW * 0.07)),
+                  lineHeight: Math.max(34, Math.min(46, screenW * 0.1)),
+                },
+              ]}
+            >
               ร้านค้า
             </Text>
             <Text
               variant="caption"
               color={semantic.textSecondary}
-              style={styles.heroSubtitle}
+              style={[
+                styles.heroSubtitle,
+                {
+                  fontSize: Math.max(13, Math.min(17, screenW * 0.04)),
+                  lineHeight: Math.max(24, Math.min(30, screenW * 0.07)),
+                },
+              ]}
               numberOfLines={isTablet ? 1 : 2}
             >
               อาหาร ของเล่น และของจำเป็นสำหรับเพื่อนขนปุย
@@ -846,13 +861,10 @@ const styles = StyleSheet.create({
     width: 480,
   },
   heroTitle: {
-    fontSize: 28,
-    lineHeight: 36,
     color: '#1A1A1F',
+    fontWeight: '700',
   },
   heroSubtitle: {
-    fontSize: 16,
-    lineHeight: 24,
     color: '#4A4A50',
   },
 

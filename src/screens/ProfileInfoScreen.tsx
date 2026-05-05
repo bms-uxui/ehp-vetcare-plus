@@ -6,7 +6,6 @@ import {
   PanResponder,
   Platform,
   Pressable,
-  ScrollView,
   StyleSheet,
   TextInput,
   View,
@@ -15,6 +14,7 @@ import Animated, {
   FadeIn,
   FadeOut,
   runOnJS,
+  useAnimatedScrollHandler,
   useAnimatedStyle,
   useSharedValue,
   withSpring,
@@ -28,6 +28,7 @@ const SHEET_HIDDEN = 800;
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../App';
 import { AppBackground, CalendarSheet, Card, Icon, SubPageHeader, Text } from '../components';
+import { HEADER_HEIGHT } from '../components/SubPageHeader';
 import { semantic, spacing } from '../theme';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'ProfileInfo'>;
@@ -109,6 +110,12 @@ export default function ProfileInfoScreen({ navigation }: Props) {
   };
   const meta = editingField ? editingMeta[editingField] : null;
 
+  const insets = useSafeAreaInsets();
+  const scrollY = useSharedValue(0);
+  const scrollHandler = useAnimatedScrollHandler((e) => {
+    scrollY.value = e.contentOffset.y;
+  });
+
   // Edit sheet animations + pan-to-dismiss
   const editTy = useSharedValue(SHEET_HIDDEN);
   useEffect(() => {
@@ -181,12 +188,21 @@ export default function ProfileInfoScreen({ navigation }: Props) {
   return (
     <View style={styles.root}>
       <AppBackground />
-      <SubPageHeader title="ข้อมูลส่วนตัว" onBack={() => navigation.goBack()} />
+      <SubPageHeader
+        title="ข้อมูลส่วนตัว"
+        onBack={() => navigation.goBack()}
+        scrollY={scrollY}
+      />
 
-      <ScrollView
+      <Animated.ScrollView
         style={styles.flex}
-        contentContainerStyle={[styles.scroll, { paddingTop: spacing.md }]}
+        contentContainerStyle={[
+          styles.scroll,
+          { paddingTop: insets.top + HEADER_HEIGHT + spacing.md },
+        ]}
         showsVerticalScrollIndicator={false}
+        onScroll={scrollHandler}
+        scrollEventThrottle={16}
       >
         {/* Avatar Hero */}
         <View style={styles.hero}>
@@ -299,7 +315,7 @@ export default function ProfileInfoScreen({ navigation }: Props) {
         </Card>
 
         <View style={{ height: spacing.xl }} />
-      </ScrollView>
+      </Animated.ScrollView>
 
       {/* Edit text sheet (fullName / username / address) */}
       {editingField && meta ? (

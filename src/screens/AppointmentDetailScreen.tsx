@@ -1,8 +1,14 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Image, Pressable, StyleSheet, View } from 'react-native';
+import Animated, {
+  useAnimatedScrollHandler,
+  useSharedValue,
+} from 'react-native-reanimated';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../App';
 import {
+  AppBackground,
   Button,
   Card,
   ConfirmModal,
@@ -15,6 +21,7 @@ import {
   Text,
   useSkeletonShimmer,
 } from '../components';
+import { HEADER_HEIGHT } from '../components/SubPageHeader';
 import { semantic, spacing } from '../theme';
 import { thDate } from '../data/appointments';
 import { useAppointments } from '../data/appointmentsContext';
@@ -57,6 +64,12 @@ const isDayReached = (dateISO: string): boolean => {
 type Props = NativeStackScreenProps<RootStackParamList, 'AppointmentDetail'>;
 
 export default function AppointmentDetailScreen({ route, navigation }: Props) {
+  const insets = useSafeAreaInsets();
+  const scrollY = useSharedValue(0);
+  const scrollHandler = useAnimatedScrollHandler((e) => {
+    scrollY.value = e.contentOffset.y;
+  });
+
   const { appointmentId } = route.params;
   const { appointments, cancelAppointment } = useAppointments();
   const appointment = appointments.find((a) => a.id === appointmentId);
@@ -131,8 +144,21 @@ export default function AppointmentDetailScreen({ route, navigation }: Props) {
 
   return (
     <View style={styles.root}>
-    <SubPageHeader title="รายละเอียดการนัด" onBack={() => navigation.goBack()} />
-    <Screen scroll topFade={false} style={{ paddingTop: spacing.md }}>
+    <AppBackground />
+    <SubPageHeader
+      title="รายละเอียดการนัด"
+      onBack={() => navigation.goBack()}
+      scrollY={scrollY}
+    />
+    <Animated.ScrollView
+      contentContainerStyle={[
+        styles.scrollContent,
+        { paddingTop: insets.top + HEADER_HEIGHT + spacing.md },
+      ]}
+      showsVerticalScrollIndicator={false}
+      onScroll={scrollHandler}
+      scrollEventThrottle={16}
+    >
       <View style={styles.hero}>
         <Text variant="h1" align="center" style={styles.title}>
           {appointment.typeLabel}
@@ -253,7 +279,7 @@ export default function AppointmentDetailScreen({ route, navigation }: Props) {
           Bar is shown whenever there's a vet to chat with; reserve space
           accordingly. */}
       {!!teleVet && <View style={{ height: 100 }} />}
-    </Screen>
+    </Animated.ScrollView>
 
     {!!teleVet && (
       <View pointerEvents="box-none" style={styles.callBarWrap}>
@@ -463,6 +489,10 @@ const styles = StyleSheet.create({
   },
   root: {
     flex: 1,
+  },
+  scrollContent: {
+    paddingHorizontal: spacing.xl,
+    paddingBottom: spacing.lg,
   },
   callBarWrap: {
     position: 'absolute',

@@ -4,6 +4,7 @@ import Animated, {
   useAnimatedScrollHandler,
   useSharedValue,
 } from 'react-native-reanimated';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../App';
 import {
@@ -16,12 +17,14 @@ import {
   Text,
   useSkeletonShimmer,
 } from '../components';
+import { HEADER_HEIGHT } from '../components/SubPageHeader';
 import { semantic, spacing } from '../theme';
 import { mockConversations, mockVets } from '../data/televet';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'ChatList'>;
 
 export default function ChatListScreen({ navigation }: Props) {
+  const insets = useSafeAreaInsets();
   const scrollY = useSharedValue(0);
   const scrollHandler = useAnimatedScrollHandler((e) => {
     scrollY.value = e.contentOffset.y;
@@ -36,13 +39,20 @@ export default function ChatListScreen({ navigation }: Props) {
   return (
     <View style={styles.root}>
       <AppBackground />
-      <SubPageHeader title="ประวัติแชท" onBack={() => navigation.goBack()} />
+      <SubPageHeader
+        title="ประวัติแชท"
+        onBack={() => navigation.goBack()}
+        scrollY={scrollY}
+      />
 
       <Animated.ScrollView
         style={styles.flex}
         contentContainerStyle={[
           styles.scroll,
-          { paddingTop: spacing.md, paddingBottom: spacing['4xl'] },
+          {
+            paddingTop: insets.top + HEADER_HEIGHT + spacing.md,
+            paddingBottom: spacing['4xl'],
+          },
         ]}
         showsVerticalScrollIndicator={false}
         onScroll={scrollHandler}

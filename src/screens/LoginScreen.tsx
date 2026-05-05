@@ -1,99 +1,117 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
-  Dimensions,
+  Image,
+  ImageSourcePropType,
   KeyboardAvoidingView,
   Platform,
   Pressable,
   ScrollView,
   StyleSheet,
+  TextInput,
   View,
 } from 'react-native';
 import Animated, {
   Easing,
+  FadeIn,
   FadeInDown,
   FadeInUp,
+  runOnJS,
   useAnimatedStyle,
   useSharedValue,
   withDelay,
   withRepeat,
+  withSequence,
+  withSpring,
   withTiming,
 } from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
-import { BlurView } from 'expo-blur';
-import { GlassView, isLiquidGlassAvailable } from '../lib/glass-effect';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { RootStackParamList } from '../../App';
-import { Button, Icon, Input, Text } from '../components';
-import { radii, semantic, shadows, spacing } from '../theme';
-
-const { width: SCREEN_W } = Dimensions.get('window');
-const LIQUID_GLASS = isLiquidGlassAvailable();
+import { AppBackground, Icon, Text } from '../components';
+import { colors, semantic } from '../theme';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Login'>;
+
+const SOCIAL_LOGOS: Record<'google' | 'facebook' | 'line', ImageSourcePropType> = {
+  google:   require('../../assets/social/google.png'),
+  facebook: require('../../assets/social/facebook.png'),
+  line:     require('../../assets/social/line.png'),
+};
+
+// Sized large enough that the rotated grid fully covers the screen on any device
+const PATTERN_DIM = 10;
+const PATTERN_SIZE = 1200;
+const PATTERN_TILE = PATTERN_SIZE / PATTERN_DIM;
+const TILE_COUNT = PATTERN_DIM * PATTERN_DIM;
 
 export default function LoginScreen({ navigation }: Props) {
   const insets = useSafeAreaInsets();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [error, setError] = useState<string | null>(null);
+  const [emailFocus, setEmailFocus] = useState(false);
+  const [passwordFocus, setPasswordFocus] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const emailRef = useRef<TextInput>(null);
+  const passwordRef = useRef<TextInput>(null);
 
-  const logoScale = useSharedValue(1);
-  const logoGlow = useSharedValue(0.6);
-
+  // EHP badge — bounce in + breathing scale loop
+  const badgeScale = useSharedValue(0);
+  const badgeRot = useSharedValue(0);
   useEffect(() => {
-    logoScale.value = withRepeat(
-      withTiming(1.06, { duration: 2400, easing: Easing.inOut(Easing.quad) }),
-      -1,
-      true,
+    badgeScale.value = withDelay(
+      700,
+      withSequence(
+        withSpring(1.12, { damping: 8, stiffness: 180, mass: 0.6 }),
+        withSpring(1, { damping: 10, stiffness: 200 }),
+        withDelay(
+          400,
+          withRepeat(
+            withSequence(
+              withTiming(1.05, { duration: 1800, easing: Easing.inOut(Easing.sin) }),
+              withTiming(1, { duration: 1800, easing: Easing.inOut(Easing.sin) }),
+            ),
+            -1,
+            false,
+          ),
+        ),
+      ),
     );
-    logoGlow.value = withRepeat(
-      withTiming(1, { duration: 2400, easing: Easing.inOut(Easing.quad) }),
-      -1,
-      true,
+    badgeRot.value = withDelay(
+      700,
+      withSequence(
+        withTiming(-8, { duration: 180 }),
+        withTiming(6, { duration: 220 }),
+        withTiming(0, { duration: 180 }),
+      ),
     );
   }, []);
-
-  const logoStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: logoScale.value }],
-  }));
-
-  const glowStyle = useAnimatedStyle(() => ({
-    opacity: logoGlow.value,
-    transform: [{ scale: 0.85 + logoGlow.value * 0.3 }],
+  const badgeStyle = useAnimatedStyle(() => ({
+    transform: [
+      { scale: badgeScale.value },
+      { rotate: `${badgeRot.value}deg` },
+    ],
   }));
 
   const onSubmit = () => {
-    if (!email || !password) {
-      setError('กรุณากรอกอีเมลและรหัสผ่าน');
-      return;
-    }
-    setError(null);
     navigation.replace('Main');
   };
 
   return (
     <View style={styles.root}>
+      <AppBackground />
+
+      {/* Decorative 5×5 rotated tile pattern in the top half */}
+      <BgPattern />
+
+      {/* Full-screen white wash — transparent at top → solid white in lower half.
+          Single continuous gradient so the bg pattern fades smoothly into the form area. */}
       <LinearGradient
-        colors={['#FFFDFB', '#FBE9EC', '#F0CCD5']}
-        locations={[0, 0.5, 1]}
-        start={{ x: 0.5, y: 0 }}
-        end={{ x: 0.5, y: 1 }}
+        pointerEvents="none"
+        colors={['rgba(255,253,251,0)', 'rgba(255,253,251,0.6)', '#FFFDFB']}
+        locations={[0, 0.32, 0.55]}
         style={StyleSheet.absoluteFill}
       />
-
-      {/* Aurora blobs for depth */}
-      <View style={[styles.blob, styles.blobRose]} />
-      <View style={[styles.blob, styles.blobCream]} />
-      <View style={[styles.blob, styles.blobAccent]} />
-
-      {/* Floating paw prints */}
-      <FloatingPaw delay={0}    style={{ top: 80,   left: 32 }}  size={22} opacity={0.16} />
-      <FloatingPaw delay={500}  style={{ top: 140,  right: 48 }} size={28} opacity={0.12} />
-      <FloatingPaw delay={1000} style={{ top: 320,  left: 20 }}  size={18} opacity={0.18} />
-      <FloatingPaw delay={1500} style={{ top: 480,  right: 28 }} size={24} opacity={0.13} />
-      <FloatingPaw delay={2000} style={{ bottom: 200, left: 56 }} size={20} opacity={0.14} />
-      <FloatingPaw delay={700}  style={{ bottom: 80, right: 64 }} size={26} opacity={0.10} />
 
       <KeyboardAvoidingView
         style={styles.flex}
@@ -103,223 +121,339 @@ export default function LoginScreen({ navigation }: Props) {
           contentContainerStyle={[
             styles.scroll,
             {
-              paddingTop: insets.top + spacing.xl,
-              paddingBottom: insets.bottom + spacing['3xl'],
+              paddingTop: insets.top,
+              paddingBottom: insets.bottom + 16,
             },
           ]}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
-          {/* Hero — logo with breathing glow */}
-          <Animated.View entering={FadeInDown.duration(700).delay(100)} style={styles.heroLogo}>
-            <Animated.View style={[styles.logoGlow, glowStyle]} />
-            <Animated.View style={[styles.logoMark, logoStyle, shadows.lift]}>
-              <LinearGradient
-                colors={['#EFA5B8', '#DA8AA1', '#B86A7C']}
-                locations={[0, 0.45, 1]}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-                style={StyleSheet.absoluteFill}
+          {/* TOP HERO — illustration + EHP badge + black underline */}
+          <Animated.View
+            entering={FadeIn.duration(700).delay(80)}
+            style={styles.topHero}
+          >
+            <View style={styles.topHeroInner}>
+              <Image
+                source={require('../../assets/illustrations/vet-girl-hero.png')}
+                style={styles.heroImg}
+                resizeMode="contain"
               />
-              <View pointerEvents="none" style={styles.logoSheen} />
-              <Icon name="PawPrint" size={56} color={semantic.onPrimary} strokeWidth={2.2} />
+
+              {/* EHP badge — top-right of inner container */}
+              <Animated.View style={[styles.brandBadge, badgeStyle]}>
+                <Image
+                  source={require('../../assets/icon.png')}
+                  style={styles.brandBadgeImg}
+                  resizeMode="contain"
+                />
+              </Animated.View>
+            </View>
+          </Animated.View>
+
+          {/* Title + form + social */}
+          <View style={styles.bottomSection}>
+            {/* TITLE */}
+            <Animated.View
+              entering={FadeInDown.duration(600).delay(180)}
+              style={styles.titleBlock}
+            >
+              <View style={styles.titleRow}>
+                <Text style={styles.title}>EHP </Text>
+                <Text style={[styles.title, { color: semantic.primary }]}>VetCare+</Text>
+              </View>
+              <Text style={styles.description}>
+                ดูแลด้วยใจ เพื่อเพื่อนตัวน้อย
+              </Text>
             </Animated.View>
-          </Animated.View>
 
-          <Animated.View entering={FadeInDown.duration(600).delay(220)} style={styles.heroText}>
-            <Text variant="display" align="center" style={styles.title}>
-              VetCare
-              <Text variant="display" color={semantic.primary}>+</Text>
-            </Text>
-            <Text variant="body" color={semantic.textSecondary} align="center" style={styles.tagline}>
-              ดูแลด้วยใจ เพื่อเพื่อนตัวน้อยของคุณ
-            </Text>
-          </Animated.View>
-
-          {/* Stat pills — premium feel */}
-          <Animated.View entering={FadeInDown.duration(600).delay(320)} style={styles.statsRow}>
-            <StatPill icon="Heart" label="10K+ ตัว" />
-            <StatPill icon="Stethoscope" label="200+ สัตวแพทย์" />
-            <StatPill icon="Clock" label="24 / 7" />
-          </Animated.View>
-
-          {/* Glass card — form */}
-          <Animated.View entering={FadeInUp.duration(700).delay(420)}>
-            <GlassCard>
-              <Input
-                label="อีเมล"
-                placeholder="you@example.com"
-                autoCapitalize="none"
-                autoCorrect={false}
-                keyboardType="email-address"
-                value={email}
-                onChangeText={setEmail}
-                error={error && !email ? 'กรุณากรอก' : undefined}
-                leftElement={<Icon name="Mail" size={20} color={semantic.textSecondary} />}
-              />
-              <Input
-                label="รหัสผ่าน"
-                placeholder="••••••••"
-                secureTextEntry
-                value={password}
-                onChangeText={setPassword}
-                error={error && !password ? 'กรุณากรอก' : undefined}
-                leftElement={<Icon name="Lock" size={20} color={semantic.textSecondary} />}
-              />
-
-              <View style={styles.forgotRow}>
-                <Pressable onPress={() => {}} hitSlop={8}>
-                  <Text variant="caption" color={semantic.primary} style={styles.linkText}>
-                    ลืมรหัสผ่าน?
-                  </Text>
+            {/* FORM */}
+            <Animated.View
+              entering={FadeInUp.duration(600).delay(280)}
+              style={styles.formBlock}
+            >
+              <View style={styles.field}>
+                <Text style={styles.fieldLabel}>อีเมล</Text>
+                <Pressable
+                  onPress={() => emailRef.current?.focus()}
+                  style={[
+                    styles.inputBox,
+                    emailFocus && styles.inputBoxFocused,
+                  ]}
+                >
+                  <TextInput
+                    ref={emailRef}
+                    style={[styles.input, styles.inputFlex]}
+                    value={email}
+                    onChangeText={setEmail}
+                    placeholder="you@example.com"
+                    placeholderTextColor={colors.neutral[400]}
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                    keyboardType="email-address"
+                    returnKeyType="next"
+                    onSubmitEditing={() => passwordRef.current?.focus()}
+                    onFocus={() => setEmailFocus(true)}
+                    onBlur={() => setEmailFocus(false)}
+                  />
                 </Pressable>
               </View>
 
-              <Button label="เข้าสู่ระบบ" onPress={onSubmit} size="lg" />
+              <View style={styles.field}>
+                <Text style={styles.fieldLabel}>รหัสผ่าน</Text>
+                <Pressable
+                  onPress={() => passwordRef.current?.focus()}
+                  style={[
+                    styles.inputBox,
+                    passwordFocus && styles.inputBoxFocused,
+                  ]}
+                >
+                  <TextInput
+                    ref={passwordRef}
+                    style={[styles.input, styles.inputFlex]}
+                    value={password}
+                    onChangeText={setPassword}
+                    placeholder="••••••••"
+                    placeholderTextColor={colors.neutral[400]}
+                    secureTextEntry={!showPassword}
+                    returnKeyType="go"
+                    onSubmitEditing={onSubmit}
+                    onFocus={() => setPasswordFocus(true)}
+                    onBlur={() => setPasswordFocus(false)}
+                  />
+                  <Pressable
+                    onPress={() => setShowPassword((v) => !v)}
+                    hitSlop={8}
+                    accessibilityLabel={
+                      showPassword ? 'ซ่อนรหัสผ่าน' : 'แสดงรหัสผ่าน'
+                    }
+                    style={({ pressed }) => [
+                      styles.eyeBtn,
+                      pressed && { opacity: 0.6 },
+                    ]}
+                  >
+                    <Icon
+                      name={showPassword ? 'EyeOff' : 'Eye'}
+                      size={20}
+                      color={colors.neutral[500]}
+                      strokeWidth={2}
+                    />
+                  </Pressable>
+                </Pressable>
+              </View>
 
+              <View style={styles.forgotRow}>
+                <Pressable hitSlop={8}>
+                  <Text style={styles.forgotText}>ลืมรหัสผ่าน</Text>
+                </Pressable>
+              </View>
+
+              {/* Login button — rose 600 pill */}
+              <Pressable
+                onPress={onSubmit}
+                style={({ pressed }) => [
+                  styles.loginBtn,
+                  pressed && { opacity: 0.92, transform: [{ scale: 0.98 }] },
+                ]}
+              >
+                <Text style={styles.loginBtnText}>เข้าสู่ระบบ</Text>
+              </Pressable>
+            </Animated.View>
+
+            {/* SOCIAL */}
+            <Animated.View
+              entering={FadeInUp.duration(600).delay(380)}
+              style={styles.socialBlock}
+            >
               <View style={styles.dividerRow}>
-                <View style={styles.divider} />
-                <Text variant="caption" color={semantic.textMuted}>หรือเข้าสู่ระบบด้วย</Text>
-                <View style={styles.divider} />
+                <View style={styles.dividerLine} />
+                <Text style={styles.dividerText}>หรือ ลงชื่อเข้าใช้งานโดย</Text>
+                <View style={styles.dividerLine} />
               </View>
 
               <View style={styles.socialRow}>
-                <SocialButton brand="google" onPress={() => navigation.replace('Main')} />
-                <SocialButton brand="facebook" onPress={() => {}} />
-                <SocialButton brand="line" onPress={() => {}} />
+                <SocialPill
+                  brand="google"
+                  label="Google"
+                  onPress={() => navigation.replace('Main')}
+                />
+                <SocialPill brand="facebook" label="Facebook" onPress={() => {}} />
+                <SocialPill brand="line" label="Line" onPress={() => {}} />
               </View>
-            </GlassCard>
-          </Animated.View>
 
-          {/* Signup */}
-          <Animated.View entering={FadeInUp.duration(600).delay(560)} style={styles.signupRow}>
-            <Text variant="caption" color={semantic.textSecondary}>
-              ยังไม่มีบัญชี?
-            </Text>
-            <Pressable onPress={() => navigation.navigate('Signup')} hitSlop={8} style={styles.signupBtn}>
-              <Text variant="bodyStrong" color={semantic.primary} style={styles.signupText}>
-                สมัครสมาชิก
-              </Text>
-              <Icon name="ArrowRight" size={16} color={semantic.primary} strokeWidth={2.4} />
-            </Pressable>
-          </Animated.View>
+              <Pressable
+                hitSlop={8}
+                onPress={() => navigation.navigate('Signup')}
+                style={styles.signupRow}
+              >
+                <Text style={styles.signupText}>สมัครสมาชิก</Text>
+              </Pressable>
+            </Animated.View>
+          </View>
         </ScrollView>
       </KeyboardAvoidingView>
     </View>
   );
 }
 
-/* --- Sub-components --- */
+const TILE_PALETTE = [
+  'rgba(255,156,182,0.28)',  // pink
+  'rgba(184,106,124,0.28)',  // rose
+  'rgba(247,177,151,0.28)',  // peach
+  'rgba(210,195,254,0.28)',  // lavender
+  'rgba(255,214,199,0.28)',  // peach light
+  'rgba(159,82,102,0.28)',   // rose dark
+] as const;
 
-type FloatingPawProps = {
-  delay: number;
-  size: number;
-  opacity: number;
-  style: { top?: number; bottom?: number; left?: number; right?: number };
-};
+function pickRandom<T>(list: readonly T[], avoid?: T): T {
+  if (list.length <= 1) return list[0];
+  let next = list[Math.floor(Math.random() * list.length)];
+  while (next === avoid) {
+    next = list[Math.floor(Math.random() * list.length)];
+  }
+  return next;
+}
 
-function FloatingPaw({ delay, size, opacity, style }: FloatingPawProps) {
-  const ty = useSharedValue(0);
-  const rot = useSharedValue(0);
+function PatternTile({ dim }: { dim: boolean }) {
+  const rotation = useSharedValue(0);
+  const [color, setColor] = useState(() => pickRandom(TILE_PALETTE));
 
   useEffect(() => {
-    ty.value = withDelay(
-      delay,
-      withRepeat(
-        withTiming(-14, { duration: 3200, easing: Easing.inOut(Easing.sin) }),
-        -1,
-        true,
-      ),
-    );
-    rot.value = withDelay(
-      delay,
-      withRepeat(
-        withTiming(10, { duration: 4200, easing: Easing.inOut(Easing.sin) }),
-        -1,
-        true,
-      ),
-    );
+    let alive = true;
+    let timeoutId: ReturnType<typeof setTimeout> | null = null;
+    let currentColor = color;
+
+    const swap = () => {
+      if (!alive) return;
+      const next = pickRandom(TILE_PALETTE, currentColor);
+      currentColor = next;
+      setColor(next);
+      // Snap to flipped-over (-90) so the second half rotates back into view
+      rotation.value = -90;
+      rotation.value = withTiming(
+        0,
+        { duration: 700, easing: Easing.out(Easing.cubic) },
+        (finished) => {
+          if (finished) runOnJS(scheduleNext)();
+        },
+      );
+    };
+
+    const scheduleNext = () => {
+      if (!alive) return;
+      const delay = 5000 + Math.random() * 10000;
+      timeoutId = setTimeout(() => {
+        if (!alive) return;
+        rotation.value = withTiming(
+          90,
+          { duration: 700, easing: Easing.in(Easing.cubic) },
+          (finished) => {
+            if (finished) runOnJS(swap)();
+          },
+        );
+      }, delay);
+    };
+
+    scheduleNext();
+    return () => {
+      alive = false;
+      if (timeoutId) clearTimeout(timeoutId);
+    };
   }, []);
 
   const animStyle = useAnimatedStyle(() => ({
-    transform: [{ translateY: ty.value }, { rotate: `${rot.value}deg` }],
+    transform: [
+      { perspective: 800 },
+      { rotateY: `${rotation.value}deg` },
+    ],
   }));
 
   return (
     <Animated.View
-      pointerEvents="none"
-      style={[{ position: 'absolute', opacity, ...style }, animStyle]}
+      style={[
+        styles.bgPatternTile,
+        dim && { opacity: 0.55 },
+        animStyle,
+      ]}
     >
-      <Icon name="PawPrint" size={size} color={semantic.primary} strokeWidth={2} />
+      {/* Tinted base — translucent rose/peach color */}
+      <View
+        pointerEvents="none"
+        style={[StyleSheet.absoluteFillObject, { backgroundColor: color }]}
+      />
+      {/* Glass top-left highlight (light from upper-left) */}
+      <LinearGradient
+        pointerEvents="none"
+        colors={['rgba(255,255,255,0.55)', 'rgba(255,255,255,0)']}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 0.7, y: 0.7 }}
+        style={StyleSheet.absoluteFillObject}
+      />
+      {/* Subtle bottom shadow — gives depth */}
+      <LinearGradient
+        pointerEvents="none"
+        colors={['rgba(255,255,255,0)', 'rgba(0,0,0,0.06)']}
+        start={{ x: 0.5, y: 0.55 }}
+        end={{ x: 0.5, y: 1 }}
+        style={StyleSheet.absoluteFillObject}
+      />
+      {/* Diagonal sheen — thin glossy stripe */}
+      <LinearGradient
+        pointerEvents="none"
+        colors={[
+          'rgba(255,255,255,0)',
+          'rgba(255,255,255,0.22)',
+          'rgba(255,255,255,0)',
+        ]}
+        locations={[0.35, 0.5, 0.65]}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={StyleSheet.absoluteFillObject}
+      />
     </Animated.View>
   );
 }
 
-function StatPill({ icon, label }: { icon: string; label: string }) {
+function BgPattern() {
   return (
-    <View style={styles.statPill}>
-      <Icon name={icon as any} size={13} color={semantic.primary} strokeWidth={2.4} />
-      <Text variant="caption" style={styles.statText}>
-        {label}
-      </Text>
+    <View pointerEvents="none" style={styles.bgPatternHost}>
+      <View style={styles.bgPatternRotate}>
+        <View style={styles.bgPatternGrid}>
+          {Array.from({ length: TILE_COUNT }).map((_, i) => {
+            const row = Math.floor(i / PATTERN_DIM);
+            const col = i % PATTERN_DIM;
+            const dim = (row + col) % 2 === 0;
+            return <PatternTile key={i} dim={dim} />;
+          })}
+        </View>
+      </View>
     </View>
   );
 }
 
-function GlassCard({ children }: { children: React.ReactNode }) {
-  return (
-    <View style={[styles.cardWrap, shadows.lg]}>
-      {LIQUID_GLASS ? (
-        <GlassView
-          glassEffectStyle="regular"
-          colorScheme="light"
-          style={StyleSheet.absoluteFill}
-        />
-      ) : (
-        <>
-          <BlurView
-            intensity={80}
-            tint="systemThinMaterialLight"
-            style={StyleSheet.absoluteFill}
-          />
-          <View pointerEvents="none" style={[StyleSheet.absoluteFill, styles.cardTint]} />
-        </>
-      )}
-      <View pointerEvents="none" style={styles.cardHairline} />
-      <View style={styles.cardInner}>{children}</View>
-    </View>
-  );
-}
-
-const SOCIAL_CONFIG: Record<string, { bg: string; fg: string; label: string; fontSize: number; bordered?: boolean }> = {
-  google:   { bg: '#FFFFFF', fg: '#4285F4', label: 'G', fontSize: 24, bordered: true },
-  facebook: { bg: '#1877F2', fg: '#FFFFFF', label: 'f', fontSize: 24 },
-  line:     { bg: '#06C755', fg: '#FFFFFF', label: 'LINE', fontSize: 11 },
-};
-
-function SocialButton({ brand, onPress }: { brand: keyof typeof SOCIAL_CONFIG; onPress: () => void }) {
-  const cfg = SOCIAL_CONFIG[brand];
+function SocialPill({
+  brand,
+  label,
+  onPress,
+}: {
+  brand: keyof typeof SOCIAL_LOGOS;
+  label: string;
+  onPress: () => void;
+}) {
   return (
     <Pressable
       onPress={onPress}
       style={({ pressed }) => [
-        styles.socialBtn,
-        { backgroundColor: cfg.bg },
-        cfg.bordered && styles.socialBtnBordered,
-        shadows.sm,
-        pressed && { transform: [{ scale: 0.96 }], opacity: 0.92 },
+        styles.socialPill,
+        pressed && { opacity: 0.85, transform: [{ scale: 0.98 }] },
       ]}
     >
-      <Text
-        style={{
-          color: cfg.fg,
-          fontWeight: '800',
-          fontSize: cfg.fontSize,
-          letterSpacing: cfg.label.length > 1 ? 0.5 : 0,
-        }}
-      >
-        {cfg.label}
-      </Text>
+      <Image
+        source={SOCIAL_LOGOS[brand]}
+        style={styles.socialPillIcon}
+        resizeMode="contain"
+      />
+      <Text style={styles.socialPillLabel}>{label}</Text>
     </Pressable>
   );
 }
@@ -328,181 +462,238 @@ const styles = StyleSheet.create({
   flex: { flex: 1 },
   root: {
     flex: 1,
-    backgroundColor: '#FFFDFB',
   },
   scroll: {
-    paddingHorizontal: spacing.xl,
-    gap: spacing.xl,
+    flexGrow: 1,
   },
 
-  blob: {
-    position: 'absolute',
-    borderRadius: 9999,
-  },
-  blobRose: {
-    width: SCREEN_W * 0.9,
-    height: SCREEN_W * 0.9,
-    backgroundColor: 'rgba(220, 138, 161, 0.35)',
-    top: -SCREEN_W * 0.3,
-    right: -SCREEN_W * 0.3,
-    opacity: 0.7,
-  },
-  blobCream: {
-    width: SCREEN_W * 0.7,
-    height: SCREEN_W * 0.7,
-    backgroundColor: 'rgba(249, 236, 224, 0.6)',
-    top: SCREEN_W * 0.5,
-    left: -SCREEN_W * 0.3,
-  },
-  blobAccent: {
-    width: SCREEN_W * 0.6,
-    height: SCREEN_W * 0.6,
-    backgroundColor: 'rgba(232, 168, 124, 0.18)',
-    bottom: -SCREEN_W * 0.2,
-    right: -SCREEN_W * 0.2,
-  },
-
-  heroLogo: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: spacing.xl,
-    marginBottom: spacing.xs,
-    height: 140,
-  },
-  logoGlow: {
-    position: 'absolute',
-    width: 180,
-    height: 180,
-    borderRadius: 90,
-    backgroundColor: 'rgba(216, 138, 161, 0.45)',
-  },
-  logoMark: {
-    width: 112,
-    height: 112,
-    borderRadius: 56,
+  // ── BG PATTERN ──
+  bgPatternHost: {
+    ...StyleSheet.absoluteFillObject,
     alignItems: 'center',
     justifyContent: 'center',
     overflow: 'hidden',
-    borderWidth: 1.5,
-    borderColor: 'rgba(255,255,255,0.35)',
   },
-  logoSheen: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    height: '40%',
-    backgroundColor: 'rgba(255,255,255,0.18)',
+  bgPatternRotate: {
+    width: PATTERN_SIZE,
+    height: PATTERN_SIZE,
+    transform: [{ rotate: '75deg' }],
+  },
+  bgPatternGrid: {
+    width: PATTERN_SIZE,
+    height: PATTERN_SIZE,
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+  },
+  bgPatternTile: {
+    width: PATTERN_TILE,
+    height: PATTERN_TILE,
+    borderRadius: 8,
+    overflow: 'hidden',
+    borderWidth: 0.5,
+    borderColor: 'rgba(255,255,255,0.45)',
   },
 
-  heroText: {
+  // ── TOP HERO ──
+  topHero: {
+    width: '100%',
+    height: 220,
     alignItems: 'center',
-    gap: 6,
+    justifyContent: 'flex-end',
+  },
+  topHeroInner: {
+    width: 300,
+    height: 200,
+    alignItems: 'center',
+    justifyContent: 'flex-end',
+    position: 'relative',
+  },
+  heroImg: {
+    width: 181,
+    height: 160,
+  },
+  brandBadge: {
+    position: 'absolute',
+    top: 24,
+    right: 52,
+    width: 67,
+    height: 67,
+    borderRadius: 33.5,
+    backgroundColor: '#FFFFFF',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 4,
+    borderWidth: 2,
+    borderColor: '#FFFFFF',
+    shadowColor: '#5E303C',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.18,
+    shadowRadius: 12,
+    elevation: 5,
+  },
+  brandBadgeImg: {
+    width: '100%',
+    height: '100%',
+  },
+
+  // ── BOTTOM SECTION ──
+  bottomSection: {
+    flex: 1,
+    width: '100%',
+  },
+
+  // ── TITLE ──
+  titleBlock: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    padding: 16,
+  },
+  titleRow: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    justifyContent: 'center',
   },
   title: {
-    fontSize: 40,
-    lineHeight: 48,
-    letterSpacing: -0.8,
+    fontSize: 34,
+    lineHeight: 40,
+    fontWeight: '700',
+    color: semantic.textPrimary,
+    textAlign: 'center',
   },
-  tagline: {
-    fontSize: 15,
-    opacity: 0.9,
+  description: {
+    fontSize: 16,
+    lineHeight: 22,
+    fontWeight: '500',
+    color: semantic.textSecondary,
+    textAlign: 'center',
   },
 
-  statsRow: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    flexWrap: 'wrap',
-    gap: spacing.sm,
+  // ── FORM ──
+  formBlock: {
+    padding: 16,
+    gap: 10,
   },
-  statPill: {
+  field: {
+    gap: 8,
+  },
+  fieldLabel: {
+    fontSize: 14,
+    color: colors.neutral[400],
+    fontWeight: '500',
+  },
+  inputBox: {
+    height: 56,
+    borderRadius: 16,
+    backgroundColor: '#F8F8F8',
+    borderWidth: 1,
+    borderColor: '#D9D9D9',
+    paddingHorizontal: 16,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: spacing.md,
-    paddingVertical: 6,
-    borderRadius: radii.pill,
-    backgroundColor: 'rgba(255,255,255,0.7)',
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: 'rgba(184, 106, 124, 0.2)',
   },
-  statText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: semantic.primary,
+  inputBoxFocused: {
+    borderColor: semantic.primary,
+    borderWidth: 1.5,
   },
-
-  cardWrap: {
-    borderRadius: radii['2xl'],
-    overflow: 'hidden',
+  input: {
+    fontSize: 16,
+    color: semantic.textPrimary,
+    paddingVertical: 0,
   },
-  cardTint: {
-    backgroundColor: 'rgba(255,255,255,0.55)',
+  inputFlex: {
+    flex: 1,
   },
-  cardHairline: {
-    ...StyleSheet.absoluteFillObject,
-    borderRadius: radii['2xl'],
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: 'rgba(255,255,255,0.6)',
+  eyeBtn: {
+    width: 32,
+    height: 32,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginLeft: 4,
   },
-  cardInner: {
-    padding: spacing.xl,
-    gap: spacing.lg,
-  },
-
   forgotRow: {
     alignItems: 'flex-end',
-    marginTop: -spacing.sm,
   },
-  linkText: {
-    fontWeight: '600',
+  forgotText: {
+    fontSize: 12,
+    color: colors.neutral[400],
+    textDecorationLine: 'underline',
+  },
+  loginBtn: {
+    height: 56,
+    borderRadius: 100,
+    backgroundColor: colors.rose[600],
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 6,
+    shadowColor: '#5E303C',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.22,
+    shadowRadius: 14,
+    elevation: 4,
+  },
+  loginBtnText: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#FFFFFF',
+    letterSpacing: 0.3,
   },
 
+  // ── SOCIAL ──
+  socialBlock: {
+    padding: 16,
+    gap: 16,
+  },
   dividerRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.md,
-    marginTop: spacing.xs,
+    gap: 8,
   },
-  divider: {
+  dividerLine: {
     flex: 1,
     height: StyleSheet.hairlineWidth,
-    backgroundColor: 'rgba(184, 106, 124, 0.25)',
+    backgroundColor: 'rgba(0,0,0,0.18)',
   },
-
+  dividerText: {
+    fontSize: 12,
+    color: colors.neutral[400],
+  },
   socialRow: {
     flexDirection: 'row',
-    justifyContent: 'center',
-    gap: spacing.lg,
+    gap: 10,
   },
-  socialBtn: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
+  socialPill: {
+    flex: 1,
+    height: 40,
+    borderRadius: 100,
+    backgroundColor: '#FFFFFF',
     alignItems: 'center',
     justifyContent: 'center',
+    flexDirection: 'row',
+    gap: 8,
+    paddingHorizontal: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
   },
-  socialBtnBordered: {
-    borderWidth: 1,
-    borderColor: '#E5E5E7',
+  socialPillIcon: {
+    width: 20,
+    height: 20,
   },
-
+  socialPillLabel: {
+    fontSize: 12,
+    color: '#040404',
+    fontWeight: '500',
+  },
   signupRow: {
-    flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    gap: spacing.xs,
-    marginTop: spacing.xs,
-  },
-  signupBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
     paddingVertical: 4,
-    paddingHorizontal: spacing.xs,
   },
   signupText: {
     fontSize: 14,
-    fontWeight: '700',
+    color: colors.neutral[400],
+    textDecorationLine: 'underline',
   },
 });

@@ -1,7 +1,8 @@
-import { memo, useCallback, useEffect, useState } from 'react';
+import { memo, useCallback, useEffect, useMemo, useState } from 'react';
 import { Image, Pressable, StyleSheet, useWindowDimensions, View } from 'react-native';
 import Animated, {
   Easing,
+  Extrapolation,
   useAnimatedScrollHandler,
   useAnimatedStyle,
   useSharedValue,
@@ -10,11 +11,16 @@ import Animated, {
   withTiming,
   interpolate,
 } from 'react-native-reanimated';
+import { BlurView } from 'expo-blur';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../App';
-import { AppBackground, Icon, StickyAppBar, Text } from '../components';
+import { AppBackground, Icon, Text } from '../components';
+import DraggableFlatList, {
+  RenderItemParams,
+  ScaleDecorator,
+} from 'react-native-draggable-flatlist';
 import { radii, semantic, spacing } from '../theme';
 import { mockPets, petAgeString, Pet } from '../data/pets';
 
@@ -22,6 +28,8 @@ type Props = NativeStackScreenProps<RootStackParamList, 'PetsList'>;
 
 const HERO_HEIGHT = 220;
 const TAB_BAR_SPACE = 110;
+const FADE_START = 30;
+const FADE_END = 90;
 const RIPPLE = { color: 'rgba(184,106,124,0.18)', borderless: false } as const;
 const RIPPLE_LIGHT = { color: 'rgba(255,255,255,0.25)', borderless: false } as const;
 const HERO_IMAGE = require('../../assets/pet-profile-hero.png');
@@ -32,7 +40,7 @@ const BTN_WIDTH_GUESS = 320;
 
 export default function PetsListScreen({ navigation }: Props) {
   const insets = useSafeAreaInsets();
-  const { height: windowHeight, width: windowWidth } = useWindowDimensions();
+  const { width: windowWidth } = useWindowDimensions();
 
   // ── Shimmer (sweeps left → right, repeats with delay) ──
   const shimmer = useSharedValue(0);
@@ -59,8 +67,34 @@ export default function PetsListScreen({ navigation }: Props) {
   const scrollHandler = useAnimatedScrollHandler((e) => {
     scrollY.value = e.contentOffset.y;
   });
-  const stickyFadeStart = HERO_HEIGHT - 40;
-  const stickyFadeEnd = HERO_HEIGHT + 10;
+
+  const barBgStyle = useAnimatedStyle(() => ({
+    opacity: interpolate(
+      scrollY.value,
+      [FADE_START, FADE_END],
+      [0, 1],
+      Extrapolation.CLAMP,
+    ),
+  }));
+
+  const titleStyle = useAnimatedStyle(() => ({
+    opacity: interpolate(
+      scrollY.value,
+      [FADE_START + 30, FADE_END],
+      [0, 1],
+      Extrapolation.CLAMP,
+    ),
+    transform: [
+      {
+        translateY: interpolate(
+          scrollY.value,
+          [FADE_START + 30, FADE_END],
+          [8, 0],
+          Extrapolation.CLAMP,
+        ),
+      },
+    ],
+  }));
 
   const onAddPet = useCallback(
     () => navigation.navigate('AddPet'),
@@ -77,6 +111,46 @@ export default function PetsListScreen({ navigation }: Props) {
     const t = setTimeout(() => setLoading(false), 700);
     return () => clearTimeout(t);
   }, []);
+
+  // ── Edit-mode (reorder) state ──
+  const [editMode, setEditMode] = useState(false);
+  const [petOrder, setPetOrder] = useState<string[]>(() =>
+    mockPets.map((p) => p.id),
+  );
+  // Keep order in sync if pets are added / removed elsewhere in the app.
+  useEffect(() => {
+    setPetOrder((prev) => {
+      const ids = mockPets.map((p) => p.id);
+      const merged = prev.filter((id) => ids.includes(id));
+      const added = ids.filter((id) => !merged.includes(id));
+      return [...merged, ...added];
+    });
+  }, []);
+  const orderedPets = useMemo(
+    () =>
+      petOrder
+        .map((id) => mockPets.find((p) => p.id === id))
+        .filter((p): p is Pet => Boolean(p)),
+    [petOrder],
+  );
+  // Stable accent per pet — keyed by pet.id so the color follows the pet
+  // (and doesn't shift around as the card is dragged through other slots).
+  const accentByPetId = useMemo(() => {
+    const m = new Map<string, CardAccent>();
+    mockPets.forEach((p, i) => {
+      m.set(p.id, CARD_PALETTE[i % CARD_PALETTE.length]);
+    });
+    return m;
+  }, []);
+  const finishEdit = useCallback(() => {
+    // Persist new order onto the mockPets array so other screens see it.
+    const byId = new Map(mockPets.map((p) => [p.id, p]));
+    const reordered = petOrder
+      .map((id) => byId.get(id))
+      .filter((p): p is Pet => Boolean(p));
+    mockPets.splice(0, mockPets.length, ...reordered);
+    setEditMode(false);
+  }, [petOrder]);
 
   // Skeleton shimmer sweep (separate from the add-button shimmer).
   const skeleton = useSharedValue(0);
@@ -99,15 +173,40 @@ export default function PetsListScreen({ navigation }: Props) {
     ],
   }));
 
-  return (
-    <View style={styles.root}>
-      <AppBackground />
-      <Animated.ScrollView
-        contentContainerStyle={{ paddingBottom: TAB_BAR_SPACE }}
-        showsVerticalScrollIndicator={false}
-        onScroll={scrollHandler}
-        scrollEventThrottle={16}
-      >
+  const onDragEnd = useCallback(
+    ({ data }: { data: Pet[] }) => setPetOrder(data.map((p) => p.id)),
+    [],
+  );
+
+  // Card minHeight (174) + contentContainer gap (12) = stable row height
+  const ITEM_HEIGHT = 174 + spacing.md;
+  const getItemLayout = useCallback(
+    (_data: ArrayLike<Pet> | null | undefined, index: number) => ({
+      length: ITEM_HEIGHT,
+      offset: ITEM_HEIGHT * index,
+      index,
+    }),
+    [ITEM_HEIGHT],
+  );
+
+  const renderDraggableItem = useCallback(
+    ({ item, drag, isActive }: RenderItemParams<Pet>) => (
+      <ScaleDecorator activeScale={1.08}>
+        <PetCard
+          pet={item}
+          accent={accentByPetId.get(item.id) ?? CARD_PALETTE[0]}
+          onOpen={onOpenPet}
+          editMode={editMode}
+          onDrag={drag}
+          isDragging={isActive}
+        />
+      </ScaleDecorator>
+    ),
+    [accentByPetId, editMode, onOpenPet],
+  );
+
+  const renderHeader = useCallback(() => (
+    <>
       {/* ── HERO ── */}
       <View
         style={[
@@ -140,72 +239,174 @@ export default function PetsListScreen({ navigation }: Props) {
         />
 
         <View style={styles.heroText}>
-          <Text variant="bodyStrong" style={styles.heroTitle}>
+          <Text
+            variant="bodyStrong"
+            style={[
+              styles.heroTitle,
+              {
+                fontSize: Math.max(22, Math.min(32, windowWidth * 0.07)),
+                lineHeight: Math.max(34, Math.min(46, windowWidth * 0.1)),
+              },
+            ]}
+          >
             สัตว์เลี้ยง
           </Text>
           <Text
             variant="caption"
             color={semantic.textSecondary}
-            style={styles.heroSubtitle}
+            style={[
+              styles.heroSubtitle,
+              {
+                fontSize: Math.max(13, Math.min(17, windowWidth * 0.04)),
+                lineHeight: Math.max(24, Math.min(30, windowWidth * 0.07)),
+              },
+            ]}
           >
             รวมข้อมูลสัตว์เลี้ยงของคุณไว้ในที่เดียว
           </Text>
         </View>
       </View>
 
-      {/* ── BODY SHEET ── */}
+      {/* ── ADD / EDIT TOGGLE — sits at the seam between hero and list ── */}
+      <View style={styles.addWrap}>
+          {editMode ? (
+            <Pressable
+              onPress={finishEdit}
+              android_ripple={RIPPLE_LIGHT}
+              style={({ pressed }) => [
+                styles.addBtn,
+                styles.addRowFloat,
+                pressed && { opacity: 0.9 },
+              ]}
+            >
+              <Icon name="Check" size={18} color={semantic.onPrimary} strokeWidth={2.4} />
+              <Text variant="bodyStrong" color={semantic.onPrimary} style={styles.addBtnText}>
+                เสร็จสิ้น
+              </Text>
+            </Pressable>
+          ) : (
+            <View style={[styles.addRow, styles.addRowFloat]}>
+              <Pressable
+                onPress={onAddPet}
+                android_ripple={RIPPLE_LIGHT}
+                style={({ pressed }) => [
+                  styles.addBtn,
+                  styles.addBtnFlex,
+                  pressed && { opacity: 0.9 },
+                ]}
+              >
+                <AnimatedLG
+                  pointerEvents="none"
+                  colors={['rgba(255,255,255,0)', 'rgba(255,255,255,0.45)', 'rgba(255,255,255,0)']}
+                  start={{ x: 0, y: 0.5 }}
+                  end={{ x: 1, y: 0.5 }}
+                  style={[styles.shimmer, shimmerStyle]}
+                />
+                <Icon name="Plus" size={18} color={semantic.onPrimary} strokeWidth={2.4} />
+                <Text variant="bodyStrong" color={semantic.onPrimary} style={styles.addBtnText}>
+                  เพิ่มสัตว์เลี้ยง
+                </Text>
+              </Pressable>
+              <Pressable
+                onPress={() => setEditMode(true)}
+                android_ripple={RIPPLE}
+                accessibilityLabel="จัดเรียงสัตว์เลี้ยง"
+                style={({ pressed }) => [
+                  styles.editToggle,
+                  pressed && { opacity: 0.85 },
+                ]}
+              >
+                <Icon name="ArrowUpDown" size={18} color={semantic.primary} strokeWidth={2.4} />
+              </Pressable>
+            </View>
+          )}
+      </View>
+    </>
+  ), [
+    insets.top,
+    windowWidth,
+    editMode,
+    finishEdit,
+    onAddPet,
+    shimmerStyle,
+  ]);
+
+  return (
+    <View style={styles.root}>
+      <AppBackground />
+      {loading ? (
+        <View style={{ flex: 1 }}>
+          {renderHeader()}
+          <View style={styles.list}>
+            {Array.from({ length: 3 }).map((_, i) => (
+              <PetCardSkeleton
+                key={`skeleton-${i}`}
+                shimmerStyle={skeletonShimmerStyle}
+              />
+            ))}
+          </View>
+        </View>
+      ) : (
+        <View style={styles.listWrap}>
+          <DraggableFlatList
+          data={orderedPets}
+          keyExtractor={(p) => p.id}
+          activationDistance={editMode ? 8 : 9999}
+          autoscrollSpeed={140}
+          autoscrollThreshold={100}
+          onDragEnd={onDragEnd}
+          ListHeaderComponent={renderHeader}
+          contentContainerStyle={styles.listContent}
+          showsVerticalScrollIndicator={false}
+          onScroll={scrollHandler}
+          scrollEventThrottle={16}
+          renderItem={renderDraggableItem}
+        />
+        </View>
+      )}
+
+      {/* Top fade — soft white wash matching Screen wrapper used by other tabs */}
+      <LinearGradient
+        pointerEvents="none"
+        colors={['#FFFDFB', 'rgba(255,253,251,0.85)', 'rgba(255,253,251,0)']}
+        locations={[0, 0.55, 1]}
+        style={[styles.topFade, { height: insets.top + 24 }]}
+      />
+
+      {/* Sticky AppBar — matches PetShop / VetHub */}
       <View
+        pointerEvents="box-none"
         style={[
-          styles.sheet,
-          { minHeight: windowHeight - HERO_HEIGHT - insets.top + 24 + TAB_BAR_SPACE },
+          styles.appbar,
+          { paddingTop: insets.top, height: insets.top + 56 },
         ]}
       >
-        <View style={styles.addWrap}>
-          <Pressable
-            onPress={onAddPet}
-            android_ripple={RIPPLE_LIGHT}
-            style={({ pressed }) => [styles.addBtn, pressed && { opacity: 0.9 }]}
-          >
-            <AnimatedLG
-              pointerEvents="none"
-              colors={['rgba(255,255,255,0)', 'rgba(255,255,255,0.45)', 'rgba(255,255,255,0)']}
-              start={{ x: 0, y: 0.5 }}
-              end={{ x: 1, y: 0.5 }}
-              style={[styles.shimmer, shimmerStyle]}
-            />
-            <Icon name="Plus" size={18} color={semantic.onPrimary} strokeWidth={2.4} />
-            <Text variant="bodyStrong" color={semantic.onPrimary} style={styles.addBtnText}>
-              เพิ่มสัตว์เลี้ยง
-            </Text>
-          </Pressable>
-        </View>
+        <Animated.View
+          pointerEvents="none"
+          style={[StyleSheet.absoluteFill, barBgStyle]}
+        >
+          <BlurView
+            intensity={80}
+            tint="systemChromeMaterialLight"
+            style={StyleSheet.absoluteFill}
+          />
+          <View style={[StyleSheet.absoluteFill, styles.barTint]} />
+          <View style={styles.barHairline} />
+        </Animated.View>
 
-        <View style={styles.list}>
-          {loading
-            ? Array.from({ length: 3 }).map((_, i) => (
-                <PetCardSkeleton
-                  key={`skeleton-${i}`}
-                  shimmerStyle={skeletonShimmerStyle}
-                />
-              ))
-            : mockPets.map((pet, idx) => (
-                <PetCard
-                  key={pet.id}
-                  pet={pet}
-                  accent={CARD_PALETTE[idx % CARD_PALETTE.length]}
-                  onOpen={onOpenPet}
-                />
-              ))}
+        <View style={styles.appbarContent}>
+          <View style={styles.appbarPlaceholder} />
+          <Animated.View
+            pointerEvents="none"
+            style={[styles.appbarTitleWrap, titleStyle]}
+          >
+            <Text variant="bodyStrong" style={styles.appbarTitle} numberOfLines={1}>
+              สัตว์เลี้ยง
+            </Text>
+          </Animated.View>
+          <View style={styles.appbarPlaceholder} />
         </View>
       </View>
-      </Animated.ScrollView>
-
-      <StickyAppBar
-        scrollY={scrollY}
-        fadeStartAt={stickyFadeStart}
-        fadeEndAt={stickyFadeEnd}
-        title="ข้อมูลสัตว์เลี้ยง"
-      />
     </View>
   );
 }
@@ -232,7 +433,7 @@ function PetCardSkeleton({
 }) {
   return (
     <View style={styles.cardShadow}>
-      <View style={[styles.card, { backgroundColor: '#E6E6E8' }]}>
+      <View style={[styles.card, styles.cardSized, { backgroundColor: '#E6E6E8' }]}>
         <View style={[styles.cardTop, { backgroundColor: '#FFFFFF' }]}>
           <View style={styles.skelLineLong} />
         </View>
@@ -281,25 +482,32 @@ function PetCardSkeleton({
   );
 }
 
-const PetCard = memo(function PetCard({
+function PetCardImpl({
   pet,
   accent,
   onOpen,
+  editMode = false,
+  onDrag,
+  isDragging = false,
 }: {
   pet: Pet;
   accent: CardAccent;
   onOpen: (id: string) => void;
+  editMode?: boolean;
+  onDrag?: () => void;
+  isDragging?: boolean;
 }) {
   const handlePress = useCallback(() => onOpen(pet.id), [onOpen, pet.id]);
   return (
     <View style={styles.cardShadow}>
       <Pressable
-        onPress={handlePress}
-        android_ripple={RIPPLE}
+        onPress={editMode ? undefined : handlePress}
+        android_ripple={editMode ? undefined : RIPPLE}
         style={({ pressed }) => [
           styles.card,
+          styles.cardSized,
           { backgroundColor: accent.bg },
-          pressed && { opacity: 0.92 },
+          pressed && !editMode && { opacity: 0.92 },
         ]}
       >
         {/* White top strip — name */}
@@ -362,10 +570,27 @@ const PetCard = memo(function PetCard({
             </Text>
           </View>
         </View>
+
+        {editMode && (
+          <Pressable
+            onLongPress={onDrag}
+            delayLongPress={120}
+            hitSlop={8}
+            style={({ pressed }) => [
+              styles.dragHandle,
+              (pressed || isDragging) && { opacity: 0.7 },
+            ]}
+            accessibilityLabel="ลากเพื่อจัดเรียง"
+          >
+            <Icon name="GripVertical" size={22} color="#FFFFFF" strokeWidth={2.4} />
+          </Pressable>
+        )}
       </Pressable>
     </View>
   );
-});
+}
+
+const PetCard = memo(PetCardImpl);
 
 const Stat = memo(function Stat({ label, value }: { label: string; value: string }) {
   return (
@@ -383,6 +608,57 @@ const Stat = memo(function Stat({ label, value }: { label: string; value: string
 const styles = StyleSheet.create({
   root: {
     flex: 1,
+    backgroundColor: semantic.background,
+  },
+  topFade: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+  },
+  appbar: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    zIndex: 10,
+  },
+  appbarContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: spacing.lg,
+    height: 56,
+  },
+  appbarPlaceholder: {
+    width: 44,
+    height: 44,
+  },
+  appbarTitleWrap: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    top: 0,
+    bottom: 0,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  appbarTitle: {
+    fontSize: 16,
+    color: '#1A1A1A',
+    maxWidth: '60%',
+    textAlign: 'center',
+  },
+  barTint: {
+    backgroundColor: 'rgba(255,255,255,0.4)',
+  },
+  barHairline: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: StyleSheet.hairlineWidth,
+    backgroundColor: 'rgba(0,0,0,0.08)',
   },
   hero: {
     position: 'relative',
@@ -409,14 +685,10 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   heroTitle: {
-    fontSize: 28,
-    lineHeight: 42,
     color: '#1A1A1F',
     fontWeight: '700',
   },
   heroSubtitle: {
-    fontSize: 16,
-    lineHeight: 24,
     color: '#4A4A50',
   },
   sheet: {
@@ -432,10 +704,53 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: -6 },
     elevation: 8,
   },
+  // Wraps the add/edit row inside the ListHeaderComponent. Visually it looks
+  // like the top portion of a single rounded "sheet" — the FlatList's own
+  // backgroundColor (`listScroll`) carries the same fill down behind every
+  // card so the sheet appears continuous.
+  sheetHeader: {
+    backgroundColor: semantic.background,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    marginTop: -24,
+    paddingTop: 24,
+    shadowColor: '#000',
+    shadowOpacity: 0.08,
+    shadowRadius: 16,
+    shadowOffset: { width: 0, height: -6 },
+    elevation: 8,
+  },
+  listWrap: {
+    flex: 1,
+    backgroundColor: semantic.background,
+  },
+  listContent: {
+    gap: spacing.md,
+    paddingBottom: TAB_BAR_SPACE,
+    backgroundColor: semantic.background,
+  },
+  cardRowPad: {
+    paddingHorizontal: spacing.xl,
+  },
+  // White sheet edge that the button row sits on top of. marginTop pulls
+  // the rounded top into the hero; the button row inside is offset further
+  // up via its own negative margin so it straddles the seam.
   addWrap: {
     paddingHorizontal: spacing.xl,
+    paddingTop: 8,
+    paddingBottom: spacing.lg,
     marginTop: -24,
-    marginBottom: spacing.lg,
+    backgroundColor: semantic.background,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+  },
+  addRowFloat: {
+    marginTop: -32,
+  },
+  addRow: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+    alignItems: 'center',
   },
   addBtn: {
     height: 48,
@@ -447,6 +762,28 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
     overflow: 'hidden',
   },
+  addBtnFlex: {
+    flex: 1,
+  },
+  editToggle: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    borderWidth: 1.5,
+    borderColor: semantic.primary,
+    backgroundColor: '#FFFFFF',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  dragHandle: {
+    position: 'absolute',
+    right: 8,
+    top: 0,
+    bottom: 0,
+    width: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   shimmer: {
     position: 'absolute',
     top: 0,
@@ -457,10 +794,10 @@ const styles = StyleSheet.create({
     fontSize: 15,
   },
   list: {
-    paddingHorizontal: spacing.xl,
     gap: spacing.md,
   },
   cardShadow: {
+    marginHorizontal: spacing.xl,
     borderRadius: radii.xl,
     backgroundColor: '#FFFFFF',
     shadowColor: '#7E3D4F',
@@ -474,6 +811,9 @@ const styles = StyleSheet.create({
     backgroundColor: '#1F4151',
     borderRadius: radii.xl,
     overflow: 'hidden',
+  },
+  cardSized: {
+    minHeight: 174,
   },
   cardTop: {
     backgroundColor: '#FFFFFF',

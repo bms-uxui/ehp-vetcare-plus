@@ -6,7 +6,7 @@
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
-    "newArchEnabled": true,
+    "newArchEnabled": false,
     "splash": {
       "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
@@ -43,6 +43,12 @@
           "color": "#9F5266"
         }
       ]
-    ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "d4bbdc8d-80fc-45f3-917b-ea8181aaddb7"
+      }
+    },
+    "owner": "oommie"
   }
 }

@@ -1,6 +1,14 @@
 import { Pressable, StyleSheet, View } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import Animated, {
+  Extrapolation,
+  interpolate,
+  SharedValue,
+  useAnimatedStyle,
+  useSharedValue,
+} from 'react-native-reanimated';
+import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as LucideIcons from 'lucide-react-native';
 import Icon from './Icon';
 import Text from './Text';
@@ -17,19 +25,73 @@ type Props = {
   title: string;
   onBack?: () => void;
   trailing?: Action;
+  /**
+   * When provided, the header switches to the Cart-style overlay pattern:
+   * sits absolute at the top, blurs in as the user scrolls. When omitted, the
+   * header stays at rest (transparent + subtle banner gradient).
+   */
+  scrollY?: SharedValue<number>;
 };
 
 export const HEADER_HEIGHT = 56;
 
-export default function SubPageHeader({ title, onBack, trailing }: Props) {
+export default function SubPageHeader({ title, onBack, trailing, scrollY }: Props) {
   const insets = useSafeAreaInsets();
+  const fallback = useSharedValue(0);
+  const y = scrollY ?? fallback;
+
+  // Graduated blur — soft layer fades in first, then heavy layer overlays
+  const softBlurStyle = useAnimatedStyle(() => ({
+    opacity: interpolate(y.value, [0, 80], [0, 1], Extrapolation.CLAMP),
+  }));
+  const hardBlurStyle = useAnimatedStyle(() => ({
+    opacity: interpolate(y.value, [60, 160], [0, 1], Extrapolation.CLAMP),
+  }));
+  const hairlineStyle = useAnimatedStyle(() => ({
+    opacity: interpolate(y.value, [60, 160], [0, 1], Extrapolation.CLAMP),
+  }));
+  const bannerGradientStyle = useAnimatedStyle(() => ({
+    opacity: interpolate(y.value, [0, 60], [1, 0], Extrapolation.CLAMP),
+  }));
 
   return (
-    <View style={[styles.wrap, { paddingTop: insets.top }]}>
-      <LinearGradient
-        colors={['rgba(0,0,0,0.05)', 'rgba(115,115,115,0)']}
-        style={styles.bannerGradient}
+    <View
+      pointerEvents="box-none"
+      style={[styles.wrap, { paddingTop: insets.top, height: insets.top + HEADER_HEIGHT }]}
+    >
+      <Animated.View
         pointerEvents="none"
+        style={[StyleSheet.absoluteFill, softBlurStyle]}
+      >
+        <BlurView
+          intensity={30}
+          tint="systemChromeMaterialLight"
+          style={StyleSheet.absoluteFill}
+        />
+      </Animated.View>
+      <Animated.View
+        pointerEvents="none"
+        style={[StyleSheet.absoluteFill, hardBlurStyle]}
+      >
+        <BlurView
+          intensity={80}
+          tint="systemChromeMaterialLight"
+          style={StyleSheet.absoluteFill}
+        />
+      </Animated.View>
+      <Animated.View
+        pointerEvents="none"
+        style={[styles.bannerGradient, bannerGradientStyle]}
+      >
+        <LinearGradient
+          colors={['rgba(0,0,0,0.05)', 'rgba(115,115,115,0)']}
+          style={StyleSheet.absoluteFill}
+          pointerEvents="none"
+        />
+      </Animated.View>
+      <Animated.View
+        pointerEvents="none"
+        style={[styles.hairline, hairlineStyle]}
       />
 
       <View style={styles.row}>
@@ -71,8 +133,10 @@ export default function SubPageHeader({ title, onBack, trailing }: Props) {
 
 const styles = StyleSheet.create({
   wrap: {
-    backgroundColor: 'transparent',
-    paddingBottom: 4,
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
     zIndex: 10,
   },
   bannerGradient: {
@@ -81,6 +145,14 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     height: 6,
+  },
+  hairline: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: StyleSheet.hairlineWidth,
+    backgroundColor: 'rgba(0,0,0,0.08)',
   },
   row: {
     flexDirection: 'row',

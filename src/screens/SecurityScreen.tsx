@@ -1,9 +1,15 @@
 import { useState } from 'react';
-import { ScrollView, StyleSheet, Switch, View, Pressable } from 'react-native';
+import { StyleSheet, Switch, View, Pressable } from 'react-native';
+import Animated, {
+  useAnimatedScrollHandler,
+  useSharedValue,
+} from 'react-native-reanimated';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { CommonActions } from '@react-navigation/native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../App';
 import { AppBackground, Card, ConfirmModal, Icon, SubPageHeader, Text } from '../components';
+import { HEADER_HEIGHT } from '../components/SubPageHeader';
 import { semantic, spacing } from '../theme';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Security'>;
@@ -55,9 +61,15 @@ const fmtRelative = (iso: string) => {
 };
 
 export default function SecurityScreen({ navigation }: Props) {
+  const insets = useSafeAreaInsets();
   const [biometric, setBiometric] = useState(true);
   const [twoFA, setTwoFA] = useState(false);
   const [logoutAllOpen, setLogoutAllOpen] = useState(false);
+
+  const scrollY = useSharedValue(0);
+  const scrollHandler = useAnimatedScrollHandler((e) => {
+    scrollY.value = e.contentOffset.y;
+  });
 
   const onLogoutAll = () => {
     setLogoutAllOpen(false);
@@ -69,12 +81,21 @@ export default function SecurityScreen({ navigation }: Props) {
   return (
     <View style={styles.root}>
       <AppBackground />
-      <SubPageHeader title="ความปลอดภัย" onBack={() => navigation.goBack()} />
+      <SubPageHeader
+        title="ความปลอดภัย"
+        onBack={() => navigation.goBack()}
+        scrollY={scrollY}
+      />
 
-      <ScrollView
+      <Animated.ScrollView
         style={styles.flex}
-        contentContainerStyle={[styles.scroll, { paddingTop: spacing.md }]}
+        contentContainerStyle={[
+          styles.scroll,
+          { paddingTop: insets.top + HEADER_HEIGHT + spacing.md },
+        ]}
         showsVerticalScrollIndicator={false}
+        onScroll={scrollHandler}
+        scrollEventThrottle={16}
       >
         {/* Login & access */}
         <SectionLabel>การเข้าสู่ระบบ</SectionLabel>
@@ -157,7 +178,7 @@ export default function SecurityScreen({ navigation }: Props) {
             ออกจากระบบทุกอุปกรณ์
           </Text>
         </Pressable>
-      </ScrollView>
+      </Animated.ScrollView>
 
       <ConfirmModal
         visible={logoutAllOpen}

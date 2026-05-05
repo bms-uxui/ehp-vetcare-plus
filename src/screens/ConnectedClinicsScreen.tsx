@@ -1,7 +1,13 @@
-import { ScrollView, StyleSheet, View, Pressable } from 'react-native';
+import { StyleSheet, View, Pressable } from 'react-native';
+import Animated, {
+  useAnimatedScrollHandler,
+  useSharedValue,
+} from 'react-native-reanimated';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../App';
 import { AppBackground, Card, Icon, SubPageHeader, Text } from '../components';
+import { HEADER_HEIGHT } from '../components/SubPageHeader';
 import { semantic, spacing } from '../theme';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'ConnectedClinics'>;
@@ -56,15 +62,30 @@ const fmtDate = (iso: string) =>
   });
 
 export default function ConnectedClinicsScreen({ navigation }: Props) {
+  const insets = useSafeAreaInsets();
+  const scrollY = useSharedValue(0);
+  const scrollHandler = useAnimatedScrollHandler((e) => {
+    scrollY.value = e.contentOffset.y;
+  });
+
   return (
     <View style={styles.root}>
       <AppBackground />
-      <SubPageHeader title="คลินิกที่เชื่อมต่อ" onBack={() => navigation.goBack()} />
+      <SubPageHeader
+        title="คลินิกที่เชื่อมต่อ"
+        onBack={() => navigation.goBack()}
+        scrollY={scrollY}
+      />
 
-      <ScrollView
+      <Animated.ScrollView
         style={styles.flex}
-        contentContainerStyle={[styles.scroll, { paddingTop: spacing.md }]}
+        contentContainerStyle={[
+          styles.scroll,
+          { paddingTop: insets.top + HEADER_HEIGHT + spacing.md },
+        ]}
         showsVerticalScrollIndicator={false}
+        onScroll={scrollHandler}
+        scrollEventThrottle={16}
       >
         <Text variant="caption" color={semantic.textSecondary} style={styles.intro}>
           คลินิกที่เชื่อมต่อจะแชร์ประวัติการรักษาและข้อมูลสัตว์เลี้ยงของคุณโดยอัตโนมัติ
@@ -129,7 +150,7 @@ export default function ConnectedClinicsScreen({ navigation }: Props) {
             เพิ่มคลินิกที่เชื่อมต่อ
           </Text>
         </Pressable>
-      </ScrollView>
+      </Animated.ScrollView>
     </View>
   );
 }
