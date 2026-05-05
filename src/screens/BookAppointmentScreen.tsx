@@ -174,7 +174,6 @@ export default function BookAppointmentScreen({ navigation, route }: Props) {
         steps={[
           { icon: 'CalendarPlus' },
           { icon: 'ClipboardCheck' },
-          { icon: 'CircleCheck' },
         ]}
       />
       <KeyboardAvoidingView
