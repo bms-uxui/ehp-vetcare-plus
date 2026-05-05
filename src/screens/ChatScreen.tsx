@@ -42,7 +42,14 @@ import {
   Message,
 } from '../data/televet';
 import { mockPets } from '../data/pets';
+import { useAppointments } from '../data/appointmentsContext';
 import { useCall } from '../data/callContext';
+import {
+  appointmentStartDate,
+  formatRemaining,
+  isVideoCallActive,
+  isVideoCallPreview,
+} from '../lib/appointmentTime';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Chat'>;
 
@@ -66,7 +73,7 @@ const HISTORY_TEMPLATES: { fromVet: boolean; text: string }[] = [
 ];
 
 export default function ChatScreen({ route, navigation }: Props) {
-  const { conversationId, vetId, aiMode, petId } = route.params;
+  const { conversationId, vetId, aiMode, petId, initialPrompt, initialReply, appointmentId } = route.params;
 
   const conversation = mockConversations.find((c) => c.id === conversationId);
   const resolvedVetId = conversation?.vetId ?? vetId;
@@ -124,6 +131,37 @@ export default function ChatScreen({ route, navigation }: Props) {
     }
   };
 
+  // Video call gating:
+  //   - active (start ≤ now < end) → enabled
+  //   - preview (≤15 min before start) → disabled, shows countdown
+  //   - otherwise → hidden / disabled, no countdown
+  // The 15-min mark is purely a heads-up; the actual call only opens at the
+  // appointment time. A reminder push notification fires at -15 min as well.
+  const { appointments: allAppointments } = useAppointments();
+  const appointment = appointmentId
+    ? allAppointments.find((a) => a.id === appointmentId)
+    : undefined;
+  const apptDateTime = useMemo(
+    () => (appointment ? appointmentStartDate(appointment) : null),
+    [appointment],
+  );
+  const [vcNow, setVcNow] = useState(() => Date.now());
+  useEffect(() => {
+    if (!apptDateTime) return;
+    const id = setInterval(() => setVcNow(Date.now()), 1000);
+    return () => clearInterval(id);
+  }, [apptDateTime]);
+  const canStartVideoCall = !!appointment && isVideoCallActive(appointment, vcNow);
+  const inCallPreview = !!appointment && isVideoCallPreview(appointment, vcNow);
+  const callCountdown =
+    inCallPreview && apptDateTime
+      ? formatRemaining(apptDateTime.getTime() - vcNow)
+      : null;
+  const onStartVideoCall = () => {
+    if (!canStartVideoCall || !resolvedVetId) return;
+    navigation.navigate('VideoCall', { vetId: resolvedVetId });
+  };
+
   const initialMessages = useMemo(
     () => mockMessages.filter((m) => m.conversationId === conversationId),
     [conversationId],
@@ -144,6 +182,45 @@ export default function ChatScreen({ route, navigation }: Props) {
 
   useEffect(() => {
     setTimeout(() => scrollRef.current?.scrollToEnd({ animated: false }), 50);
+  }, []);
+
+  // Auto-send an initial prompt + AI reply when navigated here with one
+  // (e.g. from HelpScreen FAQ topic → ask AI to teach app usage).
+  useEffect(() => {
+    if (!initialPrompt) return;
+    const userText = fillTemplate(initialPrompt);
+    const replyText = initialReply ? fillTemplate(initialReply) : '';
+    setMessages((prev) => [
+      ...prev,
+      {
+        id: `local-init-${Date.now()}`,
+        conversationId,
+        fromVet: false,
+        text: userText,
+        sentAtISO: new Date().toISOString(),
+      },
+    ]);
+    setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 80);
+    if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+    setVetTyping(true);
+    setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 120);
+    typingTimeoutRef.current = setTimeout(() => {
+      setVetTyping(false);
+      if (!replyText) return;
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: `ai-init-${Date.now()}`,
+          conversationId,
+          fromVet: true,
+          text: replyText,
+          sentAtISO: new Date().toISOString(),
+        },
+      ]);
+      setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 50);
+    }, 1400 + Math.random() * 800);
+    // Only on mount — intentional empty deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const onRefresh = useCallback(() => {
@@ -358,17 +435,37 @@ export default function ChatScreen({ route, navigation }: Props) {
         </View>
         {!isAi && (
           <Pressable
-            onPress={isCallMinimizedForVet ? onMaximizeCall : () => {}}
+            onPress={
+              isCallMinimizedForVet
+                ? onMaximizeCall
+                : canStartVideoCall
+                  ? onStartVideoCall
+                  : undefined
+            }
+            disabled={!isCallMinimizedForVet && !canStartVideoCall}
+            hitSlop={6}
+            accessibilityLabel={
+              isCallMinimizedForVet
+                ? 'เปิดหน้าจอวิดีโอคอล'
+                : canStartVideoCall
+                  ? 'เริ่มวิดีโอคอลสัตวแพทย์'
+                  : callCountdown
+                    ? `เริ่มได้ในอีก ${callCountdown}`
+                    : 'วิดีโอคอลใช้ได้เมื่อถึงเวลานัด'
+            }
             style={[
               styles.callBtn,
               isCallMinimizedForVet && styles.callBtnActive,
-              !isCallMinimizedForVet && vet.status !== 'online' && { opacity: 0.3 },
+              canStartVideoCall && !isCallMinimizedForVet && styles.callBtnReady,
+              !isCallMinimizedForVet && !canStartVideoCall && { opacity: 0.35 },
             ]}
-            disabled={!isCallMinimizedForVet && vet.status !== 'online'}
           >
             <Icon name="Video" size={20} color={semantic.primary} />
             {isCallMinimizedForVet && (
               <Text style={styles.callBtnTime}>{formatCallTime(callDuration)}</Text>
+            )}
+            {!isCallMinimizedForVet && callCountdown && (
+              <Text style={styles.callBtnTime}>{callCountdown}</Text>
             )}
           </Pressable>
         )}
@@ -645,6 +742,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  callBtnReady: {
+    width: 'auto',
+    flexDirection: 'row',
+    paddingHorizontal: 10,
+    gap: 6,
+    backgroundColor: '#F5E4E7',
+  },
   callBtnActive: {
     width: 'auto',
     flexDirection: 'row',
@@ -743,7 +847,7 @@ const styles = StyleSheet.create({
     borderRadius: radii.xl,
   },
   bubbleMine: {
-    backgroundColor: semantic.surfaceMuted,
+    backgroundColor: '#FFFFFF',
     borderBottomRightRadius: 6,
   },
   bubbleTheirs: {

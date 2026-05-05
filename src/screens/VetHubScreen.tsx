@@ -1,5 +1,5 @@
-import { ComponentProps, useState } from 'react';
-import { Image, Pressable, StyleSheet, useWindowDimensions, View } from 'react-native';
+import { ComponentProps, useEffect, useState } from 'react';
+import { Image, Linking, Pressable, StyleSheet, useWindowDimensions, View } from 'react-native';
 import Animated, {
   Extrapolation,
   interpolate,
@@ -12,21 +12,17 @@ import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { tabBarCompact } from '../navigation/tabBarVisibility';
+import { useResponsiveScale } from '../lib/responsive';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../App';
-import { Card, Icon, Text } from '../components';
+import { Card, Icon, SkeletonBox, SkeletonShimmer, Text, useSkeletonShimmer } from '../components';
 import { colors, radii, semantic, spacing } from '../theme';
-import { mockAppointments, Appointment, typeMeta, MOCK_VETS } from '../data/appointments';
+import { Appointment, typeMeta, MOCK_VETS } from '../data/appointments';
+import { useAppointments } from '../data/appointmentsContext';
 import { mockPets } from '../data/pets';
 import { mockVets, mockConversations, TeleVet } from '../data/televet';
 
-const isApptDayReached = (dateISO: string): boolean => {
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const apptDay = new Date(dateISO);
-  apptDay.setHours(0, 0, 0, 0);
-  return apptDay.getTime() <= today.getTime();
-};
+import { isVideoCallActive } from '../lib/appointmentTime';
 
 const computeAge = (birthISO: string): number => {
   const now = new Date();
@@ -65,11 +61,12 @@ export default function VetHubScreen({ navigation }: Props) {
   const { height: windowHeight, width: windowWidth } = useWindowDimensions();
   const [tab, setTab] = useState<Tab>('upcoming');
 
-  const upcoming = mockAppointments
+  const { appointments } = useAppointments();
+  const upcoming = appointments
     .filter((a) => a.status === 'upcoming')
     .sort((a, b) => a.dateISO.localeCompare(b.dateISO));
 
-  const past = mockAppointments
+  const past = appointments
     .filter((a) => a.status !== 'upcoming')
     .sort((a, b) => b.dateISO.localeCompare(a.dateISO));
 
@@ -108,6 +105,22 @@ export default function VetHubScreen({ navigation }: Props) {
   }));
 
   const onChatPress = () => navigation.navigate('ChatList');
+
+  const scale = useResponsiveScale();
+  const shimmerStyle = useSkeletonShimmer();
+
+  // Tick once a minute so video call buttons auto-enable when the
+  // 15-min window opens / closes, without per-card intervals.
+  const [nowMs, setNowMs] = useState<number>(() => Date.now());
+  useEffect(() => {
+    const id = setInterval(() => setNowMs(Date.now()), 60_000);
+    return () => clearInterval(id);
+  }, []);
+  const [loading, setLoading] = useState(true);
+  useEffect(() => {
+    const t = setTimeout(() => setLoading(false), 700);
+    return () => clearTimeout(t);
+  }, []);
 
   return (
     <View style={styles.root}>
@@ -227,8 +240,12 @@ export default function VetHubScreen({ navigation }: Props) {
           onPress={() => {
             if (upcoming[0]) {
               navigation.navigate('AppointmentDetail', { appointmentId: upcoming[0].id });
+            } else {
+              // No upcoming → bento becomes "book first appointment" CTA.
+              navigation.navigate('BookAppointment');
             }
           }}
+          accessibilityLabel={upcoming[0] ? 'นัดที่กำลังจะถึง' : 'จองนัดแรก'}
           style={({ pressed }) => [
             styles.bentoTile,
             styles.bentoCard,
@@ -243,7 +260,7 @@ export default function VetHubScreen({ navigation }: Props) {
             style={StyleSheet.absoluteFill}
             pointerEvents="none"
           />
-          <View style={styles.bentoCardInner}>
+          <View style={[styles.bentoCardInner, { height: 104 * scale }]}>
             <Svg
               width={220}
               height={220}
@@ -260,11 +277,11 @@ export default function VetHubScreen({ navigation }: Props) {
               </Defs>
               <Circle cx="100" cy="100" r="100" fill="url(#glowRG)" />
             </Svg>
-            <View style={styles.bentoTextCol}>
+            <View style={[styles.bentoTextCol, { paddingRight: 92 * scale }]}>
               <Text
                 variant="caption"
                 color="rgba(76,29,5,0.7)"
-                style={styles.bentoEyebrow}
+                style={[styles.bentoEyebrow, { fontSize: 13 * scale }]}
                 numberOfLines={1}
               >
                 นัดที่กำลังจะถึง
@@ -273,7 +290,7 @@ export default function VetHubScreen({ navigation }: Props) {
                 <>
                   <Text
                     variant="bodyStrong"
-                    style={styles.bentoHero}
+                    style={[styles.bentoHero, { fontSize: 20 * scale, lineHeight: 28 * scale }]}
                     color="#5C2D05"
                     numberOfLines={1}
                   >
@@ -282,31 +299,55 @@ export default function VetHubScreen({ navigation }: Props) {
                   <Text
                     variant="bodyStrong"
                     color="#7C2D12"
-                    style={styles.bentoSubtext}
+                    style={[styles.bentoSubtext, { fontSize: 14 * scale, lineHeight: 18 * scale }]}
                     numberOfLines={1}
                   >
                     {thDateLong(upcoming[0].dateISO)} · {upcoming[0].time}
                   </Text>
                 </>
               ) : (
-                <Text variant="bodyStrong" style={styles.bentoHero} numberOfLines={1} color="rgba(76,29,5,0.5)">
-                  ไม่มีนัด
-                </Text>
+                <>
+                  <Text
+                    variant="bodyStrong"
+                    style={[styles.bentoHero, { fontSize: 20 * scale, lineHeight: 28 * scale }]}
+                    numberOfLines={1}
+                    color="#5C2D05"
+                  >
+                    จองนัดแรก
+                  </Text>
+                  <Text
+                    variant="bodyStrong"
+                    color="#7C2D12"
+                    style={[styles.bentoSubtext, { fontSize: 14 * scale, lineHeight: 18 * scale }]}
+                    numberOfLines={1}
+                  >
+                    แตะเพื่อจองนัดหมาย
+                  </Text>
+                </>
               )}
             </View>
             <Image
               source={PET_COMING_SOON_IMG}
-              style={styles.bentoMascotComingSoon}
+              style={[
+                styles.bentoMascotComingSoon,
+                { width: 107 * scale, height: 118 * scale },
+              ]}
               resizeMode="contain"
             />
           </View>
         </Pressable>
       </View>
 
-      <UpcomingTab
-        appointments={[...upcoming, ...past]}
-        navigation={navigation}
-      />
+      {loading ? (
+        <UpcomingTabSkeleton shimmerStyle={shimmerStyle} />
+      ) : (
+        <UpcomingTab
+          appointments={[...upcoming, ...past]}
+          navigation={navigation}
+          scale={scale}
+          nowMs={nowMs}
+        />
+      )}
         </View>
       </Animated.ScrollView>
 
@@ -339,6 +380,62 @@ export default function VetHubScreen({ navigation }: Props) {
   );
 }
 
+function UpcomingTabSkeleton({
+  shimmerStyle,
+}: {
+  shimmerStyle: ReturnType<typeof useSkeletonShimmer>;
+}) {
+  return (
+    <View style={styles.upcomingWrap}>
+      <View style={styles.monthHeader}>
+        <SkeletonBox width={140} height={18} />
+        <View style={{ flexDirection: 'row', gap: 8 }}>
+          <SkeletonBox width={32} height={32} radius={16} />
+          <SkeletonBox width={32} height={32} radius={16} />
+        </View>
+      </View>
+      {Array.from({ length: 2 }).map((_, gi) => (
+        <View key={`grp-${gi}`} style={styles.dateGroup}>
+          <View style={styles.dateHeader}>
+            <SkeletonBox width={80} height={12} />
+            <View style={[styles.dateBigRow, { marginTop: 6, gap: 8 }]}>
+              <SkeletonBox width={42} height={32} radius={8} />
+              <SkeletonBox width={120} height={12} />
+            </View>
+          </View>
+          <View style={styles.list}>
+            {Array.from({ length: 2 }).map((_, ci) => (
+              <View key={`row-${gi}-${ci}`} style={styles.apptItemRow}>
+                <View style={styles.skelTimeBox}>
+                  <SkeletonBox width={36} height={12} />
+                  <SkeletonBox width={30} height={10} />
+                </View>
+                <View style={[styles.skelApptCard, { flex: 1 }]}>
+                  <View style={styles.skelApptTop}>
+                    <SkeletonBox width="55%" height={14} light />
+                    <View style={{ flexDirection: 'row', gap: 8, marginTop: 8 }}>
+                      <SkeletonBox width={70} height={10} light />
+                      <SkeletonBox width={50} height={10} light />
+                    </View>
+                  </View>
+                  <View style={styles.skelApptBottom}>
+                    <View style={{ flex: 1, gap: 8 }}>
+                      <SkeletonBox width="40%" height={10} />
+                      <SkeletonBox width="70%" height={10} />
+                    </View>
+                    <SkeletonBox width={36} height={36} radius={18} />
+                  </View>
+                  <SkeletonShimmer shimmerStyle={shimmerStyle} />
+                </View>
+              </View>
+            ))}
+          </View>
+        </View>
+      ))}
+    </View>
+  );
+}
+
 function TabBtn({ label, active, onPress }: { label: string; active: boolean; onPress: () => void }) {
   return (
     <Pressable onPress={onPress} style={[styles.tabBtn, active && styles.tabBtnActive]}>
@@ -356,9 +453,13 @@ function TabBtn({ label, active, onPress }: { label: string; active: boolean; on
 function UpcomingTab({
   appointments,
   navigation,
+  scale,
+  nowMs,
 }: {
   appointments: Appointment[];
   navigation: Props['navigation'];
+  scale: number;
+  nowMs: number;
 }) {
   const [viewMonth, setViewMonth] = useState<Date>(() => {
     const first = appointments[0];
@@ -409,13 +510,15 @@ function UpcomingTab({
                   : getApptTheme(a.type === 'consultation');
                 return (
                   <View key={a.id} style={styles.apptItemRow}>
-                    <TimeBox time={a.time} theme={theme} />
+                    <TimeBox time={a.time} theme={theme} scale={scale} />
                     <View style={{ flex: 1 }}>
                       <AppointmentCardNew
                         appointment={a}
                         navigation={navigation}
                         theme={theme}
                         isHistory={isHistory}
+                        scale={scale}
+                        nowMs={nowMs}
                       />
                     </View>
                   </View>
@@ -538,10 +641,24 @@ const getMutedTheme = (): ApptTheme => ({
   timeGlow: colors.neutral[100],
 });
 
-function TimeBox({ time, theme }: { time: string; theme: ApptTheme }) {
+function TimeBox({
+  time,
+  theme,
+  scale = 1,
+}: {
+  time: string;
+  theme: ApptTheme;
+  scale?: number;
+}) {
   const glowId = `timeGlow-${theme.timeGlow.replace('#', '')}`;
+  const size = 56 * scale;
   return (
-    <View style={[styles.timeBox, { backgroundColor: theme.tintBg }]}>
+    <View
+      style={[
+        styles.timeBox,
+        { backgroundColor: theme.tintBg, width: size, height: size, borderRadius: 24 * scale },
+      ]}
+    >
       <Svg
         width={147}
         height={147}
@@ -557,8 +674,8 @@ function TimeBox({ time, theme }: { time: string; theme: ApptTheme }) {
         </Defs>
         <Circle cx="73.5" cy="73.5" r="73.5" fill={`url(#${glowId})`} />
       </Svg>
-      <Icon name="Clock" size={16} color={semantic.textPrimary} strokeWidth={2} />
-      <Text variant="bodyStrong" style={styles.timeBoxText}>
+      <Icon name="Clock" size={16 * scale} color={semantic.textPrimary} strokeWidth={2} />
+      <Text variant="bodyStrong" style={[styles.timeBoxText, { fontSize: 14 * scale }]}>
         {time}
       </Text>
     </View>
@@ -570,11 +687,15 @@ function AppointmentCardNew({
   navigation,
   theme,
   isHistory = false,
+  scale = 1,
+  nowMs = Date.now(),
 }: {
   appointment: Appointment;
   navigation: Props['navigation'];
   theme: ApptTheme;
   isHistory?: boolean;
+  scale?: number;
+  nowMs?: number;
 }) {
   const pet = mockPets.find((p) => p.id === appointment.petId);
   const vet = MOCK_VETS.find((v) => v.name === appointment.vetName);
@@ -583,20 +704,31 @@ function AppointmentCardNew({
   const meta = typeMeta[appointment.type];
 
   const isOnline = appointment.type === 'consultation';
-  const canVideoCall = isOnline && isApptDayReached(appointment.dateISO);
+  const canVideoCall = isOnline && !isHistory && isVideoCallActive(appointment, nowMs);
   const speciesIcon =
     pet?.species === 'dog' ? 'Dog' : pet?.species === 'cat' ? 'Cat' : 'PawPrint';
 
   const onCardPress = () =>
     navigation.navigate('AppointmentDetail', { appointmentId: appointment.id });
+  const teleVet = mockVets.find((v) => v.name.startsWith(appointment.vetName));
   const onChat = () => {
-    const existing = mockConversations[0];
-    if (existing) navigation.navigate('Chat', { conversationId: existing.id });
+    if (!teleVet) return;
+    const existing = mockConversations.find((c) => c.vetId === teleVet.id);
+    navigation.navigate('Chat', {
+      conversationId: existing?.id ?? `new-${teleVet.id}`,
+      vetId: teleVet.id,
+      appointmentId: appointment.id,
+    });
   };
   const onVideoCall = () => {
-    const teleVet =
-      mockVets.find((v) => v.name.startsWith(appointment.vetName)) ?? mockVets[0];
-    if (teleVet) navigation.navigate('VideoCall', { vetId: teleVet.id });
+    const target = teleVet ?? mockVets[0];
+    if (target) navigation.navigate('VideoCall', { vetId: target.id });
+  };
+  const onOpenClinicMap = () => {
+    const q = encodeURIComponent(appointment.clinicName);
+    Linking.openURL(`https://www.google.com/maps/search/?api=1&query=${q}`).catch(
+      () => {},
+    );
   };
 
   const petImage = isOnline ? PET_VIDEOCALL_IMG : PET_DRIVE_IMG;
@@ -612,7 +744,12 @@ function AppointmentCardNew({
       <View style={[styles.apptCardTop, { backgroundColor: theme.darkBg }]}>
         <Image
           source={petImage}
-          style={isOnline ? styles.apptPetImageOnline : styles.apptPetImage}
+          style={[
+            isOnline ? styles.apptPetImageOnline : styles.apptPetImage,
+            isOnline
+              ? { width: 86 * scale, height: 95 * scale }
+              : { width: 74 * scale, height: 82 * scale },
+          ]}
           resizeMode="contain"
         />
         <Svg
@@ -640,18 +777,18 @@ function AppointmentCardNew({
             fill={`url(#cardGlow-${theme.glowAccent.replace('#', '')})`}
           />
         </Svg>
-        <View style={[styles.vetTopRow, styles.vetTopRowWithImage]}>
+        <View style={[styles.vetTopRow, styles.vetTopRowWithImage, { paddingRight: 64 * scale }]}>
           <View style={{ flex: 1 }}>
             <Text
               variant="bodyStrong"
               numberOfLines={1}
-              style={styles.apptCardTitleInverse}
+              style={[styles.apptCardTitleInverse, { fontSize: 14 * scale }]}
             >
               {appointment.clinicName}
             </Text>
             <View style={styles.chipRow}>
-              <ChipItem icon="UserRound" label={appointment.vetName} inverse />
-              <ChipItem icon={meta.icon as any} label={appointment.typeLabel} inverse />
+              <ChipItem icon="UserRound" label={appointment.vetName} inverse scale={scale} />
+              <ChipItem icon={meta.icon as any} label={appointment.typeLabel} inverse scale={scale} />
             </View>
           </View>
         </View>
@@ -667,23 +804,29 @@ function AppointmentCardNew({
                 icon="PawPrint"
                 label="ชื่อ"
                 value={`น้อง${appointment.petName}`}
+                scale={scale}
               />
               {pet?.speciesLabel ? (
                 <>
                   <View style={styles.petInfoDivider} />
-                  <PetInfoItem icon={speciesIcon} label="ชนิด" value={pet.speciesLabel} />
+                  <PetInfoItem icon={speciesIcon} label="ชนิด" value={pet.speciesLabel} scale={scale} />
                 </>
               ) : null}
               {sexLabel ? (
                 <>
                   <View style={styles.petInfoDivider} />
-                  <PetInfoItem icon="User" label="เพศ" value={sexLabel} />
+                  <PetInfoItem
+                    icon={pet?.gender === 'male' ? 'Mars' : 'Venus'}
+                    label="เพศ"
+                    value={sexLabel}
+                    scale={scale}
+                  />
                 </>
               ) : null}
               {ageYears !== null ? (
                 <>
                   <View style={styles.petInfoDivider} />
-                  <PetInfoItem icon="Cake" label="อายุ" value={`${ageYears} ปี`} />
+                  <PetInfoItem icon="Cake" label="อายุ" value={`${ageYears} ปี`} scale={scale} />
                 </>
               ) : null}
             </View>
@@ -693,28 +836,32 @@ function AppointmentCardNew({
               <>
                 <Pressable
                   onPress={onChat}
+                  hitSlop={8}
+                  accessibilityLabel={`แชทกับ ${appointment.vetName}`}
                   style={({ pressed }) => [
                     styles.iconBtn,
-                    { backgroundColor: theme.lightBg },
+                    { backgroundColor: theme.lightBg, width: 32 * scale, height: 32 * scale },
                     pressed && styles.iconBtnPressed,
                   ]}
                 >
-                  <Icon name="MessageCircle" size={16} color={theme.darkBg} strokeWidth={2.5} />
+                  <Icon name="MessageCircle" size={16 * scale} color={theme.darkBg} strokeWidth={2.5} />
                 </Pressable>
                 {!isHistory && (
                   <Pressable
                     onPress={canVideoCall ? onVideoCall : undefined}
                     disabled={!canVideoCall}
+                    hitSlop={8}
+                    accessibilityLabel="วิดีโอคอลสัตวแพทย์"
                     style={({ pressed }) => [
                       styles.iconBtn,
-                      { backgroundColor: theme.lightBg },
+                      { backgroundColor: theme.lightBg, width: 32 * scale, height: 32 * scale },
                       !canVideoCall && styles.iconBtnDisabled,
                       pressed && canVideoCall && styles.iconBtnPressed,
                     ]}
                   >
                     <Icon
                       name="Video"
-                      size={18}
+                      size={18 * scale}
                       color={canVideoCall ? theme.darkBg : semantic.textMuted}
                     />
                   </Pressable>
@@ -722,14 +869,16 @@ function AppointmentCardNew({
               </>
             ) : (
               <Pressable
-                onPress={() => {}}
+                onPress={onOpenClinicMap}
+                hitSlop={8}
+                accessibilityLabel={`เปิดแผนที่ ${appointment.clinicName}`}
                 style={({ pressed }) => [
                   styles.iconBtn,
-                  { backgroundColor: theme.lightBg },
+                  { backgroundColor: theme.lightBg, width: 32 * scale, height: 32 * scale },
                   pressed && styles.iconBtnPressed,
                 ]}
               >
-                <Icon name="MapPin" size={18} color={theme.darkBg} />
+                <Icon name="MapPin" size={18 * scale} color={theme.darkBg} />
               </Pressable>
             )}
           </View>
@@ -926,18 +1075,20 @@ function PetInfoItem({
   icon,
   label,
   value,
+  scale = 1,
 }: {
   icon: ComponentProps<typeof Icon>['name'];
   label: string;
   value: string;
+  scale?: number;
 }) {
   return (
     <View style={styles.petInfoItem}>
       <View style={styles.petInfoLabelRow}>
-        <Icon name={icon} size={11} color={semantic.textMuted} strokeWidth={2} />
-        <Text style={styles.petInfoLabel}>{label}</Text>
+        <Icon name={icon} size={11 * scale} color={semantic.textMuted} strokeWidth={2} />
+        <Text style={[styles.petInfoLabel, { fontSize: 10 * scale }]}>{label}</Text>
       </View>
-      <Text style={styles.petInfoValue} numberOfLines={1}>
+      <Text style={[styles.petInfoValue, { fontSize: 10 * scale }]} numberOfLines={1}>
         {value}
       </Text>
     </View>
@@ -948,21 +1099,23 @@ function ChipItem({
   icon,
   label,
   inverse = false,
+  scale = 1,
 }: {
   icon: ComponentProps<typeof Icon>['name'];
   label: string;
   inverse?: boolean;
+  scale?: number;
 }) {
   const iconColor = inverse ? 'rgba(255,255,255,0.85)' : semantic.textMuted;
   const textColor = inverse ? 'rgba(255,255,255,0.95)' : semantic.textSecondary;
   return (
     <View style={styles.chipItem}>
-      <Icon name={icon} size={11} color={iconColor} strokeWidth={2} />
+      <Icon name={icon} size={11 * scale} color={iconColor} strokeWidth={2} />
       <Text
         variant="caption"
         numberOfLines={1}
         ellipsizeMode="tail"
-        style={[styles.chipItemText, { fontSize: 10, color: textColor }]}
+        style={[styles.chipItemText, { fontSize: 10 * scale, color: textColor }]}
       >
         {label}
       </Text>
@@ -1228,6 +1381,37 @@ const styles = StyleSheet.create({
   /* Upcoming tab — calendar/date/card per Figma */
   upcomingWrap: {
     gap: spacing.lg,
+  },
+  skelTimeBox: {
+    width: 64,
+    height: 64,
+    borderRadius: 12,
+    backgroundColor: '#EFEFF1',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+  },
+  skelApptCard: {
+    borderRadius: 16,
+    overflow: 'hidden',
+    backgroundColor: '#FFFFFF',
+    shadowColor: '#000',
+    shadowOpacity: 0.06,
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 2,
+  },
+  skelApptTop: {
+    backgroundColor: '#D7D7DB',
+    paddingHorizontal: 14,
+    paddingVertical: 16,
+  },
+  skelApptBottom: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 14,
   },
   apptItemRow: {
     flexDirection: 'row',

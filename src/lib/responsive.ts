@@ -41,3 +41,18 @@ export function getProductColumns(width: number): number {
   if (width >= 700) return 4;
   return 2;
 }
+
+/**
+ * Uniform scale factor relative to a 390pt baseline (iPhone 14), clamped so
+ * layouts stay proportional without overshooting on tiny phones or tablets.
+ *  - iPhone SE (320pt)  → ~0.86
+ *  - iPhone 14 (390pt)  → 1.00
+ *  - iPhone 14 Pro Max  → ~1.10
+ *  - iPad (≥ 700pt)     → 1.20 (capped)
+ *
+ * Use to scale font sizes, icon sizes, and fixed-pt box dimensions.
+ */
+export function useResponsiveScale(min = 0.86, max = 1.2, baseline = 390): number {
+  const { width } = useWindowDimensions();
+  return Math.max(min, Math.min(max, width / baseline));
+}

@@ -2,9 +2,28 @@ import { useEffect, useMemo, useState } from 'react';
 import { Image, Pressable, StyleSheet, View } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../App';
-import { Button, Card, ConfirmModal, Icon, PetAvatar, Screen, SubPageHeader, Text } from '../components';
+import {
+  Button,
+  Card,
+  ConfirmModal,
+  Icon,
+  PetAvatar,
+  Screen,
+  SkeletonBox,
+  SkeletonShimmer,
+  SubPageHeader,
+  Text,
+  useSkeletonShimmer,
+} from '../components';
 import { semantic, spacing } from '../theme';
-import { mockAppointments, thDate } from '../data/appointments';
+import { thDate } from '../data/appointments';
+import { useAppointments } from '../data/appointmentsContext';
+import {
+  appointmentStartDate,
+  formatRemaining,
+  isVideoCallActive,
+  isVideoCallPreview,
+} from '../lib/appointmentTime';
 import { mockVets, mockConversations } from '../data/televet';
 
 const TH_WEEKDAY_SHORT = ['อา.', 'จ.', 'อ.', 'พ.', 'พฤ.', 'ศ.', 'ส.'];
@@ -39,7 +58,8 @@ type Props = NativeStackScreenProps<RootStackParamList, 'AppointmentDetail'>;
 
 export default function AppointmentDetailScreen({ route, navigation }: Props) {
   const { appointmentId } = route.params;
-  const appointment = mockAppointments.find((a) => a.id === appointmentId);
+  const { appointments, cancelAppointment } = useAppointments();
+  const appointment = appointments.find((a) => a.id === appointmentId);
 
   if (!appointment) {
     return (
@@ -51,47 +71,55 @@ export default function AppointmentDetailScreen({ route, navigation }: Props) {
 
   const isUpcoming = appointment.status === 'upcoming';
   const isOnline = appointment.type === 'consultation';
-  const canVideoCall = isOnline && isUpcoming && isDayReached(appointment.dateISO);
 
-  // Countdown 15 mins before appointment time
-  const apptDateTime = useMemo(() => {
-    const [hh, mm] = appointment.time.split(':').map(Number);
-    const d = new Date(appointment.dateISO);
-    d.setHours(hh, mm, 0, 0);
-    return d;
-  }, [appointment.dateISO, appointment.time]);
+  const apptDateTime = useMemo(() => appointmentStartDate(appointment), [appointment]);
 
   const [now, setNow] = useState(() => new Date());
   useEffect(() => {
-    if (!canVideoCall) return;
+    if (!isOnline || !isUpcoming) return;
     const id = setInterval(() => setNow(new Date()), 1000);
     return () => clearInterval(id);
-  }, [canVideoCall]);
+  }, [isOnline, isUpcoming]);
 
   const remainingMs = apptDateTime.getTime() - now.getTime();
-  const showCountdown = remainingMs > 0 && remainingMs <= 15 * 60 * 1000;
-  const countdownLabel = showCountdown
-    ? `${String(Math.floor(remainingMs / 60000)).padStart(2, '0')}:${String(
-        Math.floor((remainingMs % 60000) / 1000),
-      ).padStart(2, '0')}`
-    : null;
+  // Active = call may actually be placed (between start and end of slot).
+  // Preview = -15 min countdown before start (disabled, just informational).
+  const canVideoCall = isOnline && isUpcoming && isVideoCallActive(appointment, now.getTime());
+  const inPreview =
+    isOnline && isUpcoming && isVideoCallPreview(appointment, now.getTime());
+  const showVideoButton = canVideoCall || inPreview;
+  const countdownLabel = inPreview ? formatRemaining(remainingMs) : null;
 
+  const teleVet = mockVets.find((v) => v.name.startsWith(appointment.vetName));
   const onVideoCall = () => {
-    const teleVet =
-      mockVets.find((v) => v.name.startsWith(appointment.vetName)) ?? mockVets[0];
-    if (teleVet) navigation.navigate('VideoCall', { vetId: teleVet.id });
+    const target = teleVet ?? mockVets[0];
+    if (target) navigation.navigate('VideoCall', { vetId: target.id });
   };
   const onChat = () => {
-    const existing = mockConversations[0];
-    if (existing) navigation.navigate('Chat', { conversationId: existing.id });
+    if (!teleVet) return;
+    const existing = mockConversations.find((c) => c.vetId === teleVet.id);
+    navigation.navigate('Chat', {
+      conversationId: existing?.id ?? `new-${teleVet.id}`,
+      vetId: teleVet.id,
+      appointmentId: appointment.id,
+    });
   };
 
   const [cancelModalOpen, setCancelModalOpen] = useState(false);
   const onCancel = () => setCancelModalOpen(true);
 
+  const shimmerStyle = useSkeletonShimmer();
+  const [loading, setLoading] = useState(true);
+  useEffect(() => {
+    const t = setTimeout(() => setLoading(false), 700);
+    return () => clearTimeout(t);
+  }, []);
+
   const onReschedule = () => {
     const matchedVet = mockVets.find((v) => v.name.startsWith(appointment.vetName));
-    navigation.replace('BookAppointment', {
+    // Use navigate (not replace) so the back button on BookAppointment returns
+    // to the appointment detail — letting the user cancel the reschedule.
+    navigation.navigate('BookAppointment', {
       prefillPetId: appointment.petId,
       prefillMode: appointment.type === 'consultation' ? 'online' : 'clinic',
       prefillDateISO: appointment.dateISO,
@@ -112,6 +140,23 @@ export default function AppointmentDetailScreen({ route, navigation }: Props) {
         <StatusBadge status={appointment.status} dateISO={appointment.dateISO} />
       </View>
 
+      {loading && (
+        <>
+          {Array.from({ length: 3 }).map((_, i) => (
+            <View key={`apd-${i}`} style={[styles.card, styles.skelCard, { overflow: 'hidden' }]}>
+              <View style={{ gap: 10 }}>
+                <SkeletonBox width="40%" height={11} />
+                <SkeletonBox width="70%" height={14} />
+                <SkeletonBox width="55%" height={11} />
+              </View>
+              <SkeletonShimmer shimmerStyle={shimmerStyle} />
+            </View>
+          ))}
+        </>
+      )}
+
+      {!loading && (
+      <>
       <Card variant="elevated" padding="lg" style={styles.card}>
         <InfoRow label="วันที่" value={thDate(appointment.dateISO)} />
         <Divider />
@@ -201,33 +246,78 @@ export default function AppointmentDetailScreen({ route, navigation }: Props) {
         </View>
       )}
 
-      {/* Spacer so floating call bar doesn't cover the last card */}
-      {canVideoCall && <View style={{ height: 100 }} />}
+      </>
+      )}
+
+      {/* Spacer so the floating action bar doesn't cover the last card.
+          Bar is shown whenever there's a vet to chat with; reserve space
+          accordingly. */}
+      {!!teleVet && <View style={{ height: 100 }} />}
     </Screen>
 
-    {canVideoCall && (
+    {!!teleVet && (
       <View pointerEvents="box-none" style={styles.callBarWrap}>
         <View style={styles.callBarShadow}>
           <View style={styles.callRow}>
+            {/* Chat — always available so the user can ask questions any time
+                (before, during, or after the appointment). */}
             <Pressable
               onPress={onChat}
-              style={({ pressed }) => [styles.chatBtn, pressed && { opacity: 0.85 }]}
+              style={({ pressed }) => [
+                showVideoButton ? styles.chatBtn : styles.chatBtnExpanded,
+                pressed && { opacity: 0.85 },
+              ]}
               accessibilityRole="button"
-              accessibilityLabel="แชท"
+              accessibilityLabel="แชทกับสัตวแพทย์"
             >
               <Icon name="MessageCircle" size={20} color={semantic.primary} strokeWidth={2.4} />
+              {!showVideoButton && (
+                <Text variant="bodyStrong" color={semantic.primary} style={styles.videoCallText}>
+                  แชทกับสัตวแพทย์
+                </Text>
+              )}
             </Pressable>
-            <Pressable
-              onPress={onVideoCall}
-              style={({ pressed }) => [styles.videoCallBtn, pressed && { opacity: 0.92 }]}
-              accessibilityRole="button"
-              accessibilityLabel="วิดีโอคอลสัตวแพทย์"
-            >
-              <Icon name="Video" size={20} color={semantic.onPrimary} strokeWidth={2.2} />
-              <Text variant="bodyStrong" color={semantic.onPrimary} style={styles.videoCallText}>
-                {countdownLabel ? `เริ่มในอีก ${countdownLabel}` : 'วิดีโอคอลสัตวแพทย์'}
-              </Text>
-            </Pressable>
+            {/* Video call:
+                - active (start ≤ now < end) → enabled, primary color
+                - preview (≤15 min before start) → disabled, shows "เริ่มได้ในอีก MM:SS"
+                - otherwise → hidden
+                The 15-min mark is purely a heads-up; the call only opens at the
+                actual appointment time. */}
+            {showVideoButton && (
+              <Pressable
+                onPress={canVideoCall ? onVideoCall : undefined}
+                disabled={!canVideoCall}
+                style={({ pressed }) => [
+                  styles.videoCallBtn,
+                  !canVideoCall && styles.videoCallBtnPreview,
+                  pressed && canVideoCall && { opacity: 0.92 },
+                ]}
+                accessibilityRole="button"
+                accessibilityLabel={
+                  canVideoCall
+                    ? 'วิดีโอคอลสัตวแพทย์'
+                    : countdownLabel
+                      ? `เริ่มได้ในอีก ${countdownLabel}`
+                      : 'วิดีโอคอลใช้ได้เมื่อถึงเวลานัด'
+                }
+              >
+                <Icon
+                  name="Video"
+                  size={20}
+                  color={canVideoCall ? semantic.onPrimary : semantic.primary}
+                  strokeWidth={2.2}
+                />
+                <Text
+                  variant="bodyStrong"
+                  color={canVideoCall ? semantic.onPrimary : semantic.primary}
+                  style={styles.videoCallText}
+                >
+                  {canVideoCall
+                    ? 'เข้าร่วมวิดีโอคอล'
+                    : `เริ่มได้ในอีก ${countdownLabel}`}
+                </Text>
+              </Pressable>
+            )}
           </View>
         </View>
       </View>
@@ -245,6 +335,7 @@ export default function AppointmentDetailScreen({ route, navigation }: Props) {
       onCancel={() => setCancelModalOpen(false)}
       onConfirm={() => {
         setCancelModalOpen(false);
+        cancelAppointment(appointment.id);
         navigation.goBack();
       }}
     />
@@ -409,6 +500,9 @@ const styles = StyleSheet.create({
     gap: 10,
     paddingHorizontal: spacing.lg,
   },
+  videoCallBtnPreview: {
+    backgroundColor: semantic.primaryMuted,
+  },
   videoCallText: {
     fontSize: 16,
   },
@@ -419,6 +513,17 @@ const styles = StyleSheet.create({
     backgroundColor: semantic.primaryMuted,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  chatBtnExpanded: {
+    flex: 1,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: semantic.primaryMuted,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10,
+    paddingHorizontal: spacing.lg,
   },
   vetTopRow: {
     flexDirection: 'row',
@@ -482,5 +587,15 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
+  },
+  skelCard: {
+    backgroundColor: semantic.surface,
+    borderRadius: 16,
+    padding: spacing.lg,
+    shadowColor: '#000',
+    shadowOpacity: 0.06,
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 2,
   },
 });

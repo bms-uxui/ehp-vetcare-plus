@@ -45,6 +45,7 @@ import ChatListScreen from './src/screens/ChatListScreen';
 import VideoCallScreen from './src/screens/VideoCallScreen';
 import { CallProvider } from './src/data/callContext';
 import { ExpensesProvider } from './src/data/expensesContext';
+import { AppointmentsProvider } from './src/data/appointmentsContext';
 import { SchedulesProvider } from './src/data/schedulesContext';
 import {
   NotifyPrefsProvider,
@@ -130,6 +131,11 @@ export type RootStackParamList = {
     vetId?: string;
     aiMode?: boolean;
     petId?: string;
+    initialPrompt?: string;
+    initialReply?: string;
+    /** Optional appointment context — used to gate the in-chat video call
+     *  button to a 15-min window before the appointment time. */
+    appointmentId?: string;
   };
   ChatList: undefined;
   VideoCall: { vetId: string };
@@ -236,6 +242,7 @@ export default function App() {
       <StatusBar style="dark" />
       <CallProvider>
        <ExpensesProvider>
+        <AppointmentsProvider>
         <SchedulesProvider>
          <NotifyPrefsProvider>
           <ReminderSyncBridge />
@@ -420,6 +427,7 @@ export default function App() {
         </NavigationContainer>
          </NotifyPrefsProvider>
         </SchedulesProvider>
+        </AppointmentsProvider>
        </ExpensesProvider>
         <MiniCallOverlay />
       </CallProvider>

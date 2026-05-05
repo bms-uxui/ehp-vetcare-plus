@@ -1,13 +1,59 @@
+import { useEffect, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../App';
-import { Button, Card, Icon, Screen, Text } from '../components';
+import {
+  Button,
+  Card,
+  Icon,
+  Screen,
+  SkeletonBox,
+  SkeletonShimmer,
+  Text,
+  useSkeletonShimmer,
+} from '../components';
 import { radii, semantic, spacing } from '../theme';
 import { mockVets, mockConversations, statusMeta, thRelative, TeleVet } from '../data/televet';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'TeleVet'>;
 
 export default function TeleVetScreen({ navigation }: Props) {
+  const shimmerStyle = useSkeletonShimmer();
+  const [loading, setLoading] = useState(true);
+  useEffect(() => {
+    const t = setTimeout(() => setLoading(false), 700);
+    return () => clearTimeout(t);
+  }, []);
+
+  if (loading) {
+    return (
+      <Screen scroll>
+        <View style={styles.header}>
+          <Text variant="h1">ปรึกษาสัตวแพทย์</Text>
+          <Text variant="body" color={semantic.textSecondary}>
+            แชทหรือวิดีโอคอลกับสัตวแพทย์ EHP VetCare
+          </Text>
+        </View>
+        <Text variant="overline" color={semantic.textSecondary} style={styles.sectionLabel}>
+          การสนทนาล่าสุด
+        </Text>
+        <View style={styles.list}>
+          {Array.from({ length: 2 }).map((_, i) => (
+            <ConvoSkeleton key={`cv-${i}`} shimmerStyle={shimmerStyle} />
+          ))}
+        </View>
+        <Text variant="overline" color={semantic.textSecondary} style={[styles.sectionLabel, { marginTop: spacing.xl }]}>
+          สัตวแพทย์ที่พร้อมให้บริการ
+        </Text>
+        <View style={styles.list}>
+          {Array.from({ length: 3 }).map((_, i) => (
+            <VetCardSkeleton key={`vt-${i}`} shimmerStyle={shimmerStyle} />
+          ))}
+        </View>
+      </Screen>
+    );
+  }
+
   return (
     <Screen scroll>
       <View style={styles.header}>
@@ -86,6 +132,7 @@ export default function TeleVetScreen({ navigation }: Props) {
                 vetId: v.id,
               });
             }}
+            onVideoCall={() => navigation.navigate('VideoCall', { vetId: v.id })}
           />
         ))}
       </View>
@@ -102,7 +149,59 @@ export default function TeleVetScreen({ navigation }: Props) {
   );
 }
 
-function VetCard({ vet, onChat }: { vet: TeleVet; onChat: () => void }) {
+function ConvoSkeleton({
+  shimmerStyle,
+}: {
+  shimmerStyle: ReturnType<typeof useSkeletonShimmer>;
+}) {
+  return (
+    <View style={styles.skelCard}>
+      <View style={styles.convoRow}>
+        <View style={[styles.vetAvatar, { backgroundColor: '#E6E6E8' }]} />
+        <View style={{ flex: 1, gap: 8 }}>
+          <SkeletonBox width="55%" height={14} />
+          <SkeletonBox width="80%" height={11} />
+        </View>
+      </View>
+      <SkeletonShimmer shimmerStyle={shimmerStyle} />
+    </View>
+  );
+}
+
+function VetCardSkeleton({
+  shimmerStyle,
+}: {
+  shimmerStyle: ReturnType<typeof useSkeletonShimmer>;
+}) {
+  return (
+    <View style={styles.skelCard}>
+      <View style={styles.vetRow}>
+        <View style={[styles.vetAvatar, { backgroundColor: '#E6E6E8' }]} />
+        <View style={{ flex: 1, gap: 8 }}>
+          <SkeletonBox width="60%" height={14} />
+          <SkeletonBox width="40%" height={11} />
+          <SkeletonBox width="55%" height={11} />
+          <SkeletonBox width={70} height={11} />
+        </View>
+      </View>
+      <View style={styles.actionRow}>
+        <SkeletonBox style={{ flex: 1 } as any} height={36} radius={18} />
+        <SkeletonBox style={{ flex: 1 } as any} height={36} radius={18} />
+      </View>
+      <SkeletonShimmer shimmerStyle={shimmerStyle} />
+    </View>
+  );
+}
+
+function VetCard({
+  vet,
+  onChat,
+  onVideoCall,
+}: {
+  vet: TeleVet;
+  onChat: () => void;
+  onVideoCall: () => void;
+}) {
   const s = statusMeta[vet.status];
   const isOnline = vet.status === 'online';
   return (
@@ -144,7 +243,7 @@ function VetCard({ vet, onChat }: { vet: TeleVet; onChat: () => void }) {
           size="sm"
           variant={isOnline ? 'secondary' : 'ghost'}
           disabled={!isOnline}
-          onPress={() => {}}
+          onPress={onVideoCall}
           fullWidth={false}
           uppercase={false}
           leftIcon={<Icon name="Video" size={14} color={isOnline ? semantic.primary : semantic.textMuted} />}
@@ -228,5 +327,16 @@ const styles = StyleSheet.create({
   bookWrap: {
     marginTop: spacing.xl,
     marginBottom: spacing.xl,
+  },
+  skelCard: {
+    backgroundColor: semantic.surface,
+    borderRadius: radii.xl,
+    padding: spacing.lg,
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOpacity: 0.06,
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 2,
   },
 });
