@@ -29,7 +29,15 @@ import { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { AppTabsParamList } from '../navigation/AppTabs';
 import { RootStackParamList } from '../../App';
-import { Icon, PetAvatar, ProductTile, Text } from '../components';
+import {
+  Icon,
+  PetAvatar,
+  ProductTile,
+  SkeletonBox,
+  SkeletonShimmer,
+  Text,
+  useSkeletonShimmer,
+} from '../components';
 import { semantic, spacing } from '../theme';
 import {
   mockProducts,
@@ -73,6 +81,12 @@ export default function PetShopScreen({}: Props) {
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const searchInputRef = useRef<TextInput>(null);
+  const shimmerStyle = useSkeletonShimmer();
+  const [loading, setLoading] = useState(true);
+  useEffect(() => {
+    const t = setTimeout(() => setLoading(false), 700);
+    return () => clearTimeout(t);
+  }, []);
 
   const openSearch = () => {
     setSearchOpen(true);
@@ -295,7 +309,13 @@ export default function PetShopScreen({}: Props) {
             ))}
           </ScrollView>
 
-        {trimmedQuery ? (
+        {loading ? (
+          <PetShopSkeleton
+            shimmerStyle={shimmerStyle}
+            cardWidth={cardWidth}
+            numColumns={numColumns}
+          />
+        ) : trimmedQuery ? (
           // Search results — replaces all sections when query is active
           <Section title={`ผลการค้นหา (${searchResults.length})`}>
             {searchResults.length > 0 ? (
@@ -435,7 +455,7 @@ export default function PetShopScreen({}: Props) {
       {/* Search modal — full screen, opens when search bar tapped */}
       <Modal
         visible={searchOpen}
-        animationType="slide"
+        animationType="fade"
         presentationStyle="fullScreen"
         onRequestClose={closeSearch}
       >
@@ -530,6 +550,52 @@ export default function PetShopScreen({}: Props) {
 }
 
 /* ---------- Sections ---------- */
+
+function PetShopSkeleton({
+  shimmerStyle,
+  cardWidth,
+  numColumns,
+}: {
+  shimmerStyle: ReturnType<typeof useSkeletonShimmer>;
+  cardWidth: number;
+  numColumns: number;
+}) {
+  const tilesPerSection = numColumns * 2;
+  return (
+    <>
+      {[0, 1].map((s) => (
+        <View key={`sec-${s}`} style={styles.section}>
+          <SkeletonBox width={140} height={16} style={{ marginBottom: spacing.md }} />
+          <View
+            style={{
+              flexDirection: 'row',
+              flexWrap: 'wrap',
+              gap: CARD_GAP,
+            }}
+          >
+            {Array.from({ length: tilesPerSection }).map((_, i) => (
+              <View
+                key={`tile-${s}-${i}`}
+                style={[
+                  styles.skelTile,
+                  { width: cardWidth, height: cardWidth * 1.5 },
+                ]}
+              >
+                <View style={[styles.skelTileImg, { height: cardWidth }]} />
+                <View style={{ padding: 10, gap: 8 }}>
+                  <SkeletonBox width="80%" height={11} />
+                  <SkeletonBox width="60%" height={11} />
+                  <SkeletonBox width={60} height={14} />
+                </View>
+                <SkeletonShimmer shimmerStyle={shimmerStyle} />
+              </View>
+            ))}
+          </View>
+        </View>
+      ))}
+    </>
+  );
+}
 
 function Section({
   title,
@@ -1030,5 +1096,18 @@ const styles = StyleSheet.create({
     paddingVertical: spacing['2xl'],
     alignItems: 'center',
     gap: spacing.sm,
+  },
+  skelTile: {
+    backgroundColor: semantic.surface,
+    borderRadius: 16,
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOpacity: 0.06,
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 2,
+  },
+  skelTileImg: {
+    backgroundColor: '#E6E6E8',
   },
 });

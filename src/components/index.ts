@@ -11,6 +11,7 @@ export { default as Input } from './Input';
 export { default as PetAvatar } from './PetAvatar';
 export { default as ProductTile } from './ProductTile';
 export { default as Screen } from './Screen';
+export { SkeletonBox, SkeletonShimmer, useSkeletonShimmer } from './Skeleton';
 export { default as StepProgress } from './StepProgress';
 export { default as StickyAppBar } from './StickyAppBar';
 export { default as SubPageHeader } from './SubPageHeader';

@@ -1,4 +1,4 @@
-import { ComponentProps, useCallback, useMemo, useState } from 'react';
+import { ComponentProps, useCallback, useEffect, useMemo, useState } from 'react';
 import {
   Image,
   ImageBackground,
@@ -22,7 +22,15 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { GlassView, isLiquidGlassAvailable } from '../lib/glass-effect';
 import { RootStackParamList } from '../../App';
-import { AppBackground, Icon, IconButton, Text } from '../components';
+import {
+  AppBackground,
+  Icon,
+  IconButton,
+  SkeletonBox,
+  SkeletonShimmer,
+  Text,
+  useSkeletonShimmer,
+} from '../components';
 import { radii, semantic, spacing } from '../theme';
 import { ExperienceEntry, mockConversations, mockReviews, mockVets, TeleVet, VetReview } from '../data/televet';
 
@@ -47,6 +55,12 @@ export default function VetDetailScreen({ navigation, route }: Props) {
   const [tab, setTab] = useState<Tab>('reviews');
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const shimmerStyle = useSkeletonShimmer();
+  const [loading, setLoading] = useState(true);
+  useEffect(() => {
+    const t = setTimeout(() => setLoading(false), 700);
+    return () => clearTimeout(t);
+  }, []);
 
   const scrollY = useSharedValue(0);
   const scrollHandler = useAnimatedScrollHandler((e) => {
@@ -180,7 +194,9 @@ export default function VetDetailScreen({ navigation, route }: Props) {
             />
           </View>
 
-          {tab === 'reviews' ? (
+          {loading ? (
+            <VetDetailBodySkeleton shimmerStyle={shimmerStyle} />
+          ) : tab === 'reviews' ? (
             <ReviewsSection
               avgRating={avgRating}
               reviews={reviews}
@@ -267,6 +283,42 @@ export default function VetDetailScreen({ navigation, route }: Props) {
 }
 
 /* ---------- Sub-components ---------- */
+
+function VetDetailBodySkeleton({
+  shimmerStyle,
+}: {
+  shimmerStyle: ReturnType<typeof useSkeletonShimmer>;
+}) {
+  return (
+    <View style={{ gap: spacing.lg }}>
+      <View style={[styles.skelSummary, { overflow: 'hidden' }]}>
+        <SkeletonBox width={70} height={36} />
+        <View style={{ flex: 1, gap: 8 }}>
+          <SkeletonBox width="65%" height={12} />
+          <SkeletonBox width="40%" height={10} />
+        </View>
+        <SkeletonShimmer shimmerStyle={shimmerStyle} />
+      </View>
+      {Array.from({ length: 3 }).map((_, i) => (
+        <View key={`r-${i}`} style={[styles.skelReviewCard, { overflow: 'hidden' }]}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+            <SkeletonBox width={40} height={40} radius={20} />
+            <View style={{ flex: 1, gap: 6 }}>
+              <SkeletonBox width="50%" height={12} />
+              <SkeletonBox width={80} height={10} />
+            </View>
+          </View>
+          <View style={{ gap: 6, marginTop: 12 }}>
+            <SkeletonBox width="100%" height={10} />
+            <SkeletonBox width="92%" height={10} />
+            <SkeletonBox width="60%" height={10} />
+          </View>
+          <SkeletonShimmer shimmerStyle={shimmerStyle} />
+        </View>
+      ))}
+    </View>
+  );
+}
 
 function HeroChip({
   icon,
@@ -703,5 +755,28 @@ const styles = StyleSheet.create({
   btnPressed: {
     opacity: 0.7,
     transform: [{ scale: 0.98 }],
+  },
+  skelSummary: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    padding: spacing.lg,
+    borderRadius: radii.xl,
+    backgroundColor: semantic.surface,
+    shadowColor: '#000',
+    shadowOpacity: 0.06,
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 2,
+  },
+  skelReviewCard: {
+    padding: spacing.lg,
+    borderRadius: radii.xl,
+    backgroundColor: semantic.surface,
+    shadowColor: '#000',
+    shadowOpacity: 0.06,
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 2,
   },
 });

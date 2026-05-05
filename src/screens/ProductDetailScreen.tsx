@@ -30,7 +30,17 @@ import { GlassView, isLiquidGlassAvailable } from '../lib/glass-effect';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { RootStackParamList } from '../../App';
-import { AppBackground, Button, Icon, IconButton, ProductTile, Text } from '../components';
+import {
+  AppBackground,
+  Button,
+  Icon,
+  IconButton,
+  ProductTile,
+  SkeletonBox,
+  SkeletonShimmer,
+  Text,
+  useSkeletonShimmer,
+} from '../components';
 import { radii, semantic, spacing } from '../theme';
 import { mockProducts, categoryMeta, fmtBaht, getProductImages } from '../data/products';
 import { cartStore, useCart } from '../data/cart';
@@ -65,6 +75,13 @@ export default function ProductDetailScreen({ route, navigation }: Props) {
   const scrollHandler = useAnimatedScrollHandler((e) => {
     scrollY.value = e.contentOffset.y;
   });
+
+  const shimmerStyle = useSkeletonShimmer();
+  const [loading, setLoading] = useState(true);
+  useEffect(() => {
+    const t = setTimeout(() => setLoading(false), 700);
+    return () => clearTimeout(t);
+  }, []);
 
   if (!product) {
     return (
@@ -362,6 +379,10 @@ export default function ProductDetailScreen({ route, navigation }: Props) {
 
         {/* Body cards */}
         <View style={styles.body}>
+          {loading ? (
+            <ProductDetailSkeleton shimmerStyle={shimmerStyle} />
+          ) : (
+          <>
           <View style={styles.priceCard}>
             <Text weight="600" style={styles.brandLabel}>
               {product.brand}
@@ -521,6 +542,8 @@ export default function ProductDetailScreen({ route, navigation }: Props) {
                 ))}
               </ScrollView>
             </View>
+          )}
+          </>
           )}
         </View>
       </Animated.ScrollView>
@@ -844,6 +867,39 @@ function Lightbox({
 }
 
 /* ---------- Sub-components ---------- */
+
+function ProductDetailSkeleton({
+  shimmerStyle,
+}: {
+  shimmerStyle: ReturnType<typeof useSkeletonShimmer>;
+}) {
+  return (
+    <View style={{ gap: spacing.lg }}>
+      <View style={[styles.skelCard, { overflow: 'hidden' }]}>
+        <SkeletonBox width={100} height={11} />
+        <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 12, marginTop: 12 }}>
+          <SkeletonBox width={120} height={26} />
+          <SkeletonBox width={70} height={14} />
+        </View>
+        <View style={{ marginTop: 12, gap: 8 }}>
+          <SkeletonBox width="100%" height={11} />
+          <SkeletonBox width="92%" height={11} />
+          <SkeletonBox width="60%" height={11} />
+        </View>
+        <SkeletonShimmer shimmerStyle={shimmerStyle} />
+      </View>
+      <View style={[styles.skelCard, { overflow: 'hidden' }]}>
+        <SkeletonBox width={140} height={14} />
+        <View style={{ marginTop: 12, gap: 8 }}>
+          <SkeletonBox width="100%" height={10} />
+          <SkeletonBox width="100%" height={10} />
+          <SkeletonBox width="80%" height={10} />
+        </View>
+        <SkeletonShimmer shimmerStyle={shimmerStyle} />
+      </View>
+    </View>
+  );
+}
 
 function HeroChip({ icon, label }: { icon: string; label: string }) {
   return (
@@ -1413,5 +1469,15 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 13,
     fontWeight: '600',
+  },
+  skelCard: {
+    backgroundColor: semantic.surface,
+    borderRadius: 16,
+    padding: spacing.lg,
+    shadowColor: '#000',
+    shadowOpacity: 0.06,
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 2,
   },
 });

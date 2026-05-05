@@ -32,9 +32,12 @@ import {
   Icon,
   IconButton,
   PetAvatar,
+  SkeletonBox,
+  SkeletonShimmer,
   StickyAppBar,
   SubPageHeader,
   Text,
+  useSkeletonShimmer,
 } from '../components';
 import { semantic, spacing } from '../theme';
 import {
@@ -82,6 +85,12 @@ export default function ExpensesScreen({ navigation }: Props) {
   );
   const [selectedExpense, setSelectedExpense] = useState<Expense | null>(null);
   const [detailMenuOpen, setDetailMenuOpen] = useState(false);
+  const shimmerStyle = useSkeletonShimmer();
+  const [loading, setLoading] = useState(true);
+  useEffect(() => {
+    const t = setTimeout(() => setLoading(false), 700);
+    return () => clearTimeout(t);
+  }, []);
 
   // Morph animation: detail more-button (36×36 circle) grows into a popover
   // (200×~120 rounded card). Same pattern as NotificationsScreen.
@@ -240,6 +249,12 @@ export default function ExpensesScreen({ navigation }: Props) {
           ))}
         </ScrollView>
 
+        {loading && (
+          <ExpensesSkeleton shimmerStyle={shimmerStyle} />
+        )}
+
+        {!loading && (
+        <>
         {/* Summary card with pet illustration — tap to edit budget */}
         <View style={styles.section}>
           <Pressable
@@ -391,6 +406,8 @@ export default function ExpensesScreen({ navigation }: Props) {
             )}
           </View>
         </View>
+        </>
+        )}
       </Animated.ScrollView>
 
       {/* Budget edit — iOS native pageSheet (same pattern as CheckoutScreen
@@ -398,7 +415,7 @@ export default function ExpensesScreen({ navigation }: Props) {
       <Modal
         visible={budgetEditOpen}
         presentationStyle="pageSheet"
-        animationType="slide"
+        animationType="fade"
         onRequestClose={closeBudgetEdit}
       >
         <View style={styles.iosSheetRoot}>
@@ -537,7 +554,7 @@ export default function ExpensesScreen({ navigation }: Props) {
       <Modal
         visible={selectedExpense !== null}
         presentationStyle="fullScreen"
-        animationType="slide"
+        animationType="fade"
         onRequestClose={() => setSelectedExpense(null)}
       >
         <View style={styles.iosSheetRoot}>
@@ -812,6 +829,63 @@ export default function ExpensesScreen({ navigation }: Props) {
 const ACTIONS_W = 200; // 56 each × 3 buttons (details, edit, delete) + spacing
 
 /* ---------- Month chip — scale-bump animation on selection ---------- */
+
+function ExpensesSkeleton({
+  shimmerStyle,
+}: {
+  shimmerStyle: ReturnType<typeof useSkeletonShimmer>;
+}) {
+  return (
+    <>
+      <View style={styles.section}>
+        <View style={styles.skelSummary}>
+          <View style={{ gap: 10, flex: 1 }}>
+            <SkeletonBox width={120} height={12} light />
+            <SkeletonBox width={160} height={28} light />
+            <SkeletonBox width="100%" height={10} radius={5} light />
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+              <SkeletonBox width={70} height={10} light />
+              <SkeletonBox width={90} height={10} light />
+            </View>
+          </View>
+          <SkeletonShimmer shimmerStyle={shimmerStyle} />
+        </View>
+      </View>
+      <View style={styles.section}>
+        <SkeletonBox width={90} height={14} style={{ marginBottom: spacing.md, marginLeft: spacing.xs }} />
+        <View style={styles.skelGroup}>
+          {Array.from({ length: 4 }).map((_, i) => (
+            <View key={`cat-${i}`} style={styles.skelCatRow}>
+              <SkeletonBox width={36} height={36} radius={12} />
+              <View style={{ flex: 1, gap: 6 }}>
+                <SkeletonBox width="40%" height={12} />
+                <SkeletonBox width="100%" height={6} radius={3} />
+              </View>
+              <SkeletonBox width={70} height={14} />
+            </View>
+          ))}
+          <SkeletonShimmer shimmerStyle={shimmerStyle} />
+        </View>
+      </View>
+      <View style={styles.section}>
+        <SkeletonBox width={120} height={14} style={{ marginBottom: spacing.md, marginLeft: spacing.xs }} />
+        <View style={{ gap: spacing.sm }}>
+          {Array.from({ length: 3 }).map((_, i) => (
+            <View key={`tx-${i}`} style={styles.skelTxRow}>
+              <SkeletonBox width={40} height={40} radius={20} />
+              <View style={{ flex: 1, gap: 6 }}>
+                <SkeletonBox width="70%" height={12} />
+                <SkeletonBox width="40%" height={10} />
+              </View>
+              <SkeletonBox width={70} height={14} />
+              <SkeletonShimmer shimmerStyle={shimmerStyle} />
+            </View>
+          ))}
+        </View>
+      </View>
+    </>
+  );
+}
 
 function MonthChip({
   label,
@@ -1907,5 +1981,43 @@ const styles = StyleSheet.create({
   },
   actionCircleDel: {
     backgroundColor: '#C25450',
+  },
+  skelSummary: {
+    height: 200,
+    borderRadius: 24,
+    backgroundColor: '#9F5266',
+    padding: spacing.lg,
+    overflow: 'hidden',
+  },
+  skelGroup: {
+    backgroundColor: semantic.surface,
+    borderRadius: 16,
+    padding: spacing.md,
+    overflow: 'hidden',
+    gap: spacing.md,
+    shadowColor: '#000',
+    shadowOpacity: 0.06,
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 2,
+  },
+  skelCatRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+  },
+  skelTxRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    backgroundColor: semantic.surface,
+    borderRadius: 16,
+    padding: spacing.md,
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOpacity: 0.06,
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 2,
   },
 });
