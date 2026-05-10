@@ -23,11 +23,13 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Button, Card, Icon, PetAvatar, ProductTile, Screen, Text } from '../components';
 import VetCareLogo from '../../assets/vet-care-plus.svg';
 import VaccinationIllus from '../../assets/vaccination-appointment.svg';
-import { radii, semantic, shadows, spacing } from '../theme';
+import { getProductColumns, useIsTablet, useTabletHorizontalPadding } from '../lib/responsive';
+import { colors, radii, semantic, shadows, spacing } from '../theme';
 import { mockPets } from '../data/pets';
 import { typeMeta, thWeekday, thDateShort } from '../data/appointments';
 import { useAppointments } from '../data/appointmentsContext';
 import { mockProducts, categoryMeta, fmtBaht } from '../data/products';
+import { boardingNights, getActiveBoardings } from '../data/boarding';
 import {
   mockExpenses,
   monthKey,
@@ -81,8 +83,18 @@ export default function HomeScreen({ navigation }: Props) {
   // Next feeding
   const nextFeeding = mockSchedules.find((s) => s.enabled);
 
-  // Products (6 for grid)
-  const recommendedProducts = mockProducts.slice(0, 6);
+  // Products grid — match PetShopScreen's responsive layout
+  const contentPadX = useTabletHorizontalPadding(spacing.xl);
+  const isTablet = useIsTablet();
+  const productCols = getProductColumns(windowWidth);
+  const PRODUCT_GAP = 10;
+  const productCardWidth =
+    (windowWidth - contentPadX * 2 - PRODUCT_GAP * (productCols - 1)) / productCols;
+  // 2 rows of products on every breakpoint
+  const recommendedProducts = mockProducts.slice(0, productCols * 2);
+
+  // Active boarding stays — pets currently checked-in to a boarding facility
+  const activeBoardings = getActiveBoardings();
 
   // ── Banner carousel ──
   type BannerItem = {
@@ -267,14 +279,18 @@ export default function HomeScreen({ navigation }: Props) {
               android_ripple={RIPPLE}
               style={({ pressed }) => [
                 styles.iconBtn,
+                isTablet && styles.iconBtnTablet,
                 pressed && { opacity: 0.85 },
               ]}
               hitSlop={8}
             >
-              <Icon name="Bell" size={22} color={semantic.textPrimary} />
+              <Icon name="Bell" size={isTablet ? 26 : 22} color={semantic.textPrimary} />
             </Pressable>
             {hasUnreadNotifications && (
-              <View pointerEvents="none" style={styles.unreadDot} />
+              <View
+                pointerEvents="none"
+                style={[styles.unreadDot, isTablet && styles.unreadDotTablet]}
+              />
             )}
           </View>
         </View>
@@ -378,6 +394,7 @@ export default function HomeScreen({ navigation }: Props) {
             android_ripple={RIPPLE_LIGHT}
             style={({ pressed }) => [
               styles.detailBtn,
+              isTablet && styles.detailBtnTablet,
               pressed && { opacity: 0.85 },
             ]}
           >
@@ -394,7 +411,7 @@ export default function HomeScreen({ navigation }: Props) {
         </View>
       </View>
 
-      <View style={styles.content}>
+      <View style={[styles.content, { paddingHorizontal: contentPadX }]}>
         {/* ── PETS ROW (overlaps banner bottom) — glass card ── */}
         <Card variant="elevated" padding="lg" style={styles.petsCard}>
           <View style={styles.petsRow}>
@@ -437,6 +454,69 @@ export default function HomeScreen({ navigation }: Props) {
             </Pressable>
           </View>
         </Card>
+
+        {/* ── ACTIVE BOARDING ── (only when at least one pet is currently checked-in) */}
+        {activeBoardings.length > 0 && (
+          <View style={styles.boardingList}>
+            {activeBoardings.map((b) => {
+              const pet = mockPets.find((p) => p.id === b.petId);
+              if (!pet) return null;
+              const nights = boardingNights(b);
+              const startD = new Date(b.startDateISO);
+              const endD = new Date(b.endDateISO);
+              const fmtShort = (d: Date) =>
+                d.toLocaleDateString('th-TH', { day: 'numeric', month: 'short' });
+              return (
+                <Pressable
+                  key={b.id}
+                  onPress={() => navigation.navigate('BoardingDetail', { boardingId: b.id })}
+                  android_ripple={RIPPLE_LIGHT}
+                  style={({ pressed }) => [
+                    styles.boardingCard,
+                    pressed && { opacity: 0.92, transform: [{ scale: 0.99 }] },
+                  ]}
+                  accessibilityRole="button"
+                  accessibilityLabel={`ดูรายละเอียดการฝากเลี้ยงของ ${pet.name}`}
+                >
+                  <View style={styles.boardingInner}>
+                    <View style={styles.boardingPetAvatar}>
+                      {pet.photo ? (
+                        <Image source={pet.photo} style={styles.boardingPetImg} />
+                      ) : (
+                        <Text style={{ fontSize: 32 }}>{pet.emoji}</Text>
+                      )}
+                    </View>
+                    <View style={styles.boardingTextCol}>
+                      <View style={styles.boardingHeaderRow}>
+                        <Text variant="bodyStrong" style={styles.boardingPetName} numberOfLines={1}>
+                          {pet.name}
+                        </Text>
+                        <View style={styles.boardingBadge}>
+                          <Icon name="Home" size={11} color={semantic.onPrimary} strokeWidth={2.4} />
+                          <Text variant="caption" weight="600" style={styles.boardingBadgeText}>
+                            กำลังฝากเลี้ยง
+                          </Text>
+                        </View>
+                      </View>
+                      <View style={styles.boardingMetaRow}>
+                        <Icon name="CalendarDays" size={13} color={colors.rose[700]} strokeWidth={2} />
+                        <Text variant="caption" color={colors.rose[800]} numberOfLines={1}>
+                          {fmtShort(startD)} – {fmtShort(endD)} · {nights} คืน
+                        </Text>
+                      </View>
+                      <View style={styles.boardingMetaRow}>
+                        <Icon name="MapPin" size={13} color={colors.rose[700]} strokeWidth={2} />
+                        <Text variant="caption" color={colors.rose[800]} numberOfLines={1}>
+                          {b.clinicName}
+                        </Text>
+                      </View>
+                    </View>
+                  </View>
+                </Pressable>
+              );
+            })}
+          </View>
+        )}
 
         {/* ── BENTO 2-COL: COST + FEEDING ── */}
         <View style={styles.bentoRow}>
@@ -603,6 +683,7 @@ export default function HomeScreen({ navigation }: Props) {
             <ProductTile
               key={p.id}
               product={p}
+              cardWidth={productCardWidth}
               onPress={() => navigation.navigate('ProductDetail', { productId: p.id })}
             />
           ))}
@@ -629,6 +710,7 @@ export default function HomeScreen({ navigation }: Props) {
             android_ripple={RIPPLE_LIGHT}
             style={({ pressed }) => [
               styles.emptyBtn,
+              isTablet && styles.emptyBtnTablet,
               pressed && { opacity: 0.85 },
             ]}
           >
@@ -669,6 +751,11 @@ const styles = StyleSheet.create({
     shadowRadius: 2,
     elevation: 1,
   },
+  iconBtnTablet: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+  },
   unreadDot: {
     position: 'absolute',
     top: 4,
@@ -680,8 +767,14 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: '#FFFFFF',
   },
+  unreadDotTablet: {
+    top: 6,
+    right: 6,
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+  },
   content: {
-    paddingHorizontal: spacing.xl,
     gap: spacing.xl,
     marginTop: -60, // pull content up so banner bottom hits pet card middle (~120/2)
   },
@@ -791,6 +884,11 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     backgroundColor: semantic.primary,
     overflow: 'hidden',
+  },
+  detailBtnTablet: {
+    height: 44,
+    paddingHorizontal: spacing.xl,
+    borderRadius: 22,
   },
   dotsRow: {
     position: 'absolute',
@@ -960,7 +1058,82 @@ const styles = StyleSheet.create({
   productGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
+    gap: 10,
+  },
+
+  // ── ACTIVE BOARDING CARD ──
+  boardingList: {
+    gap: spacing.md,
+  },
+  boardingCard: {
+    borderRadius: 20,
+    overflow: 'hidden',
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: 'rgba(184,106,124,0.18)',
+    shadowColor: '#5E303C',
+    shadowOpacity: 0.28,
+    shadowRadius: 24,
+    shadowOffset: { width: 0, height: 12 },
+    elevation: 10,
+  },
+  boardingInner: {
+    flexDirection: 'row',
+    gap: spacing.md,
+    padding: spacing.md,
+    alignItems: 'center',
+  },
+  boardingPetAvatar: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    backgroundColor: '#FFFFFF',
+    alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'hidden',
+    borderWidth: 3,
+    borderColor: '#FFFFFF',
+    shadowColor: '#5E303C',
+    shadowOpacity: 0.10,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 3 },
+  },
+  boardingPetImg: {
+    width: '100%',
+    height: '100%',
+  },
+  boardingTextCol: {
+    flex: 1,
+    gap: 4,
+  },
+  boardingHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
     gap: spacing.sm,
+  },
+  boardingBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 9,
+    paddingVertical: 4,
+    borderRadius: 999,
+    backgroundColor: semantic.primary,
+  },
+  boardingBadgeText: {
+    fontSize: 11,
+    color: semantic.onPrimary,
+  },
+  boardingPetName: {
+    flex: 1,
+    fontSize: 17,
+    color: colors.rose[800],
+  },
+  boardingMetaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
   },
   productTile: {
     flexBasis: '47.5%',
@@ -998,6 +1171,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: spacing.xs,
+  },
+  emptyBtnTablet: {
+    height: 44,
+    paddingHorizontal: spacing.xl,
+    borderRadius: 22,
   },
   emptyBtn: {
     height: 32,

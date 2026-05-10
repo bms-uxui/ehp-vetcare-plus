@@ -22,6 +22,7 @@ import DraggableFlatList, {
   ScaleDecorator,
 } from 'react-native-draggable-flatlist';
 import { radii, semantic, spacing } from '../theme';
+import { useIsTablet, useTabletHorizontalPadding } from '../lib/responsive';
 import { mockPets, petAgeString, Pet } from '../data/pets';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'PetsList'>;
@@ -41,6 +42,8 @@ const BTN_WIDTH_GUESS = 320;
 export default function PetsListScreen({ navigation }: Props) {
   const insets = useSafeAreaInsets();
   const { width: windowWidth } = useWindowDimensions();
+  const padX = useTabletHorizontalPadding(spacing.xl);
+  const isTablet = useIsTablet();
 
   // ── Shimmer (sweeps left → right, repeats with delay) ──
   const shimmer = useSharedValue(0);
@@ -192,17 +195,19 @@ export default function PetsListScreen({ navigation }: Props) {
   const renderDraggableItem = useCallback(
     ({ item, drag, isActive }: RenderItemParams<Pet>) => (
       <ScaleDecorator activeScale={1.08}>
-        <PetCard
-          pet={item}
-          accent={accentByPetId.get(item.id) ?? CARD_PALETTE[0]}
-          onOpen={onOpenPet}
-          editMode={editMode}
-          onDrag={drag}
-          isDragging={isActive}
-        />
+        <View style={{ paddingHorizontal: padX }}>
+          <PetCard
+            pet={item}
+            accent={accentByPetId.get(item.id) ?? CARD_PALETTE[0]}
+            onOpen={onOpenPet}
+            editMode={editMode}
+            onDrag={drag}
+            isDragging={isActive}
+          />
+        </View>
       </ScaleDecorator>
     ),
-    [accentByPetId, editMode, onOpenPet],
+    [accentByPetId, editMode, onOpenPet, padX],
   );
 
   const renderHeader = useCallback(() => (
@@ -238,7 +243,13 @@ export default function PetsListScreen({ navigation }: Props) {
           resizeMode="contain"
         />
 
-        <View style={styles.heroText}>
+        <View
+          style={[
+            styles.heroText,
+            { paddingHorizontal: padX },
+            isTablet && styles.heroTextTablet,
+          ]}
+        >
           <Text
             variant="bodyStrong"
             style={[
@@ -261,6 +272,7 @@ export default function PetsListScreen({ navigation }: Props) {
                 lineHeight: Math.max(24, Math.min(30, windowWidth * 0.07)),
               },
             ]}
+            numberOfLines={isTablet ? 1 : 2}
           >
             รวมข้อมูลสัตว์เลี้ยงของคุณไว้ในที่เดียว
           </Text>
@@ -268,13 +280,14 @@ export default function PetsListScreen({ navigation }: Props) {
       </View>
 
       {/* ── ADD / EDIT TOGGLE — sits at the seam between hero and list ── */}
-      <View style={styles.addWrap}>
+      <View style={[styles.addWrap, { paddingHorizontal: padX }]}>
           {editMode ? (
             <Pressable
               onPress={finishEdit}
               android_ripple={RIPPLE_LIGHT}
               style={({ pressed }) => [
                 styles.addBtn,
+                isTablet && styles.addBtnTablet,
                 styles.addRowFloat,
                 pressed && { opacity: 0.9 },
               ]}
@@ -291,6 +304,7 @@ export default function PetsListScreen({ navigation }: Props) {
                 android_ripple={RIPPLE_LIGHT}
                 style={({ pressed }) => [
                   styles.addBtn,
+                  isTablet && styles.addBtnTablet,
                   styles.addBtnFlex,
                   pressed && { opacity: 0.9 },
                 ]}
@@ -313,6 +327,7 @@ export default function PetsListScreen({ navigation }: Props) {
                 accessibilityLabel="จัดเรียงสัตว์เลี้ยง"
                 style={({ pressed }) => [
                   styles.editToggle,
+                  isTablet && styles.editToggleTablet,
                   pressed && { opacity: 0.85 },
                 ]}
               >
@@ -684,6 +699,9 @@ const styles = StyleSheet.create({
     width: 220,
     gap: spacing.sm,
   },
+  heroTextTablet: {
+    width: 480,
+  },
   heroTitle: {
     color: '#1A1A1F',
     fontWeight: '700',
@@ -762,6 +780,9 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
     overflow: 'hidden',
   },
+  addBtnTablet: {
+    height: 60,
+  },
   addBtnFlex: {
     flex: 1,
   },
@@ -774,6 +795,11 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  editToggleTablet: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
   },
   dragHandle: {
     position: 'absolute',

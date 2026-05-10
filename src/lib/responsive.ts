@@ -4,8 +4,11 @@ import { useWindowDimensions } from 'react-native';
  *  inside a constrained max-width column instead of stretching full-bleed. */
 export const TABLET_BREAKPOINT = 700;
 
-/** Reading-friendly max content width for tablet/desktop layouts. */
-export const TABLET_MAX_WIDTH = 680;
+/** Reading-friendly max content width for tablet/desktop layouts.
+ *  Sized so that on iPad Pro 11" portrait (834pt) content fills nearly the full
+ *  width with only ~20pt side margins, while on iPad 12.9" / landscape it
+ *  centers with comfortable margins. */
+export const TABLET_MAX_WIDTH = 880;
 
 /**
  * Returns the horizontal padding needed to center a `maxWidth` column inside
@@ -55,4 +58,17 @@ export function getProductColumns(width: number): number {
 export function useResponsiveScale(min = 0.86, max = 1.2, baseline = 390): number {
   const { width } = useWindowDimensions();
   return Math.max(min, Math.min(max, width / baseline));
+}
+
+/**
+ * Typography scale factor — phone stays at 1.0, tablet bumps to a fixed
+ * multiplier so font sizes don't grow proportionally with screen width
+ * (which would make headings absurdly large on iPad Pro 13").
+ *
+ *  - phone (< 700pt) → 1.00
+ *  - iPad (≥ 700pt)  → 1.15
+ */
+export function useFontScale(tabletMultiplier = 1.15): number {
+  const { width } = useWindowDimensions();
+  return width > TABLET_BREAKPOINT ? tabletMultiplier : 1;
 }

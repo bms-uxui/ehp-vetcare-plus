@@ -1,4 +1,4 @@
-export type AppointmentType = 'checkup' | 'vaccine' | 'grooming' | 'consultation';
+export type AppointmentType = 'checkup' | 'vaccine' | 'grooming' | 'boarding' | 'consultation';
 
 export type AppointmentStatus = 'upcoming' | 'completed' | 'cancelled';
 
@@ -19,10 +19,11 @@ export type Appointment = {
 };
 
 export const typeMeta: Record<AppointmentType, { label: string; icon: string; color: string }> = {
-  checkup: { label: 'ตรวจสุขภาพ', icon: 'Stethoscope', color: '#B86A7C' },
+  checkup: { label: 'ตรวจรักษาทั่วไป', icon: 'Stethoscope', color: '#B86A7C' },
   vaccine: { label: 'ฉีดวัคซีน', icon: 'Syringe', color: '#4FB36C' },
-  grooming: { label: 'อาบน้ำตัดขน', icon: 'Scissors', color: '#4A8FD1' },
-  consultation: { label: 'ปรึกษาสัตวแพทย์', icon: 'MessageCircle', color: '#E8A87C' },
+  grooming: { label: 'อาบน้ำ/ตัดขน', icon: 'Scissors', color: '#4A8FD1' },
+  boarding: { label: 'ฝากเลี้ยง', icon: 'Home', color: '#7A9B6E' },
+  consultation: { label: 'ปรึกษาออนไลน์', icon: 'Video', color: '#1B5A77' },
 };
 
 // Compute relative dates so Video call button works on any "current day"

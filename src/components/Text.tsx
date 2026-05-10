@@ -1,5 +1,6 @@
 import { StyleSheet, Text as RNText, TextProps, TextStyle } from 'react-native';
 import { fontFamily, semantic, typography, TypographyVariant } from '../theme';
+import { useFontScale } from '../lib/responsive';
 
 type Props = TextProps & {
   variant?: TypographyVariant;
@@ -32,6 +33,7 @@ export default function Text({
   children,
   ...rest
 }: Props) {
+  const fontScale = useFontScale();
   // Android falls back to system Roboto whenever fontWeight is set without a
   // matching fontFamily. Inspect the incoming style for fontWeight, translate
   // it to the right Google Sans family, and strip the raw fontWeight so iOS
@@ -46,14 +48,30 @@ export default function Text({
       : undefined);
   const familyStyle = resolvedFamily ? { fontFamily: resolvedFamily } : undefined;
 
+  // Compute final fontSize/lineHeight from variant + inline override, then
+  // scale by tablet factor so iPad gets uniformly larger typography.
+  const variantStyle = typography[variant];
+  const baseSize =
+    typeof restStyle.fontSize === 'number' ? restStyle.fontSize : variantStyle.fontSize;
+  const baseLine =
+    typeof restStyle.lineHeight === 'number' ? restStyle.lineHeight : variantStyle.lineHeight;
+  const scaled =
+    fontScale !== 1
+      ? {
+          fontSize: baseSize !== undefined ? baseSize * fontScale : undefined,
+          lineHeight: baseLine !== undefined ? baseLine * fontScale : undefined,
+        }
+      : undefined;
+
   return (
     <RNText
       style={[
-        typography[variant],
+        variantStyle,
         { color },
         align && { textAlign: align },
         familyStyle,
         restStyle,
+        scaled,
       ]}
       {...rest}
     >

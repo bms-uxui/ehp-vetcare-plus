@@ -24,6 +24,7 @@ import { RootStackParamList } from '../../App';
 import { AppBackground, Button, Icon, SubPageHeader, Text } from '../components';
 import { HEADER_HEIGHT } from '../components/SubPageHeader';
 import { semantic, spacing } from '../theme';
+import { useTabletHorizontalPadding } from '../lib/responsive';
 import { fmtBaht } from '../data/products';
 import { useCart, cartStore, CartItem } from '../data/cart';
 
@@ -33,6 +34,7 @@ type Props = NativeStackScreenProps<RootStackParamList, 'Cart'>;
 
 export default function CartScreen({ navigation }: Props) {
   const insets = useSafeAreaInsets();
+  const padX = useTabletHorizontalPadding(spacing.lg);
   const { items } = useCart();
 
   // Track items the user has unchecked. Newly added items default to selected.
@@ -119,7 +121,7 @@ export default function CartScreen({ navigation }: Props) {
         <View
           style={[
             styles.empty,
-            { paddingTop: insets.top + HEADER_HEIGHT + 80 },
+            { paddingTop: insets.top + HEADER_HEIGHT + 80, paddingHorizontal: padX },
           ]}
         >
           <Icon
@@ -164,6 +166,7 @@ export default function CartScreen({ navigation }: Props) {
           {
             paddingTop: insets.top + HEADER_HEIGHT + spacing.md,
             paddingBottom: 220,
+            paddingHorizontal: padX,
           },
         ]}
         showsVerticalScrollIndicator={false}

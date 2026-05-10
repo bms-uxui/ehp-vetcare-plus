@@ -19,12 +19,14 @@ import {
 } from '../components';
 import { HEADER_HEIGHT } from '../components/SubPageHeader';
 import { semantic, spacing } from '../theme';
+import { useTabletHorizontalPadding } from '../lib/responsive';
 import { mockConversations, mockVets } from '../data/televet';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'ChatList'>;
 
 export default function ChatListScreen({ navigation }: Props) {
   const insets = useSafeAreaInsets();
+  const padX = useTabletHorizontalPadding(spacing.xl);
   const scrollY = useSharedValue(0);
   const scrollHandler = useAnimatedScrollHandler((e) => {
     scrollY.value = e.contentOffset.y;
@@ -52,6 +54,7 @@ export default function ChatListScreen({ navigation }: Props) {
           {
             paddingTop: insets.top + HEADER_HEIGHT + spacing.md,
             paddingBottom: spacing['4xl'],
+            paddingHorizontal: padX,
           },
         ]}
         showsVerticalScrollIndicator={false}

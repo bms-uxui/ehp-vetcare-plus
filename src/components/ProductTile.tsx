@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Image, Pressable, StyleSheet, View, ViewStyle } from 'react-native';
 import { Product, fmtBaht } from '../data/products';
+import { useIsTablet } from '../lib/responsive';
 import Text from './Text';
 
 type Props = {
@@ -14,6 +15,7 @@ type Props = {
 
 export default function ProductTile({ product, onPress, cardWidth, style }: Props) {
   const [imgFailed, setImgFailed] = useState(false);
+  const isTablet = useIsTablet();
   const isOnSale = !!product.originalPriceBaht;
   const priceColor = isOnSale ? '#C25450' : '#4FB36C';
   const showImage = !!product.imageUrl && !imgFailed;
@@ -52,14 +54,25 @@ export default function ProductTile({ product, onPress, cardWidth, style }: Prop
           </View>
         )}
       </View>
-      <View style={styles.body}>
-        <Text weight="600" style={styles.brand} numberOfLines={1}>
+      <View style={[styles.body, isTablet && styles.bodyTablet]}>
+        <Text
+          weight="600"
+          style={[styles.brand, isTablet && styles.brandTablet]}
+          numberOfLines={1}
+        >
           {product.brand}
         </Text>
-        <Text weight="600" style={styles.name} numberOfLines={1}>
+        <Text
+          weight="600"
+          style={[styles.name, isTablet && styles.nameTablet]}
+          numberOfLines={1}
+        >
           {product.name}
         </Text>
-        <Text weight="700" style={[styles.price, { color: priceColor }]}>
+        <Text
+          weight="700"
+          style={[styles.price, isTablet && styles.priceTablet, { color: priceColor }]}
+        >
           {fmtBaht(product.priceBaht)}
         </Text>
       </View>
@@ -130,5 +143,23 @@ const styles = StyleSheet.create({
     fontSize: 15,
     lineHeight: 20,
     marginTop: 2,
+  },
+
+  // ── Tablet overrides ── (sizes feel small on the larger 4-col cards)
+  bodyTablet: {
+    padding: 16,
+    gap: 4,
+  },
+  brandTablet: {
+    fontSize: 12,
+    lineHeight: 16,
+  },
+  nameTablet: {
+    fontSize: 16,
+    lineHeight: 22,
+  },
+  priceTablet: {
+    fontSize: 18,
+    lineHeight: 24,
   },
 });

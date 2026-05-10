@@ -70,6 +70,7 @@ import ProfileInfoScreen from './src/screens/ProfileInfoScreen';
 import ConnectedClinicsScreen from './src/screens/ConnectedClinicsScreen';
 import SecurityScreen from './src/screens/SecurityScreen';
 import HelpScreen from './src/screens/HelpScreen';
+import BoardingDetailScreen from './src/screens/BoardingDetailScreen';
 import AppTabs from './src/navigation/AppTabs';
 import { semantic } from './src/theme';
 
@@ -103,6 +104,7 @@ export type RootStackParamList = {
       }
     | undefined;
   AppointmentDetail: { appointmentId: string };
+  BoardingDetail: { boardingId: string };
   BookAppointment:
     | {
         selectedVetId?: string;
@@ -116,6 +118,7 @@ export type RootStackParamList = {
   BookAppointmentSummary: {
     petId: string;
     mode: 'online' | 'clinic';
+    type: 'checkup' | 'vaccine' | 'grooming' | 'boarding' | 'consultation';
     dateISO: string;
     time: string;
     vetId: string;
@@ -295,6 +298,11 @@ export default function App() {
           <Stack.Screen
             name="AppointmentDetail"
             component={AppointmentDetailScreen}
+            options={{ headerShown: false }}
+          />
+          <Stack.Screen
+            name="BoardingDetail"
+            component={BoardingDetailScreen}
             options={{ headerShown: false }}
           />
           <Stack.Screen

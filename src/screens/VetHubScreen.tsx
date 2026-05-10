@@ -17,6 +17,7 @@ import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../App';
 import { Card, Icon, SkeletonBox, SkeletonShimmer, Text, useSkeletonShimmer } from '../components';
 import { colors, radii, semantic, spacing } from '../theme';
+import { useIsTablet, useTabletHorizontalPadding } from '../lib/responsive';
 import { Appointment, typeMeta, MOCK_VETS } from '../data/appointments';
 import { useAppointments } from '../data/appointmentsContext';
 import { mockPets } from '../data/pets';
@@ -59,6 +60,8 @@ const HERO_HEIGHT = 220;
 export default function VetHubScreen({ navigation }: Props) {
   const insets = useSafeAreaInsets();
   const { height: windowHeight, width: windowWidth } = useWindowDimensions();
+  const padX = useTabletHorizontalPadding(spacing.xl);
+  const isTablet = useIsTablet();
   const [tab, setTab] = useState<Tab>('upcoming');
 
   const { appointments } = useAppointments();
@@ -148,7 +151,13 @@ export default function VetHubScreen({ navigation }: Props) {
             style={styles.heroBottomFade}
           />
           <Image source={VET_HERO_IMG} style={styles.heroImage} resizeMode="contain" />
-          <View style={styles.heroText}>
+          <View
+            style={[
+              styles.heroText,
+              { paddingHorizontal: padX },
+              isTablet && styles.heroTextTablet,
+            ]}
+          >
             <Text
               variant="bodyStrong"
               style={[
@@ -171,8 +180,11 @@ export default function VetHubScreen({ navigation }: Props) {
                   lineHeight: Math.max(24, Math.min(30, windowWidth * 0.07)),
                 },
               ]}
+              numberOfLines={isTablet ? 1 : 2}
             >
-              นัดหมาย ปรึกษาออนไลน์{'\n'}และประวัติการรักษา
+              {isTablet
+                ? 'นัดหมาย ปรึกษาออนไลน์ และประวัติการรักษา'
+                : 'นัดหมาย ปรึกษาออนไลน์\nและประวัติการรักษา'}
             </Text>
           </View>
         </View>
@@ -181,14 +193,18 @@ export default function VetHubScreen({ navigation }: Props) {
         <View
           style={[
             styles.sheet,
-            { minHeight: windowHeight - HERO_HEIGHT - insets.top + 24 },
+            { minHeight: windowHeight - HERO_HEIGHT - insets.top + 24, paddingHorizontal: padX },
           ]}
         >
           {/* CTA row — big pill + chat icon */}
           <View style={styles.addWrap}>
             <Pressable
               onPress={() => navigation.navigate('BookAppointment')}
-              style={({ pressed }) => [styles.addBtn, pressed && { opacity: 0.9 }]}
+              style={({ pressed }) => [
+                styles.addBtn,
+                isTablet && styles.addBtnTablet,
+                pressed && { opacity: 0.9 },
+              ]}
               accessibilityRole="button"
               accessibilityLabel="จองนัดหมาย"
             >
@@ -199,7 +215,11 @@ export default function VetHubScreen({ navigation }: Props) {
             </Pressable>
             <Pressable
               onPress={onChatPress}
-              style={({ pressed }) => [styles.headerIconBtn, pressed && styles.iconBtnPressed]}
+              style={({ pressed }) => [
+                styles.headerIconBtn,
+                isTablet && styles.headerIconBtnTablet,
+                pressed && styles.iconBtnPressed,
+              ]}
               accessibilityRole="button"
               accessibilityLabel="ประวัติแชท"
             >
@@ -366,7 +386,7 @@ export default function VetHubScreen({ navigation }: Props) {
           <View style={styles.barHairline} />
         </Animated.View>
 
-        <View style={styles.appbarContent}>
+        <View style={[styles.appbarContent, { paddingHorizontal: padX }]}>
           <View style={styles.appbarPlaceholder} />
           <Animated.View pointerEvents="none" style={[styles.appbarTitleWrap, titleStyle]}>
             <Text variant="bodyStrong" style={styles.appbarTitle} numberOfLines={1}>
@@ -1164,6 +1184,9 @@ const styles = StyleSheet.create({
     width: 220,
     gap: spacing.sm,
   },
+  heroTextTablet: {
+    width: 480,
+  },
   heroTitle: {
     color: '#1A1A1F',
     fontWeight: '700',
@@ -1201,6 +1224,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: spacing.sm,
     overflow: 'hidden',
+  },
+  addBtnTablet: {
+    height: 60,
   },
   addBtnText: {
     fontSize: 15,
@@ -1266,6 +1292,11 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.08,
     shadowRadius: 12,
     elevation: 3,
+  },
+  headerIconBtnTablet: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
   },
   bentoRow: {
     flexDirection: 'row',

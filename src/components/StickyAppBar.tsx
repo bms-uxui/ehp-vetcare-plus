@@ -11,6 +11,7 @@ import * as LucideIcons from 'lucide-react-native';
 import IconButton from './IconButton';
 import Text from './Text';
 import { spacing } from '../theme';
+import { useIsTablet } from '../lib/responsive';
 
 type IconName = keyof typeof LucideIcons;
 
@@ -54,6 +55,8 @@ export default function StickyAppBar({
   trailingBadge,
 }: Props) {
   const insets = useSafeAreaInsets();
+  const isTablet = useIsTablet();
+  const placeholderSize = isTablet ? 48 : 44;
 
   const barBgStyle = useAnimatedStyle(() => ({
     opacity: interpolate(
@@ -84,7 +87,8 @@ export default function StickyAppBar({
   }));
 
   const renderTrailing = () => {
-    if (!trailing) return <View style={styles.placeholder} />;
+    if (!trailing)
+      return <View style={[styles.placeholder, { width: placeholderSize, height: placeholderSize }]} />;
     // ActionButton object → render IconButton + optional badge wrapper
     if (typeof trailing === 'object' && 'icon' in trailing) {
       return (
@@ -134,7 +138,7 @@ export default function StickyAppBar({
             accessibilityLabel={leading.accessibilityLabel}
           />
         ) : (
-          <View style={styles.placeholder} />
+          <View style={[styles.placeholder, { width: placeholderSize, height: placeholderSize }]} />
         )}
 
         {title ? (
@@ -142,7 +146,11 @@ export default function StickyAppBar({
             style={[styles.titleWrap, titleStyle]}
             pointerEvents="none"
           >
-            <Text variant="bodyStrong" style={styles.title} numberOfLines={1}>
+            <Text
+              variant="bodyStrong"
+              style={[styles.title, isTablet && styles.titleTablet]}
+              numberOfLines={1}
+            >
               {title}
             </Text>
           </Animated.View>
@@ -187,6 +195,9 @@ const styles = StyleSheet.create({
     color: '#1A1A1A',
     maxWidth: '60%',
     textAlign: 'center',
+  },
+  titleTablet: {
+    fontSize: 18,
   },
   blurMid: {
     position: 'absolute',
