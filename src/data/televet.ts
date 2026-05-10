@@ -196,6 +196,143 @@ export const mockVets: TeleVet[] = [
   },
 ];
 
+/**
+ * Pet groomers / spa staff. Same shape as TeleVet so the booking screen can
+ * reuse the same picker UI when type === 'grooming'.
+ * `specialty` reads as the grooming specialty (cat/dog/breed-specific).
+ */
+export const mockGroomers: TeleVet[] = [
+  {
+    id: 'gr1',
+    name: 'คุณฝน อรพิน',
+    avatar: 'https://images.unsplash.com/photo-1580618672591-eb180b1a973f?w=200&h=200&fit=crop&crop=face',
+    specialty: 'อาบน้ำ-ตัดขนสุนัขพันธุ์เล็ก',
+    clinic: 'EHP Grooming สาขาสุขุมวิท',
+    experienceYears: 6,
+    experiences: [
+      { years: '2022-2026', description: 'หัวหน้าทีมช่างกรูมมิ่ง EHP Grooming ตัดขนสุนัขทุกพันธุ์ และอาบสปาแบบ Premium' },
+      { years: '2018-2022', description: 'ช่างประจำ Pet Spa & Grooming Bangkok ดูแลขนสุนัขและแมวมามากกว่า 5,000 ตัว' },
+    ],
+    ratePerMin: 0,
+    rating: 4.95,
+    reviewCount: 421,
+    status: 'online',
+    workingDays: [1, 2, 3, 4, 5, 6, 0],
+    timeSlots: ['09:00', '10:00', '11:00', '13:00', '14:00', '15:00', '16:00'],
+  },
+  {
+    id: 'gr2',
+    name: 'คุณบีม สิทธิชัย',
+    avatar: 'https://images.unsplash.com/photo-1564564321837-a57b7070ac4f?w=200&h=200&fit=crop&crop=face',
+    specialty: 'ตัดขนสุนัขพันธุ์ใหญ่',
+    clinic: 'EHP Grooming สาขาทองหล่อ',
+    experienceYears: 8,
+    experiences: [
+      { years: '2020-2026', description: 'ช่างเฉพาะทางสุนัขพันธุ์ใหญ่ Golden, Husky, Samoyed' },
+    ],
+    ratePerMin: 0,
+    rating: 4.88,
+    reviewCount: 287,
+    status: 'busy',
+    workingDays: [2, 3, 4, 5, 6],
+    timeSlots: ['10:00', '11:00', '13:00', '14:00', '15:00', '16:00', '17:00'],
+  },
+  {
+    id: 'gr3',
+    name: 'คุณแหม่ม วันใส',
+    avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=200&h=200&fit=crop&crop=face',
+    specialty: 'อาบน้ำ-ตัดขนแมว',
+    clinic: 'EHP Grooming สาขาอารีย์',
+    experienceYears: 5,
+    experiences: [
+      { years: '2021-2026', description: 'ช่างเฉพาะทางการอาบน้ำและตัดขนแมว ทุกสายพันธุ์ ใจเย็นกับน้องแมวขี้กลัว' },
+    ],
+    ratePerMin: 0,
+    rating: 4.92,
+    reviewCount: 198,
+    status: 'online',
+    workingDays: [0, 1, 3, 4, 6],
+    timeSlots: ['09:00', '10:00', '11:00', '13:00', '14:00', '15:00'],
+  },
+];
+
+/**
+ * Pet boarding facilities. Same shape as TeleVet so the booking screen can
+ * reuse the same picker UI when type === 'boarding'.
+ * `name` is the facility name; `specialty` describes what species/style they
+ * accept; `clinic` is the location/branch.
+ */
+export const mockBoardingClinics: TeleVet[] = [
+  {
+    id: 'bd1',
+    name: 'EHP Pet Boarding สุขุมวิท',
+    avatar: 'https://images.unsplash.com/photo-1601758228041-f3b2795255f1?w=200&h=200&fit=crop',
+    specialty: 'รับฝากสุนัข-แมว · ห้องแอร์ส่วนตัว',
+    clinic: 'สุขุมวิท 24 · ติดทางด่วน',
+    experienceYears: 9,
+    experiences: [
+      { years: '2017-2026', description: 'รับฝากเลี้ยงสุนัข-แมว ห้องแอร์ส่วนตัว มีกล้องวงจรปิดให้เจ้าของดูได้ตลอด 24 ชม.' },
+    ],
+    ratePerMin: 0,
+    rating: 4.92,
+    reviewCount: 538,
+    status: 'online',
+    workingDays: [0, 1, 2, 3, 4, 5, 6],
+    timeSlots: ['09:00', '10:00', '11:00', '13:00', '14:00', '15:00', '16:00', '17:00'],
+  },
+  {
+    id: 'bd2',
+    name: 'Happy Paws Pet Hotel',
+    avatar: 'https://images.unsplash.com/photo-1583337130417-3346a1be7dee?w=200&h=200&fit=crop',
+    specialty: 'รับฝากสุนัขพันธุ์เล็ก-กลาง · มีสนามวิ่งเล่น',
+    clinic: 'ลาดพร้าว 71 · มีรับ-ส่งภายในกรุงเทพ',
+    experienceYears: 6,
+    experiences: [
+      { years: '2020-2026', description: 'โรงแรมสุนัขสไตล์ Resort สนามวิ่งเล่น สระว่ายน้ำสุนัข มีพี่เลี้ยงประจำห้อง' },
+    ],
+    ratePerMin: 0,
+    rating: 4.85,
+    reviewCount: 312,
+    status: 'online',
+    workingDays: [0, 1, 2, 3, 4, 5, 6],
+    timeSlots: ['09:00', '10:00', '11:00', '13:00', '14:00', '15:00', '16:00'],
+  },
+  {
+    id: 'bd3',
+    name: 'Cat Cottage บ้านพักแมว',
+    avatar: 'https://images.unsplash.com/photo-1592194996308-7b43878e84a6?w=200&h=200&fit=crop',
+    specialty: 'รับฝากแมวอย่างเดียว · Cat-only',
+    clinic: 'อารีย์ ซอย 5 · ใกล้ BTS',
+    experienceYears: 4,
+    experiences: [
+      { years: '2022-2026', description: 'บ้านพักแมวโดยเฉพาะ ห้องแยกสัดส่วน ไม่มีสุนัข เงียบสงบ ลดความเครียดน้องแมว' },
+    ],
+    ratePerMin: 0,
+    rating: 4.96,
+    reviewCount: 187,
+    status: 'online',
+    workingDays: [0, 1, 2, 3, 4, 5, 6],
+    timeSlots: ['10:00', '11:00', '13:00', '14:00', '15:00', '16:00'],
+  },
+  {
+    id: 'bd4',
+    name: 'EHP Pet Boarding ทองหล่อ',
+    avatar: 'https://images.unsplash.com/photo-1450778869180-41d0601e046e?w=200&h=200&fit=crop',
+    specialty: 'รับฝากสุนัข-แมว · มี vet on-call ตลอด 24 ชม.',
+    clinic: 'ทองหล่อ ซอย 13',
+    experienceYears: 7,
+    experiences: [
+      { years: '2019-2026', description: 'มีสัตวแพทย์ประจำตลอด 24 ชม. เหมาะกับน้องที่ต้องดูแลพิเศษ หรือมีโรคประจำตัว' },
+    ],
+    ratePerMin: 0,
+    rating: 4.9,
+    reviewCount: 264,
+    status: 'busy',
+    workingDays: [0, 1, 2, 3, 4, 5, 6],
+    timeSlots: ['09:00', '10:00', '11:00', '13:00', '14:00', '15:00', '16:00', '17:00'],
+  },
+];
+
 export const mockConversations: Conversation[] = [
   {
     id: 'c-ai',

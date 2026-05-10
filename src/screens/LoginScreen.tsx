@@ -29,7 +29,13 @@ import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { RootStackParamList } from '../../App';
 import { AppBackground, Icon, Text } from '../components';
+import { useIsTablet } from '../lib/responsive';
 import { colors, semantic } from '../theme';
+
+// Login keeps a narrower form column — input fields look awkward at full 880pt
+const TABLET_FORM_WIDTH = 480;
+const TABLET_HERO_HEIGHT = 320;
+const TABLET_HERO_IMG = 260;
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Login'>;
 
@@ -47,6 +53,7 @@ const TILE_COUNT = PATTERN_DIM * PATTERN_DIM;
 
 export default function LoginScreen({ navigation }: Props) {
   const insets = useSafeAreaInsets();
+  const isTablet = useIsTablet();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [emailFocus, setEmailFocus] = useState(false);
@@ -131,17 +138,17 @@ export default function LoginScreen({ navigation }: Props) {
           {/* TOP HERO — illustration + EHP badge + black underline */}
           <Animated.View
             entering={FadeIn.duration(700).delay(80)}
-            style={styles.topHero}
+            style={[styles.topHero, isTablet && styles.topHeroTablet]}
           >
-            <View style={styles.topHeroInner}>
+            <View style={[styles.topHeroInner, isTablet && styles.topHeroInnerTablet]}>
               <Image
                 source={require('../../assets/illustrations/vet-girl-hero.png')}
-                style={styles.heroImg}
+                style={[styles.heroImg, isTablet && styles.heroImgTablet]}
                 resizeMode="contain"
               />
 
               {/* EHP badge — top-right of inner container */}
-              <Animated.View style={[styles.brandBadge, badgeStyle]}>
+              <Animated.View style={[styles.brandBadge, isTablet && styles.brandBadgeTablet, badgeStyle]}>
                 <Image
                   source={require('../../assets/icon.png')}
                   style={styles.brandBadgeImg}
@@ -152,7 +159,7 @@ export default function LoginScreen({ navigation }: Props) {
           </Animated.View>
 
           {/* Title + form + social */}
-          <View style={styles.bottomSection}>
+          <View style={[styles.bottomSection, isTablet && styles.bottomSectionTablet]}>
             {/* TITLE */}
             <Animated.View
               entering={FadeInDown.duration(600).delay(180)}
@@ -253,10 +260,13 @@ export default function LoginScreen({ navigation }: Props) {
                 onPress={onSubmit}
                 style={({ pressed }) => [
                   styles.loginBtn,
+                  isTablet && styles.loginBtnTablet,
                   pressed && { opacity: 0.92, transform: [{ scale: 0.98 }] },
                 ]}
               >
-                <Text style={styles.loginBtnText}>เข้าสู่ระบบ</Text>
+                <Text style={[styles.loginBtnText, isTablet && styles.loginBtnTextTablet]}>
+                  เข้าสู่ระบบ
+                </Text>
               </Pressable>
             </Animated.View>
 
@@ -632,6 +642,12 @@ const styles = StyleSheet.create({
     shadowRadius: 14,
     elevation: 4,
   },
+  loginBtnTablet: {
+    height: 64,
+  },
+  loginBtnTextTablet: {
+    fontSize: 18,
+  },
   loginBtnText: {
     fontSize: 16,
     fontWeight: '700',
@@ -695,5 +711,30 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: colors.neutral[400],
     textDecorationLine: 'underline',
+  },
+
+  // ── TABLET OVERRIDES ──
+  topHeroTablet: {
+    height: TABLET_HERO_HEIGHT,
+    marginTop: 24,
+  },
+  topHeroInnerTablet: {
+    width: 420,
+    height: 280,
+  },
+  heroImgTablet: {
+    width: TABLET_HERO_IMG,
+    height: TABLET_HERO_IMG * (160 / 181),
+  },
+  brandBadgeTablet: {
+    top: 32,
+    right: 72,
+    width: 88,
+    height: 88,
+    borderRadius: 44,
+  },
+  bottomSectionTablet: {
+    maxWidth: TABLET_FORM_WIDTH,
+    alignSelf: 'center',
   },
 });

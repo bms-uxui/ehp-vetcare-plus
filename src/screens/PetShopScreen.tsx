@@ -23,13 +23,21 @@ import Animated, {
 import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { getProductColumns, useIsTablet } from '../lib/responsive';
+import { getProductColumns, useIsTablet, useTabletHorizontalPadding } from '../lib/responsive';
 import { useNavigation } from '@react-navigation/native';
 import { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { AppTabsParamList } from '../navigation/AppTabs';
 import { RootStackParamList } from '../../App';
-import { Icon, PetAvatar, ProductTile, Text } from '../components';
+import {
+  Icon,
+  PetAvatar,
+  ProductTile,
+  SkeletonBox,
+  SkeletonShimmer,
+  Text,
+  useSkeletonShimmer,
+} from '../components';
 import { semantic, spacing } from '../theme';
 import {
   mockProducts,
@@ -57,9 +65,10 @@ export default function PetShopScreen({}: Props) {
   const rootNav = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const { count } = useCart();
   const { width: screenW } = useWindowDimensions();
+  const sectionPadX = useTabletHorizontalPadding(SECTION_PAD);
   const numColumns = getProductColumns(screenW);
   const cardWidth =
-    (screenW - SECTION_PAD * 2 - CARD_GAP * (numColumns - 1)) / numColumns;
+    (screenW - sectionPadX * 2 - CARD_GAP * (numColumns - 1)) / numColumns;
   const activeOrderCount = useMemo(
     () =>
       mockOrders.filter(
@@ -73,6 +82,12 @@ export default function PetShopScreen({}: Props) {
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const searchInputRef = useRef<TextInput>(null);
+  const shimmerStyle = useSkeletonShimmer();
+  const [loading, setLoading] = useState(true);
+  useEffect(() => {
+    const t = setTimeout(() => setLoading(false), 700);
+    return () => clearTimeout(t);
+  }, []);
 
   const openSearch = () => {
     setSearchOpen(true);
@@ -226,11 +241,12 @@ export default function PetShopScreen({}: Props) {
         <View style={styles.sheet}>
         {/* Toolbar — floats between hero and sheet (overlaps top of sheet) */}
         {!searchOpen && (
-          <View style={styles.toolbarWrap}>
+          <View style={[styles.toolbarWrap, { paddingHorizontal: sectionPadX }]}>
             <Pressable
               onPress={openSearch}
               style={({ pressed }) => [
                 styles.searchPill,
+                isTablet && styles.searchPillTablet,
                 pressed && { opacity: 0.85 },
               ]}
             >
@@ -247,6 +263,7 @@ export default function PetShopScreen({}: Props) {
                 onPress={() => rootNav.navigate('OrderTracking')}
                 style={({ pressed }) => [
                   styles.toolbarBtn,
+                  isTablet && styles.toolbarBtnTablet,
                   pressed && { opacity: 0.85 },
                 ]}
                 accessibilityLabel="ติดตามคำสั่งซื้อ"
@@ -271,6 +288,7 @@ export default function PetShopScreen({}: Props) {
                 onPress={() => rootNav.navigate('Cart')}
                 style={({ pressed }) => [
                   styles.toolbarBtn,
+                  isTablet && styles.toolbarBtnTablet,
                   pressed && { opacity: 0.85 },
                 ]}
                 accessibilityLabel="ตะกร้า"
@@ -297,7 +315,7 @@ export default function PetShopScreen({}: Props) {
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.chipsScroll}
+          contentContainerStyle={[styles.chipsScroll, { paddingHorizontal: sectionPadX }]}
         >
             {categories.map((c) => (
               <CategoryChip
@@ -310,9 +328,16 @@ export default function PetShopScreen({}: Props) {
             ))}
           </ScrollView>
 
-        {trimmedQuery ? (
+        {loading ? (
+          <PetShopSkeleton
+            shimmerStyle={shimmerStyle}
+            cardWidth={cardWidth}
+            numColumns={numColumns}
+            sectionPadX={sectionPadX}
+          />
+        ) : trimmedQuery ? (
           // Search results — replaces all sections when query is active
-          <Section title={`ผลการค้นหา (${searchResults.length})`}>
+          <Section title={`ผลการค้นหา (${searchResults.length})`} sectionPadX={sectionPadX}>
             {searchResults.length > 0 ? (
               <Grid
                 data={searchResults}
@@ -337,7 +362,7 @@ export default function PetShopScreen({}: Props) {
           <>
             {/* Promotion */}
             {!activeCategory && featured.length > 0 && (
-              <Section title="โปรโมชั่น">
+              <Section title="โปรโมชั่น" sectionPadX={sectionPadX}>
                 <Grid
                   data={featured}
                   onPress={goToProduct}
@@ -349,7 +374,7 @@ export default function PetShopScreen({}: Props) {
             {/* Recommend for your pets — section header is a rose banner
                 with pet photos peeking from the right. */}
             {!activeCategory && recommended.length > 0 && (
-              <View style={styles.section}>
+              <View style={[styles.section, { paddingHorizontal: sectionPadX }]}>
                 <View style={styles.recBanner}>
                   <LinearGradient
                     pointerEvents="none"
@@ -385,6 +410,7 @@ export default function PetShopScreen({}: Props) {
                   ? `${categoryMeta[activeCategory].label} (${allProducts.length})`
                   : `สินค้าทั้งหมด (${allProducts.length})`
               }
+              sectionPadX={sectionPadX}
             >
               <Grid
                 data={allProducts}
@@ -431,14 +457,18 @@ export default function PetShopScreen({}: Props) {
         </Animated.View>
 
         {/* Foreground — title + actions */}
-        <View style={styles.appbarContent}>
+        <View style={[styles.appbarContent, { paddingHorizontal: sectionPadX }]}>
           <View style={styles.appbarPlaceholder} />
 
           <Animated.View
             pointerEvents="none"
             style={[styles.appbarTitleWrap, titleStyle]}
           >
-            <Text variant="bodyStrong" style={styles.appbarTitle} numberOfLines={1}>
+            <Text
+              variant="bodyStrong"
+              style={[styles.appbarTitle, isTablet && styles.appbarTitleTablet]}
+              numberOfLines={1}
+            >
               ร้านค้า
             </Text>
           </Animated.View>
@@ -450,7 +480,7 @@ export default function PetShopScreen({}: Props) {
       {/* Search modal — full screen, opens when search bar tapped */}
       <Modal
         visible={searchOpen}
-        animationType="slide"
+        animationType="fade"
         presentationStyle="fullScreen"
         onRequestClose={closeSearch}
       >
@@ -546,17 +576,67 @@ export default function PetShopScreen({}: Props) {
 
 /* ---------- Sections ---------- */
 
+function PetShopSkeleton({
+  shimmerStyle,
+  cardWidth,
+  numColumns,
+  sectionPadX,
+}: {
+  shimmerStyle: ReturnType<typeof useSkeletonShimmer>;
+  cardWidth: number;
+  numColumns: number;
+  sectionPadX: number;
+}) {
+  const tilesPerSection = numColumns * 2;
+  return (
+    <>
+      {[0, 1].map((s) => (
+        <View key={`sec-${s}`} style={[styles.section, { paddingHorizontal: sectionPadX }]}>
+          <SkeletonBox width={140} height={16} style={{ marginBottom: spacing.md }} />
+          <View
+            style={{
+              flexDirection: 'row',
+              flexWrap: 'wrap',
+              gap: CARD_GAP,
+            }}
+          >
+            {Array.from({ length: tilesPerSection }).map((_, i) => (
+              <View
+                key={`tile-${s}-${i}`}
+                style={[
+                  styles.skelTile,
+                  { width: cardWidth, height: cardWidth * 1.5 },
+                ]}
+              >
+                <View style={[styles.skelTileImg, { height: cardWidth }]} />
+                <View style={{ padding: 10, gap: 8 }}>
+                  <SkeletonBox width="80%" height={11} />
+                  <SkeletonBox width="60%" height={11} />
+                  <SkeletonBox width={60} height={14} />
+                </View>
+                <SkeletonShimmer shimmerStyle={shimmerStyle} />
+              </View>
+            ))}
+          </View>
+        </View>
+      ))}
+    </>
+  );
+}
+
 function Section({
   title,
   trailing,
   children,
+  sectionPadX,
 }: {
   title: string;
   trailing?: ReactNode;
   children: ReactNode;
+  sectionPadX: number;
 }) {
   return (
-    <View style={styles.section}>
+    <View style={[styles.section, { paddingHorizontal: sectionPadX }]}>
       <View style={styles.sectionHeader}>
         <Text weight="600" style={styles.sectionTitle}>
           {title}
@@ -730,6 +810,9 @@ const styles = StyleSheet.create({
     maxWidth: '60%',
     textAlign: 'center',
   },
+  appbarTitleTablet: {
+    fontSize: 18,
+  },
   appbarActions: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -833,6 +916,10 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 8 },
     elevation: 6,
   },
+  searchPillTablet: {
+    height: 60,
+    paddingHorizontal: 22,
+  },
   searchPillText: {
     fontSize: 15,
     color: '#9A9AA0',
@@ -850,6 +937,11 @@ const styles = StyleSheet.create({
     shadowRadius: 20,
     shadowOffset: { width: 0, height: 8 },
     elevation: 6,
+  },
+  toolbarBtnTablet: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
   },
 
   // White content card — wraps chips + sections; rounded top, soft top shadow
@@ -1042,5 +1134,18 @@ const styles = StyleSheet.create({
     paddingVertical: spacing['2xl'],
     alignItems: 'center',
     gap: spacing.sm,
+  },
+  skelTile: {
+    backgroundColor: semantic.surface,
+    borderRadius: 16,
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOpacity: 0.06,
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 2,
+  },
+  skelTileImg: {
+    backgroundColor: '#E6E6E8',
   },
 });

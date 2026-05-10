@@ -2,6 +2,7 @@ import { Pressable, StyleSheet, View, ViewStyle } from 'react-native';
 import { BlurView } from 'expo-blur';
 import { GlassView, isLiquidGlassAvailable } from '../lib/glass-effect';
 import * as LucideIcons from 'lucide-react-native';
+import { useIsTablet } from '../lib/responsive';
 
 const LIQUID_GLASS = isLiquidGlassAvailable();
 
@@ -27,6 +28,15 @@ const SIZES: Record<Size, { box: number; icon: number; stroke: number }> = {
   lg: { box: 56, icon: 24, stroke: 2.2 },
 };
 
+// iPad — bump touch targets and icon sizes to feel proportional on the larger
+// viewport. md kept at 48 (not 56) so it still fits inside the 56pt appbar row
+// where StickyAppBar/SubPageHeader place these.
+const TABLET_SIZES: Record<Size, { box: number; icon: number; stroke: number }> = {
+  sm: { box: 40, icon: 16, stroke: 2.4 },
+  md: { box: 48, icon: 22, stroke: 2.2 },
+  lg: { box: 68, icon: 28, stroke: 2.2 },
+};
+
 /**
  * Apple iOS 26 Liquid Glass icon button.
  * - Uses native UIGlassEffect (regular) on iOS 26
@@ -45,7 +55,8 @@ export default function IconButton({
   style,
   accessibilityLabel,
 }: Props) {
-  const s = SIZES[size];
+  const isTablet = useIsTablet();
+  const s = isTablet ? TABLET_SIZES[size] : SIZES[size];
   const Comp = (LucideIcons as any)[icon];
   const radius = s.box / 2;
 

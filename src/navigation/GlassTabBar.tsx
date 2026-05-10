@@ -15,14 +15,32 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { radii, semantic, shadows, spacing } from '../theme';
 import Icon from '../components/Icon';
 import Text from '../components/Text';
+import { useIsTablet } from '../lib/responsive';
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
-const INACTIVE_WIDTH = 46;
-const BAR_PADDING = 5;
+const PHONE = {
+  inactiveWidth: 46,
+  barPadding: 5,
+  fabSize: 68,
+  fabGutter: 8,
+  tabHeight: 48,
+  iconSize: 24,
+  fabIconSize: 28,
+  barMaxWidth: undefined as number | undefined,
+};
+const TABLET = {
+  inactiveWidth: 64,
+  barPadding: 7,
+  fabSize: 88,
+  fabGutter: 12,
+  tabHeight: 64,
+  iconSize: 28,
+  fabIconSize: 34,
+  barMaxWidth: 640,
+};
+
 const SPRING = { damping: 18, stiffness: 180, mass: 0.9 };
-const FAB_SIZE = 68;
-const FAB_GUTTER = 8;
 const FAB_INDEX = 2;
 
 const inLeftHalf = (i: number) => i === 0 || i === 1;
@@ -30,6 +48,12 @@ const inRightHalf = (i: number) => i === 3 || i === 4;
 
 export default function GlassTabBar({ state, descriptors, navigation }: BottomTabBarProps) {
   const insets = useSafeAreaInsets();
+  const isTablet = useIsTablet();
+  const sz = isTablet ? TABLET : PHONE;
+  const INACTIVE_WIDTH = sz.inactiveWidth;
+  const BAR_PADDING = sz.barPadding;
+  const FAB_SIZE = sz.fabSize;
+  const FAB_GUTTER = sz.fabGutter;
   const [barWidth, setBarWidth] = useState(0);
 
   // Width per tab — drives layout. Three target states (compact, INACTIVE, expanded).
@@ -187,7 +211,8 @@ export default function GlassTabBar({ state, descriptors, navigation }: BottomTa
       <AnimatedPressable
         key={route.key}
         onPress={onPress}
-        style={[styles.tab, tabWidthStyles[index]]}
+        hitSlop={8}
+        style={[styles.tab, { height: sz.tabHeight }, tabWidthStyles[index]]}
       >
         <Animated.View
           pointerEvents="none"
@@ -199,7 +224,7 @@ export default function GlassTabBar({ state, descriptors, navigation }: BottomTa
           <Animated.View style={[styles.contentLayer, iconStyles[index]]}>
             <Icon
               name={icon as any}
-              size={24}
+              size={sz.iconSize}
               color={semantic.textMuted}
               strokeWidth={2}
             />
@@ -208,7 +233,7 @@ export default function GlassTabBar({ state, descriptors, navigation }: BottomTa
             <Text
               variant="bodyStrong"
               color={semantic.onPrimary}
-              style={styles.tabLabel}
+              style={[styles.tabLabel, isTablet && styles.tabLabelTablet]}
               numberOfLines={1}
             >
               {label}
@@ -219,12 +244,23 @@ export default function GlassTabBar({ state, descriptors, navigation }: BottomTa
     );
   };
 
+  const fabCutoutSize = FAB_SIZE + 12;
+
   return (
     <View
       pointerEvents="box-none"
       style={[styles.wrap, { paddingBottom: Math.max(insets.bottom - spacing.sm, spacing.xs) }]}
     >
-      <Animated.View style={[styles.bar, shadows.lg, compactBarStyle]} onLayout={onBarLayout}>
+      <Animated.View
+        style={[
+          styles.bar,
+          { padding: BAR_PADDING },
+          sz.barMaxWidth ? { maxWidth: sz.barMaxWidth, alignSelf: 'center' } : null,
+          shadows.lg,
+          compactBarStyle,
+        ]}
+        onLayout={onBarLayout}
+      >
         <View style={StyleSheet.absoluteFill} pointerEvents="none">
           <BlurView
             intensity={Platform.OS === 'ios' ? 50 : 70}
@@ -255,7 +291,19 @@ export default function GlassTabBar({ state, descriptors, navigation }: BottomTa
         </View>
       </Animated.View>
 
-      <Animated.View pointerEvents="none" style={[styles.fabCutout, compactFabStyle]}>
+      <Animated.View
+        pointerEvents="none"
+        style={[
+          styles.fabCutout,
+          {
+            top: -FAB_SIZE / 3 - 6,
+            width: fabCutoutSize,
+            height: fabCutoutSize,
+            borderRadius: fabCutoutSize / 2,
+          },
+          compactFabStyle,
+        ]}
+      >
         <LinearGradient
           colors={['#FFFDFB', '#FBF3F4']}
           start={{ x: 0, y: 0 }}
@@ -264,8 +312,22 @@ export default function GlassTabBar({ state, descriptors, navigation }: BottomTa
         />
       </Animated.View>
 
-      <AnimatedPressable onPress={fabPress} style={[styles.fabWrap, shadows.lift, compactFabStyle]}>
-        <View style={styles.fabRing}>
+      <AnimatedPressable
+        onPress={fabPress}
+        hitSlop={8}
+        style={[
+          styles.fabWrap,
+          {
+            top: -FAB_SIZE / 3,
+            width: FAB_SIZE,
+            height: FAB_SIZE,
+            borderRadius: FAB_SIZE / 2,
+          },
+          shadows.lift,
+          compactFabStyle,
+        ]}
+      >
+        <View style={[styles.fabRing, { borderRadius: FAB_SIZE / 2 }]}>
           <View style={[StyleSheet.absoluteFill, { backgroundColor: semantic.surface }]} />
           <Animated.View style={[StyleSheet.absoluteFill, fabFillStyle]}>
             <LinearGradient
@@ -278,7 +340,7 @@ export default function GlassTabBar({ state, descriptors, navigation }: BottomTa
           </Animated.View>
           <Icon
             name={(fabIcon ?? 'Heart') as any}
-            size={28}
+            size={sz.fabIconSize}
             color={fabFocused ? semantic.onPrimary : semantic.primary}
             strokeWidth={2.2}
           />
@@ -304,7 +366,6 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255,253,251,0.35)',
     borderWidth: 1.25,
     borderColor: 'rgba(255,255,255,0.85)',
-    padding: BAR_PADDING,
     overflow: 'visible',
     alignSelf: 'stretch',
   },
@@ -327,7 +388,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   tab: {
-    height: 48,
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: radii.pill,
@@ -353,6 +413,9 @@ const styles = StyleSheet.create({
     fontSize: 12,
     letterSpacing: 0,
   },
+  tabLabelTablet: {
+    fontSize: 14,
+  },
   pillTopBevel: {
     position: 'absolute',
     top: 0,
@@ -371,24 +434,15 @@ const styles = StyleSheet.create({
   },
   fabCutout: {
     position: 'absolute',
-    top: -FAB_SIZE / 3 - 6,
     alignSelf: 'center',
-    width: FAB_SIZE + 12,
-    height: FAB_SIZE + 12,
-    borderRadius: (FAB_SIZE + 12) / 2,
     overflow: 'hidden',
   },
   fabWrap: {
     position: 'absolute',
-    top: -FAB_SIZE / 3,
-    width: FAB_SIZE,
-    height: FAB_SIZE,
-    borderRadius: FAB_SIZE / 2,
     alignSelf: 'center',
   },
   fabRing: {
     flex: 1,
-    borderRadius: FAB_SIZE / 2,
     borderWidth: 3,
     borderColor: semantic.primary,
     alignItems: 'center',

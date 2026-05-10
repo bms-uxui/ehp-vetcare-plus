@@ -13,7 +13,8 @@ import { AppBackground, Card, Icon, StepProgress, SubPageHeader, Text } from '..
 import { HEADER_HEIGHT } from '../components/SubPageHeader';
 import { semantic, spacing } from '../theme';
 import { mockPets } from '../data/pets';
-import { mockVets } from '../data/televet';
+import { mockVets, mockGroomers, mockBoardingClinics } from '../data/televet';
+import { typeMeta } from '../data/appointments';
 import { bookingSubmitted } from '../data/bookingState';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'BookAppointmentSummary'>;
@@ -33,10 +34,19 @@ const formatDate = (iso: string) => {
 
 export default function BookAppointmentSummaryScreen({ navigation, route }: Props) {
   const insets = useSafeAreaInsets();
-  const { petId, mode, dateISO, time, vetId, notes } = route.params;
+  const { petId, mode, type, dateISO, time, vetId, notes } = route.params;
 
+  const isGrooming = type === 'grooming';
+  const isBoarding = type === 'boarding';
   const pet = mockPets.find((p) => p.id === petId);
-  const vet = mockVets.find((v) => v.id === vetId);
+  const staffPool = isBoarding
+    ? mockBoardingClinics
+    : isGrooming
+      ? mockGroomers
+      : mockVets;
+  const vet = staffPool.find((v) => v.id === vetId);
+  const staffLabel = isBoarding ? 'คลินิก' : isGrooming ? 'ช่าง' : 'สัตวแพทย์';
+  const meta = typeMeta[type];
 
   const scrollY = useSharedValue(0);
   const scrollHandler = useAnimatedScrollHandler((e) => {
@@ -94,24 +104,14 @@ export default function BookAppointmentSummaryScreen({ navigation, route }: Prop
           กรุณาตรวจสอบรายละเอียดการนัดหมายให้ถูกต้องก่อนยืนยัน
         </Text>
 
-        {/* Mode card */}
+        {/* Type card */}
         <Card variant="elevated" padding="md" style={styles.card}>
           <View style={styles.row}>
-            <View
-              style={[
-                styles.iconWrap,
-                {
-                  backgroundColor:
-                    mode === 'online'
-                      ? 'rgba(27,90,119,0.12)'
-                      : 'rgba(159,82,102,0.12)',
-                },
-              ]}
-            >
+            <View style={[styles.iconWrap, { backgroundColor: `${meta.color}1F` }]}>
               <Icon
-                name={mode === 'online' ? 'Video' : 'Hospital'}
+                name={meta.icon as any}
                 size={20}
-                color={mode === 'online' ? '#1B5A77' : '#9F5266'}
+                color={meta.color}
                 strokeWidth={2.2}
               />
             </View>
@@ -120,7 +120,7 @@ export default function BookAppointmentSummaryScreen({ navigation, route }: Prop
                 ประเภทการนัด
               </Text>
               <Text variant="bodyStrong" style={styles.value}>
-                {mode === 'online' ? 'ปรึกษาออนไลน์' : 'ที่คลินิก'}
+                {meta.label}
               </Text>
             </View>
           </View>
@@ -160,14 +160,16 @@ export default function BookAppointmentSummaryScreen({ navigation, route }: Prop
             </View>
             <View style={{ flex: 1 }}>
               <Text variant="caption" color={semantic.textSecondary}>
-                วันและเวลา
+                {isBoarding ? 'วันที่' : 'วันและเวลา'}
               </Text>
               <Text variant="bodyStrong" style={styles.value}>
                 {formatDate(dateISO)}
               </Text>
-              <Text variant="caption" color={semantic.textSecondary}>
-                เวลา {time} น.
-              </Text>
+              {!isBoarding && (
+                <Text variant="caption" color={semantic.textSecondary}>
+                  เวลา {time} น.
+                </Text>
+              )}
             </View>
           </View>
         </Card>
@@ -181,7 +183,7 @@ export default function BookAppointmentSummaryScreen({ navigation, route }: Prop
               </View>
               <View style={{ flex: 1 }}>
                 <Text variant="caption" color={semantic.textSecondary}>
-                  สัตวแพทย์
+                  {staffLabel}
                 </Text>
                 <Text variant="bodyStrong" style={styles.value} numberOfLines={1}>
                   {vet.name}

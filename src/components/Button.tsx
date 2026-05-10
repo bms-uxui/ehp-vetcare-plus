@@ -2,6 +2,7 @@ import { ActivityIndicator, Pressable, StyleSheet, View, ViewStyle } from 'react
 import { LinearGradient } from 'expo-linear-gradient';
 import { ReactNode } from 'react';
 import { gradients, radii, semantic, shadows, spacing } from '../theme';
+import { useIsTablet } from '../lib/responsive';
 import Text from './Text';
 
 type Variant = 'primary' | 'secondary' | 'ghost' | 'destructive';
@@ -36,7 +37,9 @@ export default function Button({
   rightIcon,
   style,
 }: Props) {
-  const s = sizeStyles[size];
+  const isTablet = useIsTablet();
+  const baseSize = sizeStyles[size];
+  const s = isTablet ? tabletSizeStyles[size] : baseSize;
   const isInactive = disabled || loading;
   const shouldUppercase = uppercase ?? (variant === 'primary' || variant === 'destructive');
 
@@ -163,4 +166,12 @@ const sizeStyles: Record<Size, { height: number; paddingX: number; fontSize: num
   sm: { height: 42, paddingX: spacing.lg, fontSize: 13 },
   md: { height: 54, paddingX: spacing.xl, fontSize: 15 },
   lg: { height: 60, paddingX: spacing['2xl'], fontSize: 16 },
+};
+
+// iPad — bump heights and font sizes so buttons feel proportional to the
+// larger viewport and easier to tap.
+const tabletSizeStyles: Record<Size, { height: number; paddingX: number; fontSize: number }> = {
+  sm: { height: 48, paddingX: spacing.lg, fontSize: 15 },
+  md: { height: 60, paddingX: spacing.xl, fontSize: 17 },
+  lg: { height: 68, paddingX: spacing['2xl'], fontSize: 19 },
 };

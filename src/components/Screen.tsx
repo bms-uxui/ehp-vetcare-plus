@@ -15,6 +15,7 @@ import { withTiming } from 'react-native-reanimated';
 import { semantic, spacing } from '../theme';
 import AppBackground from './AppBackground';
 import { tabBarCompact } from '../navigation/tabBarVisibility';
+import { useTabletHorizontalPadding } from '../lib/responsive';
 
 type Props = {
   children: ReactNode;
@@ -48,10 +49,11 @@ export default function Screen({
   tabBarSpace = false,
 }: Props) {
   const insets = useSafeAreaInsets();
+  const tabletPadX = useTabletHorizontalPadding(spacing.xl);
 
   const contentStyle = [
     padded && { paddingTop: insets.top + spacing.lg },
-    padded && styles.padded,
+    padded && { paddingHorizontal: tabletPadX },
     padded && !tabBarSpace && { paddingBottom: spacing.lg },
     tabBarSpace && { paddingBottom: TAB_BAR_SPACE },
     style,
@@ -123,9 +125,6 @@ export default function Screen({
 
 const styles = StyleSheet.create({
   flex: { flex: 1 },
-  padded: {
-    paddingHorizontal: spacing.xl,
-  },
   fadeTop: {
     position: 'absolute',
     top: 0,

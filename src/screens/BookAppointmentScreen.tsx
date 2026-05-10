@@ -9,7 +9,7 @@ import { HEADER_HEIGHT } from '../components/SubPageHeader';
 import { colors, semantic, spacing } from '../theme';
 import { mockPets } from '../data/pets';
 import { typeMeta, AppointmentType, MOCK_VETS } from '../data/appointments';
-import { mockVets } from '../data/televet';
+import { mockVets, mockGroomers, mockBoardingClinics } from '../data/televet';
 import { bookingSubmitted } from '../data/bookingState';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'BookAppointment'>;
@@ -41,9 +41,30 @@ export default function BookAppointmentScreen({ navigation, route }: Props) {
   const incomingVetId = route.params?.selectedVetId;
   const prefill = route.params;
   const [petId, setPetId] = useState<string | null>(prefill?.prefillPetId ?? null);
-  const [mode, setMode] = useState<'online' | 'clinic' | null>(
-    prefill?.prefillMode ?? null,
+  // Booking type — drives staff list (vets vs groomers) and derives mode.
+  const [appointmentType, setAppointmentType] = useState<AppointmentType | null>(
+    prefill?.prefillMode === 'online' ? 'consultation' : null,
   );
+  const mode: 'online' | 'clinic' | null =
+    appointmentType === null
+      ? null
+      : appointmentType === 'consultation'
+        ? 'online'
+        : 'clinic';
+  const isGrooming = appointmentType === 'grooming';
+  const isBoarding = appointmentType === 'boarding';
+  const staffPool = isBoarding
+    ? mockBoardingClinics
+    : isGrooming
+      ? mockGroomers
+      : mockVets;
+  // Section label + helper copy adapt to the staff pool's "kind"
+  const staffKind = isBoarding ? 'คลินิก' : isGrooming ? 'ช่าง' : 'แพทย์';
+  const staffSectionLabel = isBoarding
+    ? 'คลินิกที่รับฝากเลี้ยง'
+    : isGrooming
+      ? 'ช่างที่ต้องการ'
+      : 'สัตวแพทย์ที่ต้องการพบ';
   const [date, setDate] = useState<Date | null>(
     prefill?.prefillDateISO ? new Date(prefill.prefillDateISO) : null,
   );
@@ -58,7 +79,7 @@ export default function BookAppointmentScreen({ navigation, route }: Props) {
 
   const isDirty =
     petId !== null ||
-    mode !== null ||
+    appointmentType !== null ||
     date !== null ||
     time !== null ||
     vetId !== null ||
@@ -72,12 +93,12 @@ export default function BookAppointmentScreen({ navigation, route }: Props) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [incomingVetId]);
 
-  // Vets available on selected date (filtered by workingDays)
+  // Staff (vets or groomers) available on selected date — filtered by workingDays
   const availableVets = useMemo(() => {
-    if (!date) return mockVets;
+    if (!date) return staffPool;
     const dow = date.getDay();
-    return mockVets.filter((v) => v.workingDays.includes(dow));
-  }, [date]);
+    return staffPool.filter((v) => v.workingDays.includes(dow));
+  }, [date, staffPool]);
 
   // Time slots available — union of selected-date vets' slots
   const availableSlots = useMemo(() => {
@@ -110,18 +131,26 @@ export default function BookAppointmentScreen({ navigation, route }: Props) {
       })}`
     : 'แตะเพื่อเลือกวัน';
 
+  // Boarding doesn't have a time slot — guests stay all day, drop-off any time.
   const canSubmit = useMemo(
-    () => !!(petId && mode && date && time),
-    [petId, mode, date, time],
+    () => !!(petId && appointmentType && date && (isBoarding || time)),
+    [petId, appointmentType, date, time, isBoarding],
   );
 
   const selectedVet = useMemo(
-    () => mockVets.find((v) => v.id === vetId) ?? null,
-    [vetId],
+    () => staffPool.find((v) => v.id === vetId) ?? null,
+    [vetId, staffPool],
   );
 
+  // Reset selected staff when switching between vets / groomers / clinics pools
+  useEffect(() => {
+    if (vetId && !staffPool.some((v) => v.id === vetId)) setVetId(null);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isGrooming, isBoarding]);
+
   const onSubmit = () => {
-    if (!canSubmit || !petId || !mode || !date || !time) return;
+    if (!canSubmit || !petId || !appointmentType || !mode || !date) return;
+    if (!isBoarding && !time) return;
     let chosenVetId = vetId;
     if (!chosenVetId) {
       if (matchingVets.length === 0) {
@@ -134,8 +163,10 @@ export default function BookAppointmentScreen({ navigation, route }: Props) {
     navigation.navigate('BookAppointmentSummary', {
       petId,
       mode,
+      type: appointmentType,
       dateISO: date.toISOString(),
-      time,
+      // Boarding stays all day — placeholder slot for the route param shape.
+      time: isBoarding ? '—' : time!,
       vetId: chosenVetId,
       notes: notes.trim() || undefined,
     });
@@ -234,53 +265,39 @@ export default function BookAppointmentScreen({ navigation, route }: Props) {
             </View>
           </Section>
 
-          {/* Mode — Online vs Clinic */}
+          {/* Type — 4 options: checkup / grooming / boarding / online consult */}
           <Section label="ประเภทการนัด">
             <View style={styles.chipGrid}>
-              <Pressable
-                onPress={() => setMode('clinic')}
-                style={({ pressed }) => [
-                  styles.modeTile,
-                  mode === 'clinic' && styles.modeTileClinicSelected,
-                  pressed && { opacity: 0.9 },
-                ]}
-              >
-                <View style={styles.typeInner}>
-                  <View
-                    style={[
-                      styles.typeIconWrap,
-                      { backgroundColor: 'rgba(159,82,102,0.15)' },
+              {(['checkup', 'grooming', 'boarding', 'consultation'] as const).map((t) => {
+                const meta = typeMeta[t];
+                const selected = appointmentType === t;
+                const tintBg = `${meta.color}26`; // ~15% opacity
+                return (
+                  <Pressable
+                    key={t}
+                    onPress={() => setAppointmentType(t)}
+                    style={({ pressed }) => [
+                      styles.modeTile,
+                      selected && {
+                        borderColor: meta.color,
+                        backgroundColor: `${meta.color}14`,
+                      },
+                      pressed && { opacity: 0.9 },
                     ]}
                   >
-                    <Icon name="Hospital" size={22} color="#9F5266" strokeWidth={2.2} />
-                  </View>
-                  <Text variant="bodyStrong" style={{ fontSize: 13 }}>
-                    ที่คลินิก
-                  </Text>
-                </View>
-              </Pressable>
-              <Pressable
-                onPress={() => setMode('online')}
-                style={({ pressed }) => [
-                  styles.modeTile,
-                  mode === 'online' && styles.modeTileOnlineSelected,
-                  pressed && { opacity: 0.9 },
-                ]}
-              >
-                <View style={styles.typeInner}>
-                  <View
-                    style={[
-                      styles.typeIconWrap,
-                      { backgroundColor: 'rgba(27,90,119,0.15)' },
-                    ]}
-                  >
-                    <Icon name="Video" size={22} color="#1B5A77" strokeWidth={2.2} />
-                  </View>
-                  <Text variant="bodyStrong" style={{ fontSize: 13 }}>
-                    ปรึกษาออนไลน์
-                  </Text>
-                </View>
-              </Pressable>
+                    <View style={styles.typeInner}>
+                      <View
+                        style={[styles.typeIconWrap, { backgroundColor: tintBg }]}
+                      >
+                        <Icon name={meta.icon as any} size={22} color={meta.color} strokeWidth={2.2} />
+                      </View>
+                      <Text variant="bodyStrong" style={{ fontSize: 13 }} numberOfLines={1}>
+                        {meta.label}
+                      </Text>
+                    </View>
+                  </Pressable>
+                );
+              })}
             </View>
           </Section>
 
@@ -304,48 +321,50 @@ export default function BookAppointmentScreen({ navigation, route }: Props) {
             </Pressable>
           </Section>
 
-          {/* Time */}
-          <Section label="เวลา">
-            {!date ? (
-              <Text variant="caption" color={semantic.textSecondary} style={styles.helperText}>
-                เลือกวันก่อนเพื่อดูเวลาที่ว่าง
-              </Text>
-            ) : availableSlots.length === 0 ? (
-              <Text variant="caption" color={semantic.textSecondary} style={styles.helperText}>
-                ไม่มีเวลาว่างในวันที่เลือก
-              </Text>
-            ) : null}
-            <View style={[styles.timeGrid, !date && styles.timeGridLocked]}>
-              {(date ? availableSlots : TIME_SLOTS).map((t) => (
-                <Card
-                  key={t}
-                  variant="elevated"
-                  selected={!!date && time === t}
-                  padding="sm"
-                  onPress={
-                    date ? () => setTime(time === t ? null : t) : undefined
-                  }
-                  style={StyleSheet.flatten([styles.timeTile, styles.cardTightShadow])}
-                >
-                  <View style={styles.timeInner}>
-                    <Text variant="bodyStrong" style={{ fontSize: 13 }}>
-                      {t}
-                    </Text>
-                  </View>
-                </Card>
-              ))}
-            </View>
-          </Section>
+          {/* Time — hidden for boarding (guests stay all day) */}
+          {!isBoarding && (
+            <Section label="เวลา">
+              {!date ? (
+                <Text variant="caption" color={semantic.textSecondary} style={styles.helperText}>
+                  เลือกวันก่อนเพื่อดูเวลาที่ว่าง
+                </Text>
+              ) : availableSlots.length === 0 ? (
+                <Text variant="caption" color={semantic.textSecondary} style={styles.helperText}>
+                  ไม่มีเวลาว่างในวันที่เลือก
+                </Text>
+              ) : null}
+              <View style={[styles.timeGrid, !date && styles.timeGridLocked]}>
+                {(date ? availableSlots : TIME_SLOTS).map((t) => (
+                  <Card
+                    key={t}
+                    variant="elevated"
+                    selected={!!date && time === t}
+                    padding="sm"
+                    onPress={
+                      date ? () => setTime(time === t ? null : t) : undefined
+                    }
+                    style={StyleSheet.flatten([styles.timeTile, styles.cardTightShadow])}
+                  >
+                    <View style={styles.timeInner}>
+                      <Text variant="bodyStrong" style={{ fontSize: 13 }}>
+                        {t}
+                      </Text>
+                    </View>
+                  </Card>
+                ))}
+              </View>
+            </Section>
+          )}
 
-          {/* Vet */}
-          <Section label="สัตวแพทย์ที่ต้องการพบ">
+          {/* Staff — vets / groomers / boarding clinics depending on appointment type */}
+          <Section label={staffSectionLabel}>
             {!date ? (
               <Text variant="caption" color={semantic.textSecondary} style={styles.helperText}>
-                ถ้าไม่มีแพทย์ประจำ ระบบจะจัดแพทย์ที่ว่างให้
+                {`ถ้าไม่มี${staffKind}ประจำ ระบบจะจัด${staffKind}ที่ว่างให้`}
               </Text>
             ) : matchingVets.length === 0 ? (
               <Text variant="caption" color={semantic.textSecondary} style={styles.helperText}>
-                ไม่มีแพทย์ว่างในช่วงเวลานี้ ลองเปลี่ยนวันหรือเวลา
+                {`ไม่มี${staffKind}ว่างในช่วงเวลานี้ ลองเปลี่ยนวันหรือเวลา`}
               </Text>
             ) : null}
             <View style={styles.vetList}>
@@ -361,23 +380,25 @@ export default function BookAppointmentScreen({ navigation, route }: Props) {
                     onPress={() => setVetId(isSelected ? null : v.id)}
                     style={styles.cardTightShadow}
                   >
-                    <Pressable
-                      onPress={() => navigation.navigate('VetDetail', { vetId: v.id })}
-                      hitSlop={8}
-                      accessibilityRole="button"
-                      accessibilityLabel="ดูข้อมูลและรีวิว"
-                      style={({ pressed }) => [
-                        styles.vetInfoBtn,
-                        pressed && { opacity: 0.6 },
-                      ]}
-                    >
-                      <Icon
-                        name="Info"
-                        size={18}
-                        color={semantic.textMuted}
-                        strokeWidth={2}
-                      />
-                    </Pressable>
+                    {!isGrooming && !isBoarding && (
+                      <Pressable
+                        onPress={() => navigation.navigate('VetDetail', { vetId: v.id })}
+                        hitSlop={8}
+                        accessibilityRole="button"
+                        accessibilityLabel="ดูข้อมูลและรีวิว"
+                        style={({ pressed }) => [
+                          styles.vetInfoBtn,
+                          pressed && { opacity: 0.6 },
+                        ]}
+                      >
+                        <Icon
+                          name="Info"
+                          size={18}
+                          color={semantic.textMuted}
+                          strokeWidth={2}
+                        />
+                      </Pressable>
+                    )}
                     <View style={styles.vetTopRow}>
                       <View style={styles.vetAvatar}>
                         <Image source={{ uri: v.avatar }} style={styles.vetAvatarImg} />
@@ -388,7 +409,12 @@ export default function BookAppointmentScreen({ navigation, route }: Props) {
                           {v.name}
                         </Text>
                         <View style={styles.vetChipRow}>
-                          <VetChip icon="Stethoscope" label={v.specialty} />
+                          <VetChip
+                            icon={
+                              isBoarding ? 'Home' : isGrooming ? 'Scissors' : 'Stethoscope'
+                            }
+                            label={v.specialty}
+                          />
                           <VetChip icon="Briefcase" label={`${v.experienceYears} ปี`} />
                         </View>
                         <View style={styles.vetChipRow}>

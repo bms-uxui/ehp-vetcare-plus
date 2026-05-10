@@ -12,6 +12,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as LucideIcons from 'lucide-react-native';
 import Icon from './Icon';
 import Text from './Text';
+import { useIsTablet } from '../lib/responsive';
 
 type IconName = keyof typeof LucideIcons;
 
@@ -37,6 +38,7 @@ export const HEADER_HEIGHT = 56;
 
 export default function SubPageHeader({ title, onBack, trailing, scrollY }: Props) {
   const insets = useSafeAreaInsets();
+  const isTablet = useIsTablet();
   const fallback = useSharedValue(0);
   const y = scrollY ?? fallback;
 
@@ -101,15 +103,23 @@ export default function SubPageHeader({ title, onBack, trailing, scrollY }: Prop
             hitSlop={8}
             accessibilityRole="button"
             accessibilityLabel="ย้อนกลับ"
-            style={({ pressed }) => [styles.iconBtn, pressed && styles.iconBtnPressed]}
+            style={({ pressed }) => [
+              styles.iconBtn,
+              isTablet && styles.iconBtnTablet,
+              pressed && styles.iconBtnPressed,
+            ]}
           >
-            <Icon name="ChevronLeft" size={20} color="#1A1A1A" strokeWidth={2.4} />
+            <Icon name="ChevronLeft" size={isTablet ? 24 : 20} color="#1A1A1A" strokeWidth={2.4} />
           </Pressable>
         ) : (
-          <View style={styles.iconBtnPlaceholder} />
+          <View style={[styles.iconBtnPlaceholder, isTablet && styles.iconBtnTablet]} />
         )}
 
-        <Text variant="bodyStrong" numberOfLines={1} style={styles.title}>
+        <Text
+          variant="bodyStrong"
+          numberOfLines={1}
+          style={[styles.title, isTablet && styles.titleTablet]}
+        >
           {title}
         </Text>
 
@@ -119,12 +129,16 @@ export default function SubPageHeader({ title, onBack, trailing, scrollY }: Prop
             hitSlop={8}
             accessibilityRole="button"
             accessibilityLabel={trailing.accessibilityLabel ?? trailing.icon}
-            style={({ pressed }) => [styles.iconBtn, pressed && styles.iconBtnPressed]}
+            style={({ pressed }) => [
+              styles.iconBtn,
+              isTablet && styles.iconBtnTablet,
+              pressed && styles.iconBtnPressed,
+            ]}
           >
-            <Icon name={trailing.icon} size={20} color="#1A1A1A" strokeWidth={2.2} />
+            <Icon name={trailing.icon} size={isTablet ? 24 : 20} color="#1A1A1A" strokeWidth={2.2} />
           </Pressable>
         ) : (
-          <View style={styles.iconBtnPlaceholder} />
+          <View style={[styles.iconBtnPlaceholder, isTablet && styles.iconBtnTablet]} />
         )}
       </View>
     </View>
@@ -166,6 +180,9 @@ const styles = StyleSheet.create({
     fontSize: 17,
     color: '#1A1A1A',
   },
+  titleTablet: {
+    fontSize: 19,
+  },
   iconBtn: {
     width: 44,
     height: 44,
@@ -180,6 +197,11 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.06,
     shadowRadius: 2,
     elevation: 1,
+  },
+  iconBtnTablet: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
   },
   iconBtnPressed: {
     opacity: 0.7,
