@@ -61,7 +61,7 @@ export default function AddPetMicrochipScreen({ navigation }: Props) {
     const data = await syncWithEHP(digits);
     setBusy(false);
     if (!data) {
-      setError('ไม่พบข้อมูลในระบบ EHP กรุณาตรวจสอบหมายเลขอีกครั้ง');
+      setError('ไม่พบข้อมูลในระบบ Pawmely กรุณาตรวจสอบหมายเลขอีกครั้ง');
       return;
     }
     setResult(data);
@@ -78,7 +78,7 @@ export default function AddPetMicrochipScreen({ navigation }: Props) {
         หมายเลขไมโครชิป
       </Text>
       <Text variant="body" color={semantic.textSecondary} style={styles.subtitle}>
-        ป้อนหมายเลข ISO 15 หลัก เพื่อเชื่อมข้อมูลจากโรงพยาบาลในระบบ EHP
+        ป้อนหมายเลข ISO 15 หลัก เพื่อเชื่อมข้อมูลจากโรงพยาบาลในระบบ Pawmely
       </Text>
 
       <Card variant="elevated" padding="lg">
@@ -126,7 +126,7 @@ export default function AddPetMicrochipScreen({ navigation }: Props) {
             </View>
             <View style={{ flex: 1 }}>
               <Text variant="caption" color={semantic.textSecondary} style={{ fontSize: 11 }}>
-                พบข้อมูลในระบบ EHP
+                พบข้อมูลในระบบ Pawmely
               </Text>
               <Text variant="bodyStrong" style={{ fontSize: 16 }}>
                 {result.name}

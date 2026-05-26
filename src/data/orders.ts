@@ -100,7 +100,7 @@ const dayOffset = (days: number, hour = 10, minute = 0) => {
 // are renamed/removed.
 export const mockOrders: Order[] = [
   {
-    id: 'EHP-2026-0428-001',
+    id: 'PAW-2026-0428-001',
     placedAtISO: dayOffset(0, 9, 12),
     status: 'packing',
     items: [
@@ -119,7 +119,7 @@ export const mockOrders: Order[] = [
     estimatedDeliveryISO: dayOffset(2, 14, 0),
   },
   {
-    id: 'EHP-2026-0426-014',
+    id: 'PAW-2026-0426-014',
     placedAtISO: dayOffset(-2, 16, 30),
     status: 'shipping',
     items: [
@@ -135,7 +135,7 @@ export const mockOrders: Order[] = [
     estimatedDeliveryISO: dayOffset(1, 12, 0),
   },
   {
-    id: 'EHP-2026-0420-007',
+    id: 'PAW-2026-0420-007',
     placedAtISO: dayOffset(-8, 11, 5),
     status: 'delivered',
     items: [
@@ -156,7 +156,7 @@ export const mockOrders: Order[] = [
     deliveredAtISO: dayOffset(-6, 15, 40),
   },
   {
-    id: 'EHP-2026-0415-022',
+    id: 'PAW-2026-0415-022',
     placedAtISO: dayOffset(-13, 19, 50),
     status: 'cancelled',
     items: [

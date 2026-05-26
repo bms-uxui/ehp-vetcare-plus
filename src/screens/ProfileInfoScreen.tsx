@@ -225,7 +225,7 @@ export default function ProfileInfoScreen({ navigation }: Props) {
           <Text variant="h2" align="center" style={styles.name}>{fullName}</Text>
           <View style={styles.memberBadge}>
             <Icon name="Crown" size={12} color="#B45309" strokeWidth={2.4} />
-            <Text variant="caption" style={styles.memberText}>EHP Plus · เป็นสมาชิกตั้งแต่ ม.ค. 2565</Text>
+            <Text variant="caption" style={styles.memberText}>Pawmely Plus · เป็นสมาชิกตั้งแต่ ม.ค. 2565</Text>
           </View>
         </View>
 

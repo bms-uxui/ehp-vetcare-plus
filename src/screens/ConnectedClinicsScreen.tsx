@@ -26,7 +26,7 @@ type Clinic = {
 const MOCK_CLINICS: Clinic[] = [
   {
     id: 'c1',
-    name: 'EHP VetCare',
+    name: 'Pawmely',
     branch: 'สาขาสุขุมวิท',
     address: '12/3 ถ.สุขุมวิท ซอย 21, กรุงเทพฯ',
     phone: '02-123-4567',
@@ -36,7 +36,7 @@ const MOCK_CLINICS: Clinic[] = [
   },
   {
     id: 'c2',
-    name: 'EHP VetCare',
+    name: 'Pawmely',
     branch: 'สาขาทองหล่อ',
     address: '88/9 ถ.ทองหล่อ ซอย 13, กรุงเทพฯ',
     phone: '02-987-6543',

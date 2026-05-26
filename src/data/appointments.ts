@@ -50,7 +50,7 @@ export const mockAppointments: Appointment[] = [
     time: '14:30',
     durationMin: 30,
     vetName: 'สพ.ญ. ปิยะพร',
-    clinicName: 'EHP VetCare สาขาสุขุมวิท',
+    clinicName: 'Pawmely สาขาสุขุมวิท',
     status: 'upcoming',
   },
   {
@@ -64,7 +64,7 @@ export const mockAppointments: Appointment[] = [
     time: '10:00',
     durationMin: 20,
     vetName: 'สพ. อนุพงษ์',
-    clinicName: 'EHP VetCare สาขาสุขุมวิท',
+    clinicName: 'Pawmely สาขาสุขุมวิท',
     status: 'upcoming',
   },
   {
@@ -78,7 +78,7 @@ export const mockAppointments: Appointment[] = [
     time: '11:00',
     durationMin: 90,
     vetName: 'คุณฝน',
-    clinicName: 'EHP Grooming',
+    clinicName: 'Pawmely Grooming',
     status: 'upcoming',
   },
   {
@@ -120,7 +120,7 @@ export const mockAppointments: Appointment[] = [
     time: '09:30',
     durationMin: 30,
     vetName: 'สพ.ญ. ปิยะพร',
-    clinicName: 'EHP VetCare สาขาสุขุมวิท',
+    clinicName: 'Pawmely สาขาสุขุมวิท',
     status: 'completed',
     notes: 'สุขภาพแข็งแรง ไม่มีปัญหา',
   },
@@ -135,15 +135,15 @@ export const mockAppointments: Appointment[] = [
     time: '15:00',
     durationMin: 20,
     vetName: 'สพ. อนุพงษ์',
-    clinicName: 'EHP VetCare สาขาสุขุมวิท',
+    clinicName: 'Pawmely สาขาสุขุมวิท',
     status: 'completed',
   },
 ];
 
 export const MOCK_VETS = [
-  { id: 'v1', name: 'สพ.ญ. ปิยะพร', specialty: 'อายุรกรรมทั่วไป', clinic: 'EHP VetCare สาขาสุขุมวิท' },
-  { id: 'v2', name: 'สพ. อนุพงษ์', specialty: 'ศัลยกรรม', clinic: 'EHP VetCare สาขาสุขุมวิท' },
-  { id: 'v3', name: 'สพ.ญ. ณัฐา', specialty: 'ผิวหนังและภูมิแพ้', clinic: 'EHP VetCare สาขาทองหล่อ' },
+  { id: 'v1', name: 'สพ.ญ. ปิยะพร', specialty: 'อายุรกรรมทั่วไป', clinic: 'Pawmely สาขาสุขุมวิท' },
+  { id: 'v2', name: 'สพ. อนุพงษ์', specialty: 'ศัลยกรรม', clinic: 'Pawmely สาขาสุขุมวิท' },
+  { id: 'v3', name: 'สพ.ญ. ณัฐา', specialty: 'ผิวหนังและภูมิแพ้', clinic: 'Pawmely สาขาทองหล่อ' },
 ];
 
 export const thDate = (iso: string) =>

@@ -31,7 +31,7 @@ export default function TeleVetScreen({ navigation }: Props) {
         <View style={styles.header}>
           <Text variant="h1">ปรึกษาสัตวแพทย์</Text>
           <Text variant="body" color={semantic.textSecondary}>
-            แชทหรือวิดีโอคอลกับสัตวแพทย์ EHP VetCare
+            แชทหรือวิดีโอคอลกับสัตวแพทย์ Pawmely
           </Text>
         </View>
         <Text variant="overline" color={semantic.textSecondary} style={styles.sectionLabel}>
@@ -59,7 +59,7 @@ export default function TeleVetScreen({ navigation }: Props) {
       <View style={styles.header}>
         <Text variant="h1">ปรึกษาสัตวแพทย์</Text>
         <Text variant="body" color={semantic.textSecondary}>
-          แชทหรือวิดีโอคอลกับสัตวแพทย์ EHP VetCare
+          แชทหรือวิดีโอคอลกับสัตวแพทย์ Pawmely
         </Text>
       </View>
 

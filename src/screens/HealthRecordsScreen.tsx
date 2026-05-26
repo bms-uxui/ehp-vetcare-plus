@@ -102,7 +102,7 @@ export default function HealthRecordsScreen({ route, navigation }: Props) {
             <Icon name="ClipboardList" size={40} color={semantic.textMuted} strokeWidth={1.5} />
             <Text variant="bodyStrong">ยังไม่มีประวัติ</Text>
             <Text variant="caption" color={semantic.textSecondary} align="center">
-              ประวัติการเข้ารับบริการจะปรากฎเมื่อมีการบันทึกจาก EHP VetCare
+              ประวัติการเข้ารับบริการจะปรากฎเมื่อมีการบันทึกจาก Pawmely
             </Text>
           </View>
         </Card>

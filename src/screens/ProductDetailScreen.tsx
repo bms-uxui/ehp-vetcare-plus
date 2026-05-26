@@ -455,7 +455,7 @@ export default function ProductDetailScreen({ route, navigation }: Props) {
                   จัดส่งจาก
                 </Text>
                 <Text weight="600" style={styles.shipValue}>
-                  {product.clinic ?? 'EHP VetCare สาขาสุขุมวิท'}
+                  {product.clinic ?? 'Pawmely สาขาสุขุมวิท'}
                 </Text>
               </View>
             </View>

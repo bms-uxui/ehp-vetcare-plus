@@ -21,7 +21,6 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { RootStackParamList } from '../../App';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Button, Card, Icon, PetAvatar, ProductTile, Screen, Text } from '../components';
-import VetCareLogo from '../../assets/vet-care-plus.svg';
 import VaccinationIllus from '../../assets/vaccination-appointment.svg';
 import { getProductColumns, useIsTablet, useTabletHorizontalPadding } from '../lib/responsive';
 import { colors, radii, semantic, shadows, spacing } from '../theme';
@@ -272,7 +271,16 @@ export default function HomeScreen({ navigation }: Props) {
         />
 
         <View style={styles.bannerHeaderRow}>
-          <VetCareLogo width={148} height={27} />
+          <View style={styles.brandRow}>
+            <Image
+              source={require('../../assets/Pawmely.png')}
+              style={styles.brandLogo}
+              resizeMode="contain"
+            />
+            <Text variant="bodyStrong" style={styles.brandName}>
+              Pawmely
+            </Text>
+          </View>
           <View>
             <Pressable
               onPress={() => navigation.navigate('Notifications')}
@@ -675,9 +683,31 @@ export default function HomeScreen({ navigation }: Props) {
         </Pressable>
 
         {/* ── PRODUCTS ── */}
-        <Text variant="caption" color={semantic.textPrimary} weight="500" style={styles.sectionLabel}>
-          สินค้าแนะนำ
-        </Text>
+        <View style={styles.productsHeader}>
+          <View style={{ flex: 1 }}>
+            <Text variant="bodyStrong" style={styles.productsTitle}>
+              สินค้าแนะนำ
+            </Text>
+            <Text variant="caption" color={semantic.textSecondary} style={styles.productsSubtitle}>
+              คัดมาให้น้องโดยเฉพาะ
+            </Text>
+          </View>
+          <Pressable
+            onPress={() => navigation.navigate('PetShop' as never)}
+            hitSlop={8}
+            style={({ pressed }) => [
+              styles.productsSeeAll,
+              pressed && { opacity: 0.7 },
+            ]}
+            accessibilityRole="button"
+            accessibilityLabel="ดูสินค้าทั้งหมด"
+          >
+            <Text variant="caption" weight="600" style={styles.productsSeeAllText}>
+              ดูทั้งหมด
+            </Text>
+            <Icon name="ChevronRight" size={14} color={semantic.primary} strokeWidth={2.4} />
+          </Pressable>
+        </View>
         <View style={styles.productGrid}>
           {recommendedProducts.map((p) => (
             <ProductTile
@@ -735,6 +765,20 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingTop: spacing.xl,
     paddingBottom: spacing.sm,
+  },
+  brandRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  brandLogo: {
+    width: 36,
+    height: 36,
+  },
+  brandName: {
+    fontSize: 20,
+    color: colors.rose[800],
+    letterSpacing: 0.2,
   },
   iconBtn: {
     width: 44,
@@ -1054,6 +1098,36 @@ const styles = StyleSheet.create({
     marginTop: spacing.lg,
     marginLeft: spacing.xs,
     fontSize: 12,
+  },
+  productsHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: spacing.lg,
+    marginBottom: spacing.sm,
+    paddingHorizontal: spacing.xs,
+    gap: spacing.sm,
+  },
+  productsTitle: {
+    fontSize: 18,
+    color: colors.rose[800],
+  },
+  productsSubtitle: {
+    fontSize: 12,
+    marginTop: 2,
+  },
+  productsSeeAll: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 2,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 999,
+    backgroundColor: semantic.primaryMuted,
+  },
+  productsSeeAllText: {
+    fontSize: 12,
+    color: semantic.primary,
   },
   productGrid: {
     flexDirection: 'row',

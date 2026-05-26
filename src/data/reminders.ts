@@ -63,7 +63,7 @@ export const mockReminders: Reminder[] = [
     petName: 'ข้าวปั้น',
     petEmoji: '🐕',
     dueISO: '2026-03-08T09:00:00',
-    leadTimeLabel: 'บันทึกจาก EHP VetCare',
+    leadTimeLabel: 'บันทึกจาก Pawmely',
     read: true,
   },
   {

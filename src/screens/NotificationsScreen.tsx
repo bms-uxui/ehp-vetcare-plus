@@ -1089,10 +1089,10 @@ function SettingsSheet({
           </View>
         </View>
 
-        {/* Section: แจ้งเตือนจาก EHP VetCare */}
+        {/* Section: แจ้งเตือนจาก Pawmely */}
         <View style={styles.settingsSection}>
           <Text weight="500" style={styles.settingsSectionLabel}>
-            แจ้งเตือนจาก EHP VetCare
+            แจ้งเตือนจาก Pawmely
           </Text>
           <View style={styles.settingsOptionCard}>
             <SettingsOption

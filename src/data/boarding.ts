@@ -39,7 +39,7 @@ export const mockBoardings: Boarding[] = [
     id: 'bd-active-1',
     petId: 'p1',
     clinicId: 'bd1',
-    clinicName: 'EHP Pet Boarding สุขุมวิท',
+    clinicName: 'Pawmely Pet Boarding สุขุมวิท',
     startDateISO: _addDays(-2),
     endDateISO: _addDays(3),
     caretakerName: 'พี่หนิง · ผู้ดูแลประจำห้อง 3',

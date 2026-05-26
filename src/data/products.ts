@@ -39,7 +39,7 @@ export const getProductImages = (p: Product): string[] => {
   return list;
 };
 
-const DEFAULT_CLINIC = 'EHP VetCare สาขาสุขุมวิท';
+const DEFAULT_CLINIC = 'Pawmely สาขาสุขุมวิท';
 
 export const categoryMeta: Record<ProductCategory, { label: string; icon: string; bg: string; color: string }> = {
   food: { label: 'อาหาร', icon: 'UtensilsCrossed', bg: '#FFF6D9', color: '#D99A20' },
@@ -66,7 +66,7 @@ export const mockProducts: Product[] = [
     subscriptionDiscountPct: 10,
     recommendedFor: ['dog'],
     tags: ['hypoallergenic', '7kg'],
-    clinic: 'EHP VetCare สาขาสุขุมวิท',
+    clinic: 'Pawmely สาขาสุขุมวิท',
   },
   {
     id: 'pr2',
@@ -83,7 +83,7 @@ export const mockProducts: Product[] = [
     subscriptionDiscountPct: 12,
     recommendedFor: ['cat'],
     tags: ['indoor', '4kg'],
-    clinic: 'EHP VetCare สาขาสุขุมวิท',
+    clinic: 'Pawmely สาขาสุขุมวิท',
   },
   {
     id: 'pr3',
@@ -100,7 +100,7 @@ export const mockProducts: Product[] = [
     subscriptionDiscountPct: 10,
     recommendedFor: ['rabbit'],
     tags: ['fiber', '1kg'],
-    clinic: 'EHP VetCare สาขาทองหล่อ',
+    clinic: 'Pawmely สาขาทองหล่อ',
   },
   {
     id: 'pr4',
@@ -221,7 +221,7 @@ export const mockProducts: Product[] = [
     subscriptionDiscountPct: 10,
     recommendedFor: ['dog'],
     tags: ['puppy', '195g'],
-    clinic: 'EHP VetCare สาขาสุขุมวิท',
+    clinic: 'Pawmely สาขาสุขุมวิท',
   },
   {
     id: 'pr12',
@@ -238,7 +238,7 @@ export const mockProducts: Product[] = [
     subscriptionDiscountPct: 12,
     recommendedFor: ['cat'],
     tags: ['senior', '85g'],
-    clinic: 'EHP VetCare สาขาทองหล่อ',
+    clinic: 'Pawmely สาขาทองหล่อ',
   },
   {
     id: 'pr13',
@@ -345,7 +345,7 @@ export const mockProducts: Product[] = [
     reviewCount: 156,
     subscriptionEligible: false,
     recommendedFor: ['dog'],
-    clinic: 'EHP VetCare สาขาสุขุมวิท',
+    clinic: 'Pawmely สาขาสุขุมวิท',
   },
   {
     id: 'pr20',

@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "EHP VetCare Plus",
-    "slug": "ehp-vetcare-plus",
+    "name": "Pawmely",
+    "slug": "pawmely",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -14,7 +14,7 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.oommie.ehpvetcareplus"
+      "bundleIdentifier": "com.oommie.pawmely"
     },
     "android": {
       "adaptiveIcon": {
@@ -23,7 +23,7 @@
       },
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
-      "package": "com.anonymous.ehpvetcareplus"
+      "package": "com.oommie.pawmely"
     },
     "web": {
       "favicon": "./assets/favicon.png",
@@ -31,7 +31,7 @@
       "output": "single"
     },
     "experiments": {
-      "baseUrl": "/ehp-vetcare-plus"
+      "baseUrl": "/pawmely"
     },
     "plugins": [
       "expo-font",

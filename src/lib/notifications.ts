@@ -19,7 +19,7 @@ export type ScheduleInput = {
    * Notification heading — what is this notification about? Shown as the
    * subtitle line of the iOS banner. The bold top line of the banner is
    * always the app name (APP_NAME), set by us so notifications consistently
-   * read as coming from "EHP VetCare Plus".
+   * read as coming from "Pawmely".
    */
   title: string;
   /** Detail text. Keep concise — iOS shows up to ~3 lines on the banner. */
@@ -33,7 +33,7 @@ export type ScheduleInput = {
   categoryIdentifier?: string;
 };
 
-const APP_NAME = 'EHP VetCare Plus';
+const APP_NAME = 'Pawmely';
 
 // iOS notification action button identifiers — referenced by category and
 // response listener so taps on banner buttons can be handled in JS.
@@ -170,7 +170,7 @@ export async function scheduleLocal({
       : null;
 
   // Banner layout we want iOS to render:
-  //   [icon]  EHP VetCare Plus           ← iOS title field (always APP_NAME)
+  //   [icon]  Pawmely           ← iOS title field (always APP_NAME)
   //           <heading>                  ← iOS subtitle field (caller's `title`)
   //           <details, up to 3 lines>   ← iOS body field (caller's `body`)
   return Notifications.scheduleNotificationAsync({

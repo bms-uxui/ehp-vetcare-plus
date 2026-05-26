@@ -166,8 +166,7 @@ export default function LoginScreen({ navigation }: Props) {
               style={styles.titleBlock}
             >
               <View style={styles.titleRow}>
-                <Text style={styles.title}>EHP </Text>
-                <Text style={[styles.title, { color: semantic.primary }]}>VetCare+</Text>
+                <Text style={[styles.title, { color: semantic.primary }]}>Pawmely</Text>
               </View>
               <Text style={styles.description}>
                 ดูแลด้วยใจ เพื่อเพื่อนตัวน้อย
