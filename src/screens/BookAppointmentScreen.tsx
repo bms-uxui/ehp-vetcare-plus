@@ -109,9 +109,17 @@ export default function BookAppointmentScreen({ navigation, route }: Props) {
 
   // Vets that match selected date AND time
   const matchingVets = useMemo(() => {
-    if (!time) return availableVets;
-    return availableVets.filter((v) => v.timeSlots.includes(time));
-  }, [availableVets, time]);
+    const base = !time || isBoarding
+      ? availableVets
+      : availableVets.filter((v) => v.timeSlots.includes(time));
+    // Boarding: sort nearest-first so the closest clinic is on top
+    if (isBoarding) {
+      return [...base].sort(
+        (a, b) => (a.distanceKm ?? Infinity) - (b.distanceKm ?? Infinity),
+      );
+    }
+    return base;
+  }, [availableVets, time, isBoarding]);
 
   // Clear stale selections when date/time changes
   useEffect(() => {
@@ -422,6 +430,26 @@ export default function BookAppointmentScreen({ navigation, route }: Props) {
                       </View>
                     </View>
                     <View style={styles.vetDivider} />
+                    {isBoarding && (v.priceFromBaht || v.distanceKm !== undefined) && (
+                      <View style={styles.boardingMetaRow}>
+                        {v.distanceKm !== undefined && (
+                          <View style={styles.boardingMetaPill}>
+                            <Icon name="Navigation" size={11} color={semantic.primary} strokeWidth={2.2} />
+                            <Text variant="caption" weight="600" style={styles.boardingMetaText}>
+                              {v.distanceKm < 10 ? v.distanceKm.toFixed(1) : Math.round(v.distanceKm)} กม.
+                            </Text>
+                          </View>
+                        )}
+                        {v.priceFromBaht !== undefined && v.priceToBaht !== undefined && (
+                          <View style={styles.boardingMetaPill}>
+                            <Icon name="Tag" size={11} color="#4FB36C" strokeWidth={2.2} />
+                            <Text variant="caption" weight="600" style={styles.boardingPriceText}>
+                              ฿{v.priceFromBaht}–{v.priceToBaht}/คืน
+                            </Text>
+                          </View>
+                        )}
+                      </View>
+                    )}
                     <View style={styles.vetBottomRow}>
                       <View style={styles.vetBottomInfoLine}>
                         <Icon name="Clock" size={11} color={semantic.textMuted} strokeWidth={2} />
@@ -791,6 +819,30 @@ const styles = StyleSheet.create({
     height: StyleSheet.hairlineWidth,
     backgroundColor: 'rgba(0,0,0,0.08)',
     marginVertical: spacing.sm,
+  },
+  boardingMetaRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: spacing.sm,
+  },
+  boardingMetaPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 999,
+    backgroundColor: 'rgba(184,106,124,0.08)',
+  },
+  boardingMetaText: {
+    fontSize: 11,
+    color: semantic.primary,
+  },
+  boardingPriceText: {
+    fontSize: 11,
+    color: '#3F8A53',
   },
   vetBottomRow: {
     flexDirection: 'row',

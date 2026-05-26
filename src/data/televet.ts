@@ -22,6 +22,11 @@ export type TeleVet = {
   workingDays: number[];
   /** Time slots available within each working day */
   timeSlots: string[];
+  /** Boarding-specific: nightly price range in THB */
+  priceFromBaht?: number;
+  priceToBaht?: number;
+  /** Boarding-specific: distance from user in km (mock — usually computed) */
+  distanceKm?: number;
 };
 
 export type Message = {
@@ -264,40 +269,6 @@ export const mockGroomers: TeleVet[] = [
  */
 export const mockBoardingClinics: TeleVet[] = [
   {
-    id: 'bd1',
-    name: 'Pawmely Pet Boarding สุขุมวิท',
-    avatar: 'https://images.unsplash.com/photo-1601758228041-f3b2795255f1?w=200&h=200&fit=crop',
-    specialty: 'รับฝากสุนัข-แมว · ห้องแอร์ส่วนตัว',
-    clinic: 'สุขุมวิท 24 · ติดทางด่วน',
-    experienceYears: 9,
-    experiences: [
-      { years: '2017-2026', description: 'รับฝากเลี้ยงสุนัข-แมว ห้องแอร์ส่วนตัว มีกล้องวงจรปิดให้เจ้าของดูได้ตลอด 24 ชม.' },
-    ],
-    ratePerMin: 0,
-    rating: 4.92,
-    reviewCount: 538,
-    status: 'online',
-    workingDays: [0, 1, 2, 3, 4, 5, 6],
-    timeSlots: ['09:00', '10:00', '11:00', '13:00', '14:00', '15:00', '16:00', '17:00'],
-  },
-  {
-    id: 'bd2',
-    name: 'Happy Paws Pet Hotel',
-    avatar: 'https://images.unsplash.com/photo-1583337130417-3346a1be7dee?w=200&h=200&fit=crop',
-    specialty: 'รับฝากสุนัขพันธุ์เล็ก-กลาง · มีสนามวิ่งเล่น',
-    clinic: 'ลาดพร้าว 71 · มีรับ-ส่งภายในกรุงเทพ',
-    experienceYears: 6,
-    experiences: [
-      { years: '2020-2026', description: 'โรงแรมสุนัขสไตล์ Resort สนามวิ่งเล่น สระว่ายน้ำสุนัข มีพี่เลี้ยงประจำห้อง' },
-    ],
-    ratePerMin: 0,
-    rating: 4.85,
-    reviewCount: 312,
-    status: 'online',
-    workingDays: [0, 1, 2, 3, 4, 5, 6],
-    timeSlots: ['09:00', '10:00', '11:00', '13:00', '14:00', '15:00', '16:00'],
-  },
-  {
     id: 'bd3',
     name: 'Cat Cottage บ้านพักแมว',
     avatar: 'https://images.unsplash.com/photo-1592194996308-7b43878e84a6?w=200&h=200&fit=crop',
@@ -313,6 +284,29 @@ export const mockBoardingClinics: TeleVet[] = [
     status: 'online',
     workingDays: [0, 1, 2, 3, 4, 5, 6],
     timeSlots: ['10:00', '11:00', '13:00', '14:00', '15:00', '16:00'],
+    priceFromBaht: 450,
+    priceToBaht: 650,
+    distanceKm: 1.2,
+  },
+  {
+    id: 'bd1',
+    name: 'Pawmely Pet Boarding สุขุมวิท',
+    avatar: 'https://images.unsplash.com/photo-1601758228041-f3b2795255f1?w=200&h=200&fit=crop',
+    specialty: 'รับฝากสุนัข-แมว · ห้องแอร์ส่วนตัว',
+    clinic: 'สุขุมวิท 24 · ติดทางด่วน',
+    experienceYears: 9,
+    experiences: [
+      { years: '2017-2026', description: 'รับฝากเลี้ยงสุนัข-แมว ห้องแอร์ส่วนตัว มีกล้องวงจรปิดให้เจ้าของดูได้ตลอด 24 ชม.' },
+    ],
+    ratePerMin: 0,
+    rating: 4.92,
+    reviewCount: 538,
+    status: 'online',
+    workingDays: [0, 1, 2, 3, 4, 5, 6],
+    timeSlots: ['09:00', '10:00', '11:00', '13:00', '14:00', '15:00', '16:00', '17:00'],
+    priceFromBaht: 550,
+    priceToBaht: 850,
+    distanceKm: 2.8,
   },
   {
     id: 'bd4',
@@ -330,6 +324,29 @@ export const mockBoardingClinics: TeleVet[] = [
     status: 'busy',
     workingDays: [0, 1, 2, 3, 4, 5, 6],
     timeSlots: ['09:00', '10:00', '11:00', '13:00', '14:00', '15:00', '16:00', '17:00'],
+    priceFromBaht: 700,
+    priceToBaht: 1200,
+    distanceKm: 4.6,
+  },
+  {
+    id: 'bd2',
+    name: 'Happy Paws Pet Hotel',
+    avatar: 'https://images.unsplash.com/photo-1583337130417-3346a1be7dee?w=200&h=200&fit=crop',
+    specialty: 'รับฝากสุนัขพันธุ์เล็ก-กลาง · มีสนามวิ่งเล่น',
+    clinic: 'ลาดพร้าว 71 · มีรับ-ส่งภายในกรุงเทพ',
+    experienceYears: 6,
+    experiences: [
+      { years: '2020-2026', description: 'โรงแรมสุนัขสไตล์ Resort สนามวิ่งเล่น สระว่ายน้ำสุนัข มีพี่เลี้ยงประจำห้อง' },
+    ],
+    ratePerMin: 0,
+    rating: 4.85,
+    reviewCount: 312,
+    status: 'online',
+    workingDays: [0, 1, 2, 3, 4, 5, 6],
+    timeSlots: ['09:00', '10:00', '11:00', '13:00', '14:00', '15:00', '16:00'],
+    priceFromBaht: 500,
+    priceToBaht: 750,
+    distanceKm: 8.4,
   },
 ];
 

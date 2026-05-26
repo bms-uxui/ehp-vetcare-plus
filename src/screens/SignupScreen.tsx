@@ -21,23 +21,18 @@ import { colors, semantic } from '../theme';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Signup'>;
 
-type Step = 'phone' | 'otp' | 'name' | 'done';
-const STEPS: Step[] = ['phone', 'otp', 'name', 'done'];
+type Step = 'email' | 'otp' | 'name' | 'done';
+const STEPS: Step[] = ['email', 'otp', 'name', 'done'];
 
-const formatPhone = (raw: string) => {
-  const digits = raw.replace(/\D/g, '').slice(0, 10);
-  if (digits.length <= 3) return digits;
-  if (digits.length <= 6) return `${digits.slice(0, 3)}-${digits.slice(3)}`;
-  return `${digits.slice(0, 3)}-${digits.slice(3, 6)}-${digits.slice(6)}`;
-};
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export default function SignupScreen({ navigation }: Props) {
   const insets = useSafeAreaInsets();
 
-  const [step, setStep] = useState<Step>('phone');
+  const [step, setStep] = useState<Step>('email');
   const stepIdx = STEPS.indexOf(step);
 
-  const [phone, setPhone] = useState('');
+  const [email, setEmail] = useState('');
   const [otp, setOtp] = useState('');
   const [name, setName] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -55,16 +50,16 @@ export default function SignupScreen({ navigation }: Props) {
 
   const onBack = () => {
     setError(null);
-    if (step === 'phone') return navigation.goBack();
-    if (step === 'otp') return setStep('phone');
+    if (step === 'email') return navigation.goBack();
+    if (step === 'otp') return setStep('email');
     if (step === 'name') return setStep('otp');
     if (step === 'done') return setStep('name');
   };
 
   const sendOtp = () => {
-    const phoneDigits = phone.replace(/\D/g, '');
-    if (phoneDigits.length < 9) {
-      setError('เบอร์โทรไม่ถูกต้อง');
+    const trimmed = email.trim();
+    if (!EMAIL_RE.test(trimmed)) {
+      setError('อีเมลไม่ถูกต้อง');
       return;
     }
     setError(null);
@@ -153,7 +148,7 @@ export default function SignupScreen({ navigation }: Props) {
             <View style={styles.stepperWrap}>
               <StepProgress
                 steps={[
-                  { icon: 'Phone' },
+                  { icon: 'Mail' },
                   { icon: 'KeyRound' },
                   { icon: 'User' },
                 ]}
@@ -164,12 +159,12 @@ export default function SignupScreen({ navigation }: Props) {
 
           {/* Step content (re-mounts so entering animation re-fires) */}
           <View key={step}>
-            {step === 'phone' && (
-              <PhoneStep
-                phone={phone}
+            {step === 'email' && (
+              <EmailStep
+                email={email}
                 error={error}
                 onChange={(v) => {
-                  setPhone(formatPhone(v));
+                  setEmail(v);
                   setError(null);
                 }}
                 onNext={sendOtp}
@@ -178,7 +173,7 @@ export default function SignupScreen({ navigation }: Props) {
 
             {step === 'otp' && (
               <OtpStep
-                phone={phone}
+                email={email}
                 otp={otp}
                 error={error}
                 inputRef={otpRef}
@@ -219,7 +214,7 @@ export default function SignupScreen({ navigation }: Props) {
             { paddingBottom: insets.bottom > 0 ? insets.bottom : 16 },
           ]}
         >
-          {step === 'phone' && (
+          {step === 'email' && (
             <PrimaryButton label="ส่ง OTP" onPress={sendOtp} />
           )}
 
@@ -296,13 +291,13 @@ function PrimaryButton({
 
 // ── Steps ──────────────────────────────────────────────────────────
 
-function PhoneStep({
-  phone,
+function EmailStep({
+  email,
   error,
   onChange,
   onNext,
 }: {
-  phone: string;
+  email: string;
   error: string | null;
   onChange: (v: string) => void;
   onNext: () => void;
@@ -315,20 +310,22 @@ function PhoneStep({
       <Animated.View entering={FadeInDown.duration(420).delay(40)} style={styles.titleBlock}>
         <View style={styles.titleRow}>
           <Text style={styles.title}>กรอก</Text>
-          <Text style={[styles.title, { color: semantic.primary }]}>เบอร์โทร</Text>
+          <Text style={[styles.title, { color: semantic.primary }]}>อีเมล</Text>
         </View>
         <Text style={styles.description}>
-          เราจะส่งรหัส OTP ไปยังเบอร์ที่คุณกรอก
+          เราจะส่งรหัส OTP ไปยังอีเมลที่คุณกรอก
         </Text>
       </Animated.View>
 
       <View style={styles.formBlock}>
         <TextField
-          label="เบอร์มือถือ"
-          value={phone}
+          label="อีเมล"
+          value={email}
           error={error ?? undefined}
-          keyboardType="phone-pad"
-          placeholder="081-234-5678"
+          keyboardType="email-address"
+          autoCapitalize="none"
+          autoCorrect={false}
+          placeholder="you@example.com"
           returnKeyType="done"
           onChange={onChange}
           onSubmitEditing={onNext}
@@ -339,14 +336,14 @@ function PhoneStep({
 }
 
 function OtpStep({
-  phone,
+  email,
   otp,
   error,
   inputRef,
   onChange,
   onVerify,
 }: {
-  phone: string;
+  email: string;
   otp: string;
   error: string | null;
   inputRef: React.RefObject<TextInput | null>;
@@ -363,11 +360,14 @@ function OtpStep({
           <Text style={styles.title}>ยืนยัน</Text>
           <Text style={[styles.title, { color: semantic.primary }]}>OTP</Text>
         </View>
-        <Text style={styles.description}>ส่งรหัส 6 หลักไปยัง {phone}</Text>
+        <Text style={styles.description}>ส่งรหัส 6 หลักไปยัง {email}</Text>
       </Animated.View>
 
       <View style={styles.formBlock}>
-        <View style={styles.otpBoxesWrap}>
+        <Pressable
+          onPress={() => inputRef.current?.focus()}
+          style={styles.otpBoxesWrap}
+        >
           {[0, 1, 2, 3, 4, 5].map((i) => (
             <View
               key={i}
@@ -380,20 +380,23 @@ function OtpStep({
               <Text style={styles.otpDigit}>{otp[i] ?? ''}</Text>
             </View>
           ))}
-          {/* Hidden input drives the whole row */}
-          <TextInput
-            ref={inputRef}
-            value={otp}
-            onChangeText={onChange}
-            keyboardType="number-pad"
-            maxLength={6}
-            returnKeyType="done"
-            onSubmitEditing={onVerify}
-            autoFocus
-            caretHidden
-            style={styles.otpHiddenInput}
-          />
-        </View>
+        </Pressable>
+        {/* Hidden input drives the whole row — moved out of the Pressable so
+            its onPress fires reliably; the input itself sits off-screen but
+            still receives keystrokes once focused. */}
+        <TextInput
+          ref={inputRef}
+          value={otp}
+          onChangeText={onChange}
+          keyboardType="number-pad"
+          maxLength={6}
+          returnKeyType="done"
+          onSubmitEditing={onVerify}
+          autoFocus
+          caretHidden
+          textContentType="oneTimeCode"
+          style={styles.otpHiddenInput}
+        />
 
         {error && (
           <Text variant="caption" style={styles.errorText}>
