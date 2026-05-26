@@ -168,7 +168,7 @@ export default function VetHubScreen({ navigation }: Props) {
                 },
               ]}
             >
-              สัตวแพทย์
+              นัดหมาย
             </Text>
             <Text
               variant="caption"
@@ -390,7 +390,7 @@ export default function VetHubScreen({ navigation }: Props) {
           <View style={styles.appbarPlaceholder} />
           <Animated.View pointerEvents="none" style={[styles.appbarTitleWrap, titleStyle]}>
             <Text variant="bodyStrong" style={styles.appbarTitle} numberOfLines={1}>
-              สัตวแพทย์
+              นัดหมาย
             </Text>
           </Animated.View>
           <View style={styles.appbarPlaceholder} />

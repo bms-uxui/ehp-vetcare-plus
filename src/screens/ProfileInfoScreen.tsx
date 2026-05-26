@@ -46,7 +46,26 @@ const GENDER_OPTIONS = [
   { value: 'other', label: 'อื่น ๆ' },
 ] as const;
 
-type EditingField = 'fullName' | 'username' | 'address' | null;
+type EditingField = 'fullName' | 'username' | 'address' | 'nationalId' | null;
+
+// Format Thai national ID as X-XXXX-XXXXX-XX-X (13 digits)
+const formatNationalId = (raw: string) => {
+  const d = raw.replace(/\D/g, '').slice(0, 13);
+  const parts = [
+    d.slice(0, 1),
+    d.slice(1, 5),
+    d.slice(5, 10),
+    d.slice(10, 12),
+    d.slice(12, 13),
+  ].filter(Boolean);
+  return parts.join('-');
+};
+// Mask all but the last 4 digits → "X-XXXX-XXXXX-•X-X" with bullets
+const maskNationalId = (formatted: string) => {
+  const d = formatted.replace(/\D/g, '');
+  if (d.length < 13) return formatted;
+  return `${d[0]}-XXXX-XXXXX-${d.slice(10, 12)}-${d[12]}`.replace(/X/g, '•');
+};
 
 export default function ProfileInfoScreen({ navigation }: Props) {
   // Editable state
@@ -58,6 +77,8 @@ export default function ProfileInfoScreen({ navigation }: Props) {
   const [address, setAddress] = useState(
     '123 ถ.สุขุมวิท แขวงคลองตันเหนือ เขตวัฒนา กรุงเทพฯ 10110',
   );
+  const [nationalId, setNationalId] = useState('1-2345-67890-12-3');
+  const [showNationalId, setShowNationalId] = useState(false);
 
   // Edit modals state
   const [editingField, setEditingField] = useState<EditingField>(null);
@@ -96,17 +117,27 @@ export default function ProfileInfoScreen({ navigation }: Props) {
       // ensure starts with @
       setUsername(v.startsWith('@') ? v : `@${v}`);
     } else if (editingField === 'address') setAddress(v);
+    else if (editingField === 'nationalId') {
+      const digits = v.replace(/\D/g, '');
+      if (digits.length === 13) setNationalId(formatNationalId(digits));
+    }
     setEditingField(null);
   };
   const cancelEdit = () => setEditingField(null);
 
   const editingMeta: Record<
     Exclude<EditingField, null>,
-    { title: string; placeholder: string; multiline?: boolean }
+    { title: string; placeholder: string; multiline?: boolean; keyboardType?: 'number-pad'; maxLength?: number }
   > = {
     fullName: { title: 'แก้ไขชื่อ-นามสกุล', placeholder: 'ชื่อ นามสกุล' },
     username: { title: 'แก้ไข Username', placeholder: '@username' },
     address: { title: 'แก้ไขที่อยู่จัดส่ง', placeholder: 'ที่อยู่...', multiline: true },
+    nationalId: {
+      title: 'แก้ไขเลขบัตรประชาชน',
+      placeholder: '1-2345-67890-12-3',
+      keyboardType: 'number-pad',
+      maxLength: 17,
+    },
   };
   const meta = editingField ? editingMeta[editingField] : null;
 
@@ -259,6 +290,32 @@ export default function ProfileInfoScreen({ navigation }: Props) {
             value={GENDER_OPTIONS.find((o) => o.value === gender)?.label ?? 'ชาย'}
             onPress={() => setGenderSheetOpen(true)}
           />
+          <Divider />
+          <Row
+            icon="IdCard"
+            label="เลขบัตรประชาชน"
+            value={showNationalId ? nationalId : maskNationalId(nationalId)}
+            onPress={() => openEdit('nationalId', nationalId)}
+            trailing={
+              <Pressable
+                hitSlop={8}
+                onPress={() => setShowNationalId((v) => !v)}
+                accessibilityRole="button"
+                accessibilityLabel={showNationalId ? 'ซ่อนเลขบัตร' : 'แสดงเลขบัตร'}
+                style={({ pressed }) => [
+                  styles.eyeBtn,
+                  pressed && { opacity: 0.6 },
+                ]}
+              >
+                <Icon
+                  name={showNationalId ? 'EyeOff' : 'Eye'}
+                  size={18}
+                  color={semantic.textMuted}
+                  strokeWidth={2}
+                />
+              </Pressable>
+            }
+          />
         </Card>
 
         {/* Contact */}
@@ -347,10 +404,18 @@ export default function ProfileInfoScreen({ navigation }: Props) {
                 </Text>
                 <TextInput
                   value={editingValue}
-                  onChangeText={setEditingValue}
+                  onChangeText={(v) => {
+                    if (editingField === 'nationalId') {
+                      setEditingValue(formatNationalId(v));
+                    } else {
+                      setEditingValue(v);
+                    }
+                  }}
                   placeholder={meta.placeholder}
                   placeholderTextColor={semantic.textMuted}
                   multiline={meta.multiline}
+                  keyboardType={meta.keyboardType}
+                  maxLength={meta.maxLength}
                   autoFocus
                   style={[
                     styles.editInput,
@@ -468,6 +533,7 @@ function Row({
   valueLines = 1,
   onPress,
   requiresVerify = false,
+  trailing,
 }: {
   icon: string;
   label: string;
@@ -476,6 +542,7 @@ function Row({
   valueLines?: number;
   onPress?: () => void;
   requiresVerify?: boolean;
+  trailing?: React.ReactNode;
 }) {
   const interactive = !!onPress;
   return (
@@ -513,6 +580,7 @@ function Row({
           <Text variant="caption" style={styles.verifiedText}>ยืนยันแล้ว</Text>
         </View>
       )}
+      {trailing}
       {interactive ? (
         <Icon name="ChevronRight" size={18} color={semantic.textMuted} />
       ) : null}
@@ -695,6 +763,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     paddingVertical: 3,
     borderRadius: 999,
+  },
+  eyeBtn: {
+    width: 32,
+    height: 32,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: -4,
   },
   verifiedText: {
     fontSize: 10,

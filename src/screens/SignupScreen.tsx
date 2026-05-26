@@ -21,8 +21,8 @@ import { colors, semantic } from '../theme';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Signup'>;
 
-type Step = 'email' | 'otp' | 'name' | 'done';
-const STEPS: Step[] = ['email', 'otp', 'name', 'done'];
+type Step = 'email' | 'otp' | 'password' | 'name' | 'done';
+const STEPS: Step[] = ['email', 'otp', 'password', 'name', 'done'];
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -34,11 +34,15 @@ export default function SignupScreen({ navigation }: Props) {
 
   const [email, setEmail] = useState('');
   const [otp, setOtp] = useState('');
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [name, setName] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [resendIn, setResendIn] = useState(0); // countdown for "ส่งอีกครั้ง"
 
   const otpRef = useRef<TextInput>(null);
+  const passwordRef = useRef<TextInput>(null);
+  const confirmRef = useRef<TextInput>(null);
   const nameRef = useRef<TextInput>(null);
 
   // Resend countdown tick
@@ -52,7 +56,8 @@ export default function SignupScreen({ navigation }: Props) {
     setError(null);
     if (step === 'email') return navigation.goBack();
     if (step === 'otp') return setStep('email');
-    if (step === 'name') return setStep('otp');
+    if (step === 'password') return setStep('otp');
+    if (step === 'name') return setStep('password');
     if (step === 'done') return setStep('name');
   };
 
@@ -77,10 +82,24 @@ export default function SignupScreen({ navigation }: Props) {
     }
     // Mock — any 6 digits passes
     setError(null);
+    setStep('password');
+    setTimeout(() => passwordRef.current?.focus(), 80);
+  };
+  const verifyOtp = () => verifyOtpWith(otp);
+
+  const submitPassword = () => {
+    if (password.length < 8) {
+      setError('รหัสผ่านต้องมีอย่างน้อย 8 ตัวอักษร');
+      return;
+    }
+    if (password !== confirmPassword) {
+      setError('รหัสผ่านไม่ตรงกัน');
+      return;
+    }
+    setError(null);
     setStep('name');
     setTimeout(() => nameRef.current?.focus(), 80);
   };
-  const verifyOtp = () => verifyOtpWith(otp);
 
   const submitName = () => {
     if (!name.trim()) {
@@ -150,6 +169,7 @@ export default function SignupScreen({ navigation }: Props) {
                 steps={[
                   { icon: 'Mail' },
                   { icon: 'KeyRound' },
+                  { icon: 'Lock' },
                   { icon: 'User' },
                 ]}
                 currentStep={stepIdx}
@@ -186,6 +206,25 @@ export default function SignupScreen({ navigation }: Props) {
                   }
                 }}
                 onVerify={verifyOtp}
+              />
+            )}
+
+            {step === 'password' && (
+              <PasswordStep
+                password={password}
+                confirmPassword={confirmPassword}
+                error={error}
+                passwordRef={passwordRef}
+                confirmRef={confirmRef}
+                onChangePassword={(v) => {
+                  setPassword(v);
+                  setError(null);
+                }}
+                onChangeConfirm={(v) => {
+                  setConfirmPassword(v);
+                  setError(null);
+                }}
+                onNext={submitPassword}
               />
             )}
 
@@ -242,6 +281,10 @@ export default function SignupScreen({ navigation }: Props) {
               </Pressable>
               <PrimaryButton label="ยืนยัน" onPress={verifyOtp} />
             </>
+          )}
+
+          {step === 'password' && (
+            <PrimaryButton label="ถัดไป" onPress={submitPassword} />
           )}
 
           {step === 'name' && (
@@ -403,6 +446,69 @@ function OtpStep({
             {error}
           </Text>
         )}
+      </View>
+    </Animated.View>
+  );
+}
+
+function PasswordStep({
+  password,
+  confirmPassword,
+  error,
+  passwordRef,
+  confirmRef,
+  onChangePassword,
+  onChangeConfirm,
+  onNext,
+}: {
+  password: string;
+  confirmPassword: string;
+  error: string | null;
+  passwordRef: React.RefObject<TextInput | null>;
+  confirmRef: React.RefObject<TextInput | null>;
+  onChangePassword: (v: string) => void;
+  onChangeConfirm: (v: string) => void;
+  onNext: () => void;
+}) {
+  return (
+    <Animated.View
+      entering={FadeInUp.duration(420).delay(80)}
+      style={styles.stepBlock}
+    >
+      <Animated.View entering={FadeInDown.duration(420).delay(40)} style={styles.titleBlock}>
+        <View style={styles.titleRow}>
+          <Text style={styles.title}>ตั้ง</Text>
+          <Text style={[styles.title, { color: semantic.primary }]}>รหัสผ่าน</Text>
+        </View>
+        <Text style={styles.description}>อย่างน้อย 8 ตัวอักษร</Text>
+      </Animated.View>
+
+      <View style={styles.formBlock}>
+        <TextField
+          ref={passwordRef}
+          label="รหัสผ่าน"
+          value={password}
+          placeholder="••••••••"
+          secureTextEntry
+          autoCapitalize="none"
+          autoCorrect={false}
+          returnKeyType="next"
+          onChange={onChangePassword}
+          onSubmitEditing={() => confirmRef.current?.focus()}
+        />
+        <TextField
+          ref={confirmRef}
+          label="ยืนยันรหัสผ่าน"
+          value={confirmPassword}
+          error={error ?? undefined}
+          placeholder="••••••••"
+          secureTextEntry
+          autoCapitalize="none"
+          autoCorrect={false}
+          returnKeyType="done"
+          onChange={onChangeConfirm}
+          onSubmitEditing={onNext}
+        />
       </View>
     </Animated.View>
   );

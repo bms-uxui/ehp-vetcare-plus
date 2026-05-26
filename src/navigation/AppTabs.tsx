@@ -30,7 +30,7 @@ export default function AppTabs() {
       <Tab.Screen
         name="Vet"
         component={VetHubScreen}
-        options={{ tabBarLabel: 'สัตว์แพทย์', tabIcon: 'Stethoscope' } as any}
+        options={{ tabBarLabel: 'นัดหมาย', tabIcon: 'CalendarCheck' } as any}
       />
       <Tab.Screen
         name="PetsList"
