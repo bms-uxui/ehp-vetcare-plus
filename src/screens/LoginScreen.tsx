@@ -141,20 +141,11 @@ export default function LoginScreen({ navigation }: Props) {
             style={[styles.topHero, isTablet && styles.topHeroTablet]}
           >
             <View style={[styles.topHeroInner, isTablet && styles.topHeroInnerTablet]}>
-              <Image
-                source={require('../../assets/illustrations/vet-girl-hero.png')}
-                style={[styles.heroImg, isTablet && styles.heroImgTablet]}
+              <Animated.Image
+                source={require('../../assets/Pawmely.png')}
+                style={[styles.heroImg, isTablet && styles.heroImgTablet, badgeStyle]}
                 resizeMode="contain"
               />
-
-              {/* EHP badge — top-right of inner container */}
-              <Animated.View style={[styles.brandBadge, isTablet && styles.brandBadgeTablet, badgeStyle]}>
-                <Image
-                  source={require('../../assets/icon.png')}
-                  style={styles.brandBadgeImg}
-                  resizeMode="contain"
-                />
-              </Animated.View>
             </View>
           </Animated.View>
 
@@ -165,9 +156,6 @@ export default function LoginScreen({ navigation }: Props) {
               entering={FadeInDown.duration(600).delay(180)}
               style={styles.titleBlock}
             >
-              <View style={styles.titleRow}>
-                <Text style={[styles.title, { color: semantic.primary }]}>Pawmely</Text>
-              </View>
               <Text style={styles.description}>
                 ดูแลด้วยใจ เพื่อเพื่อนตัวน้อย
               </Text>

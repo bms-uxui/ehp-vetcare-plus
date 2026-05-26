@@ -47,7 +47,7 @@ const PET_BOOKING_IMG = require('../../assets/Pet-booking.png');
 const PET_COMING_SOON_IMG = require('../../assets/Pet-coming soon.png');
 const PET_DRIVE_IMG = require('../../assets/Pet-drive.png');
 const PET_VIDEOCALL_IMG = require('../../assets/Pet-videocall.png');
-const VET_HERO_IMG = require('../../assets/Hero-VetPage.png');
+const VET_HERO_IMG = require('../../assets/Pawmely.png');
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Vet'>;
 
