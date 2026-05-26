@@ -31,7 +31,7 @@
       "output": "single"
     },
     "experiments": {
-      "baseUrl": "/pawmely"
+      "baseUrl": "/ehp-vetcare-plus"
     },
     "plugins": [
       "expo-font",
