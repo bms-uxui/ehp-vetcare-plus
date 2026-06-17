@@ -27,6 +27,8 @@ import {
 } from '@expo-google-fonts/google-sans';
 import LoginScreen from './src/screens/LoginScreen';
 import SignupScreen from './src/screens/SignupScreen';
+import PrivacyConsentScreen from './src/screens/PrivacyConsentScreen';
+import TermsScreen from './src/screens/TermsScreen';
 import PetDetailScreen from './src/screens/PetDetailScreen';
 import AddPetScreen from './src/screens/AddPetScreen';
 import AddPetManualScreen from './src/screens/AddPetManualScreen';
@@ -77,6 +79,9 @@ import { semantic } from './src/theme';
 export type RootStackParamList = {
   Login: undefined;
   Signup: undefined;
+  /** mode 'gate' = หน้ายินยอมก่อน login (ค่าเริ่มต้น), 'view' = เปิดดูอย่างเดียวจากเมนูช่วยเหลือ */
+  PrivacyConsent: { mode?: 'gate' | 'view' } | undefined;
+  Terms: undefined;
   Main: undefined;
   // Tab-level routes — accessible via navigation.navigate
   Home: undefined;
@@ -254,7 +259,7 @@ export default function App() {
          <NotifyPrefsProvider>
           <ReminderSyncBridge />
         <NavigationContainer ref={navigationRef} theme={navTheme}>
-          <Stack.Navigator initialRouteName="Login">
+          <Stack.Navigator initialRouteName="PrivacyConsent">
           <Stack.Screen
             name="Login"
             component={LoginScreen}
@@ -263,6 +268,20 @@ export default function App() {
           <Stack.Screen
             name="Signup"
             component={SignupScreen}
+            options={{ headerShown: false }}
+          />
+          <Stack.Screen
+            name="PrivacyConsent"
+            component={PrivacyConsentScreen}
+            options={({ route }) => ({
+              headerShown: false,
+              // gate mode locks the swipe-back; view mode (from Help) allows it
+              gestureEnabled: route.params?.mode === 'view',
+            })}
+          />
+          <Stack.Screen
+            name="Terms"
+            component={TermsScreen}
             options={{ headerShown: false }}
           />
           <Stack.Screen
