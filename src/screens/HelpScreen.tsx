@@ -220,9 +220,17 @@ export default function HelpScreen({ navigation }: Props) {
         {/* About app */}
         <SectionLabel>เกี่ยวกับแอป</SectionLabel>
         <Card variant="elevated" padding={0} style={styles.card}>
-          <ActionRow icon="FileText" label="เงื่อนไขการใช้งาน" />
+          <ActionRow
+            icon="FileText"
+            label="เงื่อนไขการใช้งาน"
+            onPress={() => navigation.navigate('Terms')}
+          />
           <Divider />
-          <ActionRow icon="Shield" label="นโยบายความเป็นส่วนตัว" />
+          <ActionRow
+            icon="Shield"
+            label="นโยบายความเป็นส่วนตัว"
+            onPress={() => navigation.navigate('PrivacyConsent', { mode: 'view' })}
+          />
           <Divider />
           <ActionRow icon="Star" label="ให้คะแนนแอป" description="แชร์ประสบการณ์ใน App Store" />
           <Divider />
