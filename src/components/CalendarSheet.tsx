@@ -21,7 +21,7 @@ import Animated, {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Icon from './Icon';
 import Text from './Text';
-import { semantic, spacing } from '../theme';
+import { semantic, shadows, spacing } from '../theme';
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
@@ -30,8 +30,24 @@ type Props = {
   value: Date | null;
   onChange: (d: Date) => void;
   onClose: () => void;
+  /**
+   * 'range' turns the sheet into a check-in → check-out picker: the first tap
+   * sets the start, the second sets the end (a tap before the start restarts
+   * the range). The sheet stays open until both ends are set.
+   */
+  mode?: 'single' | 'range';
+  /** Range end. Only read when `mode === 'range'`; `value` is the start. */
+  endValue?: Date | null;
+  /** Called with the completed range. Only used when `mode === 'range'`. */
+  onRangeChange?: (start: Date, end: Date) => void;
   /** Earliest selectable date (inclusive). Defaults to today. */
   minDate?: Date;
+  /**
+   * Weekdays (0=Sun) that can be picked. Days outside the list render dimmed
+   * and unpressable — used to fix the calendar to a vet's on-duty days.
+   * Omit to allow every weekday.
+   */
+  enabledWeekdays?: number[];
 };
 
 const WEEK_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
@@ -87,7 +103,15 @@ export default function CalendarSheet({
   onChange,
   onClose,
   minDate,
+  enabledWeekdays,
+  mode = 'single',
+  endValue = null,
+  onRangeChange,
 }: Props) {
+  const isRange = mode === 'range';
+  // While picking a range the start lands here first; the sheet closes once the
+  // end is chosen. Kept local so the parent never sees a half-open range.
+  const [pendingStart, setPendingStart] = useState<Date | null>(null);
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
   const isTablet = width >= 600;
@@ -142,9 +166,30 @@ export default function CalendarSheet({
   };
 
   const handleSelect = (d: Date) => {
-    onChange(d);
+    if (!isRange) {
+      onChange(d);
+      onClose();
+      return;
+    }
+    const picked = startOfDay(d);
+    if (!pendingStart) {
+      setPendingStart(picked);
+      return;
+    }
+    if (picked.getTime() <= pendingStart.getTime()) {
+      // Tapped on or before the start — treat it as restarting the range.
+      setPendingStart(picked);
+      return;
+    }
+    onRangeChange?.(pendingStart, picked);
+    setPendingStart(null);
     onClose();
   };
+
+  // Reopening always starts a fresh range rather than resuming a stale one.
+  useEffect(() => {
+    if (visible && isRange) setPendingStart(null);
+  }, [visible, isRange]);
 
   const yearLabel =
     pickerMode === 'year'
@@ -291,21 +336,52 @@ export default function CalendarSheet({
           {pickerMode === 'date' && (
           <View style={styles.grid}>
             {cells.map((cell, i) => {
-              const selected = value ? isSameDay(cell.date, value) : false;
-              const isToday = isSameDay(cell.date, today);
               const cellStart = startOfDay(cell.date);
+              const isToday = isSameDay(cell.date, today);
               const isPast = min ? cellStart.getTime() < min.getTime() : false;
-              const dim = cell.isOtherMonth || isPast;
+              const offDuty = enabledWeekdays
+                ? !enabledWeekdays.includes(cell.date.getDay())
+                : false;
+              const blocked = isPast || offDuty;
+              const dim = cell.isOtherMonth || blocked;
+
+              // Range visuals: while picking, only the pending start is lit.
+              // Once committed, both ends are lit and the days between get a bar.
+              const start = isRange ? (pendingStart ?? value) : null;
+              const end = isRange && !pendingStart ? endValue : null;
+              const t = cellStart.getTime();
+              const isStart = !!start && t === startOfDay(start).getTime();
+              const isEnd = !!end && t === startOfDay(end).getTime();
+              const inRange =
+                !!start && !!end && t > startOfDay(start).getTime() && t < startOfDay(end).getTime();
+
+              const selected = isRange
+                ? isStart || isEnd
+                : value
+                  ? isSameDay(cell.date, value)
+                  : false;
+              const lit = selected || inRange;
+
               return (
                 <Pressable
                   key={i}
-                  onPress={isPast ? undefined : () => handleSelect(cell.date)}
-                  disabled={isPast}
+                  onPress={blocked ? undefined : () => handleSelect(cell.date)}
+                  disabled={blocked}
                   style={({ pressed }) => [
                     styles.cell,
-                    pressed && !selected && !isPast && { opacity: 0.6 },
+                    pressed && !lit && !blocked && { opacity: 0.6 },
                   ]}
                 >
+                  {(inRange || (isStart && !!end) || (isEnd && !!start)) && (
+                    <View
+                      pointerEvents="none"
+                      style={[
+                        styles.rangeBar,
+                        isStart && styles.rangeBarStart,
+                        isEnd && styles.rangeBarEnd,
+                      ]}
+                    />
+                  )}
                   <View style={[styles.dayBox, selected && styles.daySelected]}>
                     <Text
                       variant={selected ? 'bodyStrong' : 'body'}
@@ -313,6 +389,7 @@ export default function CalendarSheet({
                         styles.dayText,
                         dim && styles.dayDim,
                         isToday && !selected && styles.dayToday,
+                        inRange && styles.dayInRangeText,
                         selected && styles.daySelectedText,
                       ]}
                     >
@@ -355,11 +432,7 @@ const styles = StyleSheet.create({
     paddingTop: spacing.lg,
     width: 420,
     maxWidth: '92%',
-    shadowColor: '#000',
-    shadowOpacity: 0.18,
-    shadowRadius: 32,
-    shadowOffset: { width: 0, height: 12 },
-    elevation: 16,
+    ...shadows.lg,
   },
   handle: {
     alignSelf: 'center',
@@ -436,6 +509,26 @@ const styles = StyleSheet.create({
   },
   daySelectedText: {
     color: '#FFFFFF',
+  },
+  // Continuous band behind the days between the two ends. Sits under dayBox so
+  // the round start/end pills read as caps on the bar.
+  rangeBar: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    top: '50%',
+    height: 36,
+    marginTop: -18,
+    backgroundColor: 'rgba(0,122,255,0.12)',
+  },
+  rangeBarStart: {
+    left: '50%',
+  },
+  rangeBarEnd: {
+    right: '50%',
+  },
+  dayInRangeText: {
+    color: '#007AFF',
   },
   // Year picker
   yearGrid: {

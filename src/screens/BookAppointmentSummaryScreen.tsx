@@ -9,12 +9,13 @@ import Animated, {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../App';
-import { AppBackground, Card, Icon, StepProgress, SubPageHeader, Text } from '../components';
+import { AppBackground, Card, Icon, SubPageHeader, Text } from '../components';
 import { HEADER_HEIGHT } from '../components/SubPageHeader';
-import { semantic, spacing } from '../theme';
+import { semantic, shadows, spacing } from '../theme';
 import { mockPets } from '../data/pets';
 import { mockVets, mockGroomers, mockBoardingClinics } from '../data/televet';
 import { typeMeta } from '../data/appointments';
+import { useAppointments } from '../data/appointmentsContext';
 import { bookingSubmitted } from '../data/bookingState';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'BookAppointmentSummary'>;
@@ -34,11 +35,12 @@ const formatDate = (iso: string) => {
 
 export default function BookAppointmentSummaryScreen({ navigation, route }: Props) {
   const insets = useSafeAreaInsets();
-  const { petId, mode, type, dateISO, time, vetId, notes } = route.params;
+  const { petIds, clinicName, mode, type, dateISO, endDateISO, time, vetId, notes } =
+    route.params;
 
   const isGrooming = type === 'grooming';
   const isBoarding = type === 'boarding';
-  const pet = mockPets.find((p) => p.id === petId);
+  const pets = mockPets.filter((p) => petIds.includes(p.id));
   const staffPool = isBoarding
     ? mockBoardingClinics
     : isGrooming
@@ -46,6 +48,16 @@ export default function BookAppointmentSummaryScreen({ navigation, route }: Prop
       : mockVets;
   const vet = staffPool.find((v) => v.id === vetId);
   const staffLabel = isBoarding ? 'คลินิก' : isGrooming ? 'ช่าง' : 'สัตวแพทย์';
+  const stayNights =
+    endDateISO
+      ? Math.max(
+          1,
+          Math.round(
+            (new Date(endDateISO).getTime() - new Date(dateISO).getTime()) /
+              (1000 * 60 * 60 * 24),
+          ),
+        )
+      : 0;
   const meta = typeMeta[type];
 
   const scrollY = useSharedValue(0);
@@ -53,6 +65,7 @@ export default function BookAppointmentSummaryScreen({ navigation, route }: Prop
     scrollY.value = e.contentOffset.y;
   });
 
+  const { addAppointments } = useAppointments();
   const [toast, setToast] = useState<string | null>(null);
   const navTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const submittedRef = useRef(false);
@@ -61,7 +74,28 @@ export default function BookAppointmentSummaryScreen({ navigation, route }: Prop
     if (submittedRef.current) return;
     submittedRef.current = true;
     bookingSubmitted.current = true;
-    setToast('บันทึกการจองนัดของคุณแล้ว');
+    // One appointment card per pet — a shared trip still means separate records.
+    addAppointments(
+      pets.map((p) => ({
+        petId: p.id,
+        petName: p.name,
+        petEmoji: p.emoji,
+        type,
+        typeLabel: meta.label,
+        dateISO,
+        time: isBoarding ? '—' : time,
+        durationMin: 30,
+        vetName: vet?.name ?? '',
+        clinicName: clinicName ?? vet?.clinic ?? '',
+        status: 'upcoming' as const,
+        notes: notes?.trim() || undefined,
+      })),
+    );
+    setToast(
+      pets.length > 1
+        ? `บันทึกแล้ว · ออกใบนัดแยก ${pets.length} ใบ`
+        : 'บันทึกการจองนัดของคุณแล้ว',
+    );
     if (navTimerRef.current) clearTimeout(navTimerRef.current);
     navTimerRef.current = setTimeout(() => {
       // Pop back to the tabs container (Vet/Home/etc.) — using popToTop here
@@ -93,15 +127,6 @@ export default function BookAppointmentSummaryScreen({ navigation, route }: Prop
         onScroll={scrollHandler}
         scrollEventThrottle={16}
       >
-        <View style={styles.stepWrap}>
-          <StepProgress
-            currentStep={1}
-            steps={[
-              { icon: 'CalendarPlus' },
-              { icon: 'ClipboardCheck' },
-            ]}
-          />
-        </View>
         <Text variant="caption" color={semantic.textSecondary} style={styles.intro}>
           กรุณาตรวจสอบรายละเอียดการนัดหมายให้ถูกต้องก่อนยืนยัน
         </Text>
@@ -128,9 +153,9 @@ export default function BookAppointmentSummaryScreen({ navigation, route }: Prop
           </View>
         </Card>
 
-        {/* Pet card */}
-        {pet && (
-          <Card variant="elevated" padding="md" style={styles.card}>
+        {/* Pet cards — one row per pet, since each gets its own appointment */}
+        {pets.map((pet) => (
+          <Card key={pet.id} variant="elevated" padding="md" style={styles.card}>
             <View style={styles.row}>
               <View style={styles.petAvatar}>
                 {pet.photo ? (
@@ -152,6 +177,12 @@ export default function BookAppointmentSummaryScreen({ navigation, route }: Prop
               </View>
             </View>
           </Card>
+        ))}
+
+        {pets.length > 1 && (
+          <Text variant="caption" color={semantic.textSecondary} style={styles.intro}>
+            {`จะออกใบนัดแยก ${pets.length} ใบ ตัวละหนึ่งใบ ในวันและเวลาเดียวกัน`}
+          </Text>
         )}
 
         {/* Date & Time card */}
@@ -162,11 +193,21 @@ export default function BookAppointmentSummaryScreen({ navigation, route }: Prop
             </View>
             <View style={{ flex: 1 }}>
               <Text variant="caption" color={semantic.textSecondary}>
-                {isBoarding ? 'วันที่' : 'วันและเวลา'}
+                {isBoarding ? 'ช่วงวันที่ฝากเลี้ยง' : 'วันและเวลา'}
               </Text>
               <Text variant="bodyStrong" style={styles.value}>
                 {formatDate(dateISO)}
               </Text>
+              {isBoarding && endDateISO ? (
+                <>
+                  <Text variant="bodyStrong" style={styles.value}>
+                    ถึง {formatDate(endDateISO)}
+                  </Text>
+                  <Text variant="caption" color={semantic.textSecondary}>
+                    รวม {stayNights} คืน
+                  </Text>
+                </>
+              ) : null}
               {!isBoarding && (
                 <Text variant="caption" color={semantic.textSecondary}>
                   เวลา {time} น.
@@ -253,10 +294,6 @@ const styles = StyleSheet.create({
   scroll: {
     paddingHorizontal: spacing.xl,
   },
-  stepWrap: {
-    marginHorizontal: -spacing.xl,
-    marginBottom: spacing.md,
-  },
   intro: {
     fontSize: 13,
     marginBottom: spacing.lg,
@@ -264,11 +301,7 @@ const styles = StyleSheet.create({
   },
   card: {
     marginBottom: spacing.md,
-    shadowColor: '#000',
-    shadowOpacity: 0.06,
-    shadowRadius: 4,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 2,
+    ...shadows.sm,
   },
   row: {
     flexDirection: 'row',
@@ -331,11 +364,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: spacing.lg,
-    shadowColor: '#000',
-    shadowOpacity: 0.12,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 3 },
-    elevation: 3,
+    ...shadows.md,
   },
   confirmText: {
     fontSize: 16,
@@ -352,11 +381,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 12,
     zIndex: 9999,
-    shadowColor: '#000',
-    shadowOpacity: 0.25,
-    shadowRadius: 14,
-    shadowOffset: { width: 0, height: 8 },
-    elevation: 24,
+    ...shadows.pop,
   },
   toastText: {
     fontSize: 14,

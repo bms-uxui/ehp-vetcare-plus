@@ -27,6 +27,8 @@ export type TeleVet = {
   priceToBaht?: number;
   /** Boarding-specific: distance from user in km (mock — usually computed) */
   distanceKm?: number;
+  /** Boarding only — the place is connected to EHP Vetcare, so slots are live. */
+  ehpPartner?: boolean;
 };
 
 export type Message = {
@@ -199,6 +201,102 @@ export const mockVets: TeleVet[] = [
     workingDays: [0, 2, 4, 6],
     timeSlots: ['10:00', '11:00', '13:00', '14:00', '15:00', '16:00'],
   },
+
+  // ── แพทย์ของคลินิกที่ใช้ EHP Vetcare ─────────────────────────────────────
+  // `clinic` ตรงกับชื่อคลินิกในประวัติการรักษา (pet.visits[].clinic) เพื่อผูก
+  // การจอง "ตรวจรักษาทั่วไป" เข้ากับตารางแพทย์ของคลินิกนั้น (ดู clinics.ts).
+  // แต่ละคนตั้ง workingDays/timeSlots ต่างกัน → วัน/เวลา/แพทย์ที่เลือกได้จะ
+  // เปลี่ยนตามตารางจริงของคลินิก.
+  {
+    id: 'ehp-th1',
+    name: 'สพ.ญ. กมลชนก ไพศาล',
+    avatar: 'https://images.unsplash.com/photo-1594824476967-48c8b964273f?w=200&h=200&fit=crop&crop=face',
+    specialty: 'อายุรกรรมทั่วไป',
+    clinic: 'โรงพยาบาลสัตว์ทองหล่อ',
+    experienceYears: 9,
+    experiences: [
+      { years: '2020-2026', description: 'แพทย์ประจำแผนกอายุรกรรม โรงพยาบาลสัตว์ทองหล่อ ดูแลตรวจรักษาสุนัขและแมวทั่วไป' },
+      { years: '2015-2020', description: 'จบคณะสัตวแพทยศาสตร์ ม.เกษตรศาสตร์ เอกอายุรกรรมสัตว์เล็ก' },
+    ],
+    ratePerMin: 18,
+    rating: 4.9,
+    reviewCount: 268,
+    status: 'online',
+    workingDays: [1, 2, 3, 4, 5],
+    timeSlots: ['09:00', '10:00', '11:00', '13:00', '14:00'],
+  },
+  {
+    id: 'ehp-th2',
+    name: 'สพ. ธนกร รุ่งเรือง',
+    avatar: 'https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?w=200&h=200&fit=crop&crop=face',
+    specialty: 'ศัลยกรรมและกระดูก',
+    clinic: 'โรงพยาบาลสัตว์ทองหล่อ',
+    experienceYears: 11,
+    experiences: [
+      { years: '2018-2026', description: 'หัวหน้าทีมศัลยกรรม โรงพยาบาลสัตว์ทองหล่อ ผ่าตัดกระดูกและเนื้อเยื่ออ่อน' },
+      { years: '2013-2018', description: 'จบคณะสัตวแพทยศาสตร์ จุฬาฯ เอกศัลยกรรม' },
+    ],
+    ratePerMin: 22,
+    rating: 4.8,
+    reviewCount: 191,
+    status: 'busy',
+    workingDays: [2, 4, 6],
+    timeSlots: ['13:00', '14:00', '15:00', '16:00', '17:00'],
+  },
+  {
+    id: 'ehp-th3',
+    name: 'สพ.ญ. ปรียาภรณ์ สุขใจ',
+    avatar: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=200&h=200&fit=crop&crop=face',
+    specialty: 'ผิวหนังและภูมิแพ้',
+    clinic: 'โรงพยาบาลสัตว์ทองหล่อ',
+    experienceYears: 7,
+    experiences: [
+      { years: '2021-2026', description: 'แพทย์เฉพาะทางผิวหนังสัตว์เลี้ยง โรงพยาบาลสัตว์ทองหล่อ' },
+      { years: '2017-2021', description: 'จบคณะสัตวแพทยศาสตร์ ม.มหิดล ปริญญาโทเอกโรคผิวหนัง' },
+    ],
+    ratePerMin: 17,
+    rating: 4.85,
+    reviewCount: 154,
+    status: 'online',
+    workingDays: [1, 3, 5],
+    timeSlots: ['10:00', '11:00', '15:00', '16:00'],
+  },
+  {
+    id: 'ehp-pk1',
+    name: 'สพ.ญ. ชนาภา วงศ์ไพร',
+    avatar: 'https://images.unsplash.com/photo-1622253692010-333f2da6031d?w=200&h=200&fit=crop&crop=face',
+    specialty: 'สัตว์เลี้ยงชนิดพิเศษ (Exotic)',
+    clinic: 'ปุกปุยสัตวแพทย์ PUKPUI Rabbit&Exotic Pet Clinic',
+    experienceYears: 8,
+    experiences: [
+      { years: '2019-2026', description: 'แพทย์ประจำคลินิกกระต่ายและสัตว์พิเศษ PUKPUI ดูแลกระต่าย หนู เม่นแคระ และนก' },
+      { years: '2014-2019', description: 'จบคณะสัตวแพทยศาสตร์ ม.เกษตรศาสตร์ เอกสัตว์เลี้ยงชนิดพิเศษ' },
+    ],
+    ratePerMin: 19,
+    rating: 4.95,
+    reviewCount: 203,
+    status: 'online',
+    workingDays: [0, 3, 5, 6],
+    timeSlots: ['10:00', '11:00', '13:00', '14:00'],
+  },
+  {
+    id: 'ehp-pk2',
+    name: 'สพ. วรินทร์ ทองแท้',
+    avatar: 'https://images.unsplash.com/photo-1537368910025-700350fe46c7?w=200&h=200&fit=crop&crop=face',
+    specialty: 'อายุรกรรมสัตว์พิเศษ',
+    clinic: 'ปุกปุยสัตวแพทย์ PUKPUI Rabbit&Exotic Pet Clinic',
+    experienceYears: 6,
+    experiences: [
+      { years: '2022-2026', description: 'แพทย์ประจำคลินิก PUKPUI ดูแลอายุรกรรมกระต่ายและสัตว์ฟันแทะ' },
+      { years: '2016-2022', description: 'จบคณะสัตวแพทยศาสตร์ ม.เชียงใหม่ เอกสัตว์เล็กและสัตว์พิเศษ' },
+    ],
+    ratePerMin: 16,
+    rating: 4.8,
+    reviewCount: 121,
+    status: 'offline',
+    workingDays: [2, 4, 6],
+    timeSlots: ['09:00', '10:00', '14:00', '15:00', '16:00'],
+  },
 ];
 
 /**
@@ -307,6 +405,7 @@ export const mockBoardingClinics: TeleVet[] = [
     priceFromBaht: 550,
     priceToBaht: 850,
     distanceKm: 2.8,
+    ehpPartner: true,
   },
   {
     id: 'bd4',
@@ -327,6 +426,7 @@ export const mockBoardingClinics: TeleVet[] = [
     priceFromBaht: 700,
     priceToBaht: 1200,
     distanceKm: 4.6,
+    ehpPartner: true,
   },
   {
     id: 'bd2',

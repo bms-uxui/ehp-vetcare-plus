@@ -17,6 +17,8 @@ import {
 
 type AppointmentsContextValue = {
   appointments: Appointment[];
+  /** Add one card per pet — a multi-pet booking issues separate appointments. */
+  addAppointments: (drafts: Omit<Appointment, 'id'>[]) => void;
   cancelAppointment: (id: string) => void;
   updateAppointment: (id: string, patch: Partial<Omit<Appointment, 'id'>>) => void;
 };
@@ -60,6 +62,16 @@ export function AppointmentsProvider({ children }: { children: ReactNode }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  const addAppointments = useCallback((drafts: Omit<Appointment, 'id'>[]) => {
+    const created = drafts.map((d, i) => ({
+      ...d,
+      // Date.now() alone would collide when several pets are booked in one tap.
+      id: `appt-${Date.now()}-${i}`,
+    }));
+    setAppointments((prev) => [...prev, ...created]);
+    created.forEach((a) => void scheduleReminderFor(a));
+  }, []);
+
   const cancelAppointment = useCallback((id: string) => {
     setAppointments((prev) =>
       prev.map((a) => (a.id === id ? { ...a, status: 'cancelled' } : a)),
@@ -88,8 +100,8 @@ export function AppointmentsProvider({ children }: { children: ReactNode }) {
   );
 
   const value = useMemo<AppointmentsContextValue>(
-    () => ({ appointments, cancelAppointment, updateAppointment }),
-    [appointments, cancelAppointment, updateAppointment],
+    () => ({ appointments, addAppointments, cancelAppointment, updateAppointment }),
+    [appointments, addAppointments, cancelAppointment, updateAppointment],
   );
 
   return (
