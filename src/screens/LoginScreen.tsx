@@ -30,7 +30,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { RootStackParamList } from '../../App';
 import { AppBackground, Icon, Text } from '../components';
 import { useIsTablet } from '../lib/responsive';
-import { colors, semantic } from '../theme';
+import { colors, semantic, shadows } from '../theme';
 
 // Login keeps a narrower form column — input fields look awkward at full 880pt
 const TABLET_FORM_WIDTH = 480;
@@ -522,11 +522,7 @@ const styles = StyleSheet.create({
     padding: 4,
     borderWidth: 2,
     borderColor: '#FFFFFF',
-    shadowColor: '#5E303C',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.18,
-    shadowRadius: 12,
-    elevation: 5,
+    ...shadows.md,
   },
   brandBadgeImg: {
     width: '100%',
@@ -623,11 +619,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginTop: 6,
-    shadowColor: '#5E303C',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.22,
-    shadowRadius: 14,
-    elevation: 4,
+    ...shadows.md,
   },
   loginBtnTablet: {
     height: 64,
@@ -675,11 +667,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: 8,
     paddingHorizontal: 8,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
+    ...shadows.sm,
   },
   socialPillIcon: {
     width: 20,

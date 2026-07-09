@@ -6,7 +6,7 @@ import {
   StyleSheet,
   View,
 } from 'react-native';
-import { semantic } from '../theme';
+import { semantic, shadows } from '../theme';
 import Icon from './Icon';
 import Text from './Text';
 
@@ -199,11 +199,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: 'rgba(255,255,255,0.55)',
-    shadowColor: '#000',
-    shadowOpacity: 0.12,
-    shadowRadius: 20,
-    shadowOffset: { width: 0, height: 8 },
-    elevation: 6,
+    ...shadows.pop,
   },
   dropdownItem: {
     flexDirection: 'row',

@@ -5,7 +5,7 @@ import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { LinearGradient } from 'expo-linear-gradient';
 import { RootStackParamList } from '../../App';
 import { AppBackground, Button, Icon, Screen, Text } from '../components';
-import { radii, semantic, spacing } from '../theme';
+import { radii, semantic, shadows, spacing } from '../theme';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'AddPetScan'>;
 
@@ -259,11 +259,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#000',
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 2,
+    ...shadows.sm,
   },
   introTitle: {
     fontSize: 16,
@@ -351,11 +347,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     overflow: 'hidden',
     backgroundColor: '#FFFFFF',
-    shadowColor: '#7E3D4F',
-    shadowOpacity: 0.18,
-    shadowRadius: 22,
-    shadowOffset: { width: 0, height: 12 },
-    elevation: 8,
+    ...shadows.lg,
   },
   scanCardImage: {
     width: '100%',

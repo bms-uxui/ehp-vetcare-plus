@@ -31,7 +31,7 @@ import {
   Text,
   TextField,
 } from '../components';
-import { semantic } from '../theme';
+import { semantic, shadows } from '../theme';
 import { breedOptions } from '../data/breeds';
 import { mockPets, Pet } from '../data/pets';
 
@@ -578,11 +578,7 @@ const styles = StyleSheet.create({
     marginTop: 6,
     borderWidth: 1,
     borderColor: 'rgba(184,106,124,0.12)',
-    shadowColor: '#7E3D4F',
-    shadowOpacity: 0.06,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 1,
+    ...shadows.sm,
   },
   statusTextWrap: {
     flex: 1,
@@ -625,11 +621,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     paddingHorizontal: 14,
     paddingVertical: 12,
-    shadowColor: '#000',
-    shadowOpacity: 0.2,
-    shadowRadius: 12,
-    shadowOffset: { width: 0, height: 6 },
-    elevation: 6,
+    ...shadows.md,
   },
   snackbarText: {
     fontSize: 14,

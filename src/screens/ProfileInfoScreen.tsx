@@ -29,7 +29,7 @@ import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../App';
 import { AppBackground, CalendarSheet, Card, Icon, SubPageHeader, Text } from '../components';
 import { HEADER_HEIGHT } from '../components/SubPageHeader';
-import { semantic, spacing } from '../theme';
+import { semantic, shadows, spacing } from '../theme';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'ProfileInfo'>;
 
@@ -705,11 +705,7 @@ const styles = StyleSheet.create({
     fontSize: 12,
   },
   card: {
-    shadowColor: '#000',
-    shadowOpacity: 0.06,
-    shadowRadius: 4,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 2,
+    ...shadows.sm,
   },
   row: {
     flexDirection: 'row',

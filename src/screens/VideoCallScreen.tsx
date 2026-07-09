@@ -24,7 +24,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../App';
 import { Button, Icon, Text } from '../components';
-import { semantic, spacing } from '../theme';
+import { semantic, shadows, spacing } from '../theme';
 import { mockConversations, mockVets } from '../data/televet';
 import { useCall } from '../data/callContext';
 
@@ -598,11 +598,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#E03A3A',
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#E03A3A',
-    shadowOpacity: 0.4,
-    shadowRadius: 16,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 6,
+    ...shadows.lift,
   },
 
   /* Rating */

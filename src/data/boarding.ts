@@ -1,3 +1,5 @@
+import { mockBoardingClinics, TeleVet } from './televet';
+
 export type BoardingActivityStatus = 'done' | 'upcoming' | 'skipped';
 
 export type BoardingActivity = {
@@ -98,3 +100,65 @@ export const getActiveBoardings = (boardings: Boarding[] = mockBoardings): Board
     return start <= today && today <= end;
   });
 };
+
+// ── การเลือกสถานที่ฝากเลี้ยง ────────────────────────────────────────────────
+
+/** รัศมี "ใกล้ฉัน" (กม.) — ไกลกว่านี้ไม่เสนอ เพราะขับไปส่งทุกวันไม่ไหว */
+export const NEARBY_RADIUS_KM = 10;
+
+/** จำนวนที่พักนอกเครือที่คัดมาแสดง — มากกว่านี้กลายเป็นลิสต์ให้ไถ ไม่ใช่คำแนะนำ */
+export const POPULAR_LIMIT = 3;
+
+/**
+ * คะแนนความนิยม = Bayesian weighted rating
+ *
+ *   score = (v / (v + m)) * R  +  (m / (v + m)) * C
+ *
+ * ใช้แทน `rating` เปล่า ๆ เพราะที่ที่มีรีวิว 187 ครั้งแล้วได้ 4.96 ยังพิสูจน์
+ * ตัวเองน้อยกว่าที่ที่มีรีวิว 538 ครั้งแล้วได้ 4.92 — ค่าเฉลี่ยของกลุ่ม (C)
+ * จะถ่วงคะแนนของที่ที่มีรีวิวน้อยให้เข้าใกล้กลาง จนกว่าจะมีรีวิวมากพอ.
+ */
+function popularityScore(place: TeleVet, meanRating: number, priorReviews: number): number {
+  const v = place.reviewCount;
+  const R = place.rating;
+  return (v / (v + priorReviews)) * R + (priorReviews / (v + priorReviews)) * meanRating;
+}
+
+export type BoardingOptions = {
+  /** ที่พักในเครือ EHP Vetcare — slot ว่างเชื่อมกับระบบจริง จองได้ทันที */
+  partners: TeleVet[];
+  /** ที่พักนอกเครือที่อยู่ใกล้และได้รับความนิยมสูงสุด */
+  popularNearby: TeleVet[];
+};
+
+/**
+ * ที่พักในเครือ (เรียงตามระยะทาง) + ที่พักใกล้ ๆ นอกเครือที่นิยมที่สุด.
+ * ผู้ใช้จึงเทียบ "จองผ่านแอปได้เลย" กับ "ตัวเลือกที่คนแถวนี้ชอบ" ได้ในหน้าเดียว.
+ */
+export function getBoardingOptions(
+  places: TeleVet[] = mockBoardingClinics,
+): BoardingOptions {
+  const byDistance = (a: TeleVet, b: TeleVet) =>
+    (a.distanceKm ?? Infinity) - (b.distanceKm ?? Infinity);
+
+  const partners = places.filter((p) => p.ehpPartner).sort(byDistance);
+
+  const nearby = places.filter(
+    (p) => !p.ehpPartner && (p.distanceKm ?? Infinity) <= NEARBY_RADIUS_KM,
+  );
+  // Prior = ค่าเฉลี่ยรีวิวของกลุ่ม → ที่ที่รีวิวน้อยกว่าค่าเฉลี่ยจะถูกถ่วงแรงกว่า
+  const meanRating =
+    places.reduce((s, p) => s + p.rating, 0) / Math.max(1, places.length);
+  const priorReviews =
+    places.reduce((s, p) => s + p.reviewCount, 0) / Math.max(1, places.length);
+
+  const popularNearby = [...nearby]
+    .sort(
+      (a, b) =>
+        popularityScore(b, meanRating, priorReviews) -
+        popularityScore(a, meanRating, priorReviews),
+    )
+    .slice(0, POPULAR_LIMIT);
+
+  return { partners, popularNearby };
+}

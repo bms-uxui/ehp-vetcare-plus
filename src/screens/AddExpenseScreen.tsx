@@ -35,7 +35,7 @@ import {
   Text,
 } from '../components';
 import { HEADER_HEIGHT } from '../components/SubPageHeader';
-import { radii, semantic, spacing } from '../theme';
+import { radii, semantic, shadows, spacing, tintedShadow } from '../theme';
 import { categoryMeta, ExpenseCategory } from '../data/expenses';
 import { useExpenses } from '../data/expensesContext';
 import { mockPets } from '../data/pets';
@@ -219,7 +219,7 @@ export default function AddExpenseScreen({ navigation }: Props) {
                             selected && styles.catChipSelected,
                             selected && {
                               backgroundColor: meta.color,
-                              shadowColor: meta.color,
+                              ...tintedShadow(meta.color, 'pop'),
                             },
                             pressed && { opacity: 0.7 },
                           ]}
@@ -524,11 +524,7 @@ const styles = StyleSheet.create({
     position: 'relative',
     minHeight: 140,
     // Drop shadow tinted lightly so the gradient feels lifted
-    shadowColor: '#5E303C',
-    shadowOpacity: 0.06,
-    shadowRadius: 12,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 2,
+    ...shadows.md,
   },
   categoryCardContent: {
     padding: 16,
@@ -568,18 +564,10 @@ const styles = StyleSheet.create({
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: 'rgba(0,0,0,0.05)',
     // Soft drop shadow gives chips presence on the colored card
-    shadowColor: '#000',
-    shadowOpacity: 0.06,
-    shadowRadius: 4,
-    shadowOffset: { width: 0, height: 1 },
-    elevation: 1,
+    ...shadows.sm,
   },
   catChipSelected: {
-    // backgroundColor + shadowColor overridden inline per category
-    shadowOpacity: 0.32,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 4,
+    // backgroundColor + boxShadow are applied inline, tinted per category
     borderWidth: 0,
   },
   catChipText: {
@@ -610,20 +598,12 @@ const styles = StyleSheet.create({
     gap: 10,
     position: 'relative',
     overflow: 'hidden',
-    shadowColor: '#5E303C',
-    shadowOpacity: 0.04,
-    shadowRadius: 6,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 1,
+    ...shadows.sm,
   },
   petCardSelected: {
     borderColor: semantic.primary,
     borderWidth: 1.5,
-    shadowColor: semantic.primary,
-    shadowOpacity: 0.22,
-    shadowRadius: 16,
-    shadowOffset: { width: 0, height: 8 },
-    elevation: 5,
+    ...shadows.pop,
   },
   petAvatarRing: {
     width: 72,
@@ -633,18 +613,11 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#5E303C',
-    shadowOpacity: 0.12,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 3,
+    ...shadows.md,
   },
   petAvatarRingSelected: {
     backgroundColor: '#FFFFFF',
-    shadowColor: semantic.primary,
-    shadowOpacity: 0.25,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: 4 },
+    ...shadows.md,
   },
   petCheckBadge: {
     position: 'absolute',
@@ -659,11 +632,7 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: '#FFFFFF',
     zIndex: 1,
-    shadowColor: semantic.primary,
-    shadowOpacity: 0.4,
-    shadowRadius: 4,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 3,
+    ...shadows.lift,
   },
   petCardTextWrap: {
     alignItems: 'center',

@@ -276,10 +276,8 @@ export default function HomeScreen({ navigation }: Props) {
               source={require('../../assets/Pawmely.png')}
               style={styles.brandLogo}
               resizeMode="contain"
+              accessibilityLabel="Pawmely"
             />
-            <Text variant="bodyStrong" style={styles.brandName}>
-              Pawmely
-            </Text>
           </View>
           <View>
             <Pressable
@@ -304,21 +302,32 @@ export default function HomeScreen({ navigation }: Props) {
         </View>
 
         {/* ── Banner text content — stacked, crossfade ── */}
-        <View style={styles.bannerStack}>
+        <View style={[styles.bannerStack, isTablet && styles.bannerStackTablet]}>
           {bannerItems.map((item, i) => (
             <Animated.View
               key={i}
               pointerEvents="none"
-              style={[styles.bannerPage, opacityStyles[i]]}
+              style={[styles.bannerPage, isTablet && styles.bannerPageTablet, opacityStyles[i]]}
             >
               {item.IllustrationSvg ? (
-                <View style={styles.bannerIllus} pointerEvents="none">
-                  <item.IllustrationSvg width={200} height={178} />
+                <View
+                  style={[styles.bannerIllus, isTablet && styles.bannerIllusTablet]}
+                  pointerEvents="none"
+                >
+                  <item.IllustrationSvg
+                    width={isTablet ? 300 : 180}
+                    height={isTablet ? 267 : 160}
+                  />
                   {item.petId && (
-                    <View style={styles.bannerPetAvatar}>
+                    <View
+                      style={[
+                        styles.bannerPetAvatar,
+                        isTablet && styles.bannerPetAvatarTablet,
+                      ]}
+                    >
                       <PetAvatar
                         petId={item.petId}
-                        size={56}
+                        size={isTablet ? 80 : 56}
                         backgroundColor="#FFFFFF"
                       />
                     </View>
@@ -326,7 +335,11 @@ export default function HomeScreen({ navigation }: Props) {
                 </View>
               ) : item.cornerIllustration ? (
                 <View
-                  style={[styles.bannerIllus, styles.bannerIllusRaster]}
+                  style={[
+                    styles.bannerIllus,
+                    styles.bannerIllusRaster,
+                    isTablet && styles.bannerIllusRasterTablet,
+                  ]}
                   pointerEvents="none"
                 >
                   <Image
@@ -336,17 +349,31 @@ export default function HomeScreen({ navigation }: Props) {
                   />
                 </View>
               ) : null}
-              <View style={styles.dateChip}>
+              <View style={[styles.dateChip, isTablet && styles.dateChipTablet]}>
                 <View style={styles.dateDot} />
-                <Text variant="caption" color={semantic.textPrimary} weight="500">
+                <Text
+                  variant="caption"
+                  color={semantic.textPrimary}
+                  weight="500"
+                  style={isTablet && styles.dateTextTablet}
+                >
                   {item.date}
                 </Text>
               </View>
 
-              <Text variant="bodyStrong" style={styles.bannerHeadline}>
+              <Text
+                variant="bodyStrong"
+                style={[styles.bannerHeadline, isTablet && styles.bannerHeadlineTablet]}
+              >
                 {item.pet ? (
                   <>
-                    <Text variant="bodyStrong" weight="700">
+                    {/* Must carry the parent's metrics — a nested 16/24 Text
+                        shrinks the first line box and clips Thai upper marks. */}
+                    <Text
+                      variant="bodyStrong"
+                      weight="700"
+                      style={isTablet ? styles.bannerHeadlineNameTablet : styles.bannerHeadlineName}
+                    >
                       น้อง{item.pet}
                     </Text>{' '}
                     {item.actionTop}
@@ -360,7 +387,7 @@ export default function HomeScreen({ navigation }: Props) {
               <Text
                 variant="caption"
                 color={semantic.textSecondary}
-                style={styles.bannerClinic}
+                style={[styles.bannerClinic, isTablet && styles.bannerClinicTablet]}
               >
                 {item.clinic}
               </Text>
@@ -406,7 +433,11 @@ export default function HomeScreen({ navigation }: Props) {
               pressed && { opacity: 0.85 },
             ]}
           >
-            <Text variant="bodyStrong" color={semantic.onPrimary} style={{ fontSize: 13 }}>
+            <Text
+              variant="bodyStrong"
+              color={semantic.onPrimary}
+              style={{ fontSize: isTablet ? 16 : 13 }}
+            >
               {currentBanner.cta}
             </Text>
           </Pressable>
@@ -422,7 +453,7 @@ export default function HomeScreen({ navigation }: Props) {
       <View style={[styles.content, { paddingHorizontal: contentPadX }]}>
         {/* ── PETS ROW (overlaps banner bottom) — glass card ── */}
         <Card variant="elevated" padding="lg" style={styles.petsCard}>
-          <View style={styles.petsRow}>
+          <View style={[styles.petsRow, isTablet && styles.petsRowTablet]}>
             {mockPets.slice(0, 3).map((pet) => (
               <Pressable
                 key={pet.id}
@@ -475,14 +506,12 @@ export default function HomeScreen({ navigation }: Props) {
               const fmtShort = (d: Date) =>
                 d.toLocaleDateString('th-TH', { day: 'numeric', month: 'short' });
               return (
-                <Pressable
+                <Card
                   key={b.id}
+                  variant="elevated"
+                  padding={0}
                   onPress={() => navigation.navigate('BoardingDetail', { boardingId: b.id })}
-                  android_ripple={RIPPLE_LIGHT}
-                  style={({ pressed }) => [
-                    styles.boardingCard,
-                    pressed && { opacity: 0.92, transform: [{ scale: 0.99 }] },
-                  ]}
+                  style={styles.boardingCard}
                   accessibilityRole="button"
                   accessibilityLabel={`ดูรายละเอียดการฝากเลี้ยงของ ${pet.name}`}
                 >
@@ -520,7 +549,7 @@ export default function HomeScreen({ navigation }: Props) {
                       </View>
                     </View>
                   </View>
-                </Pressable>
+                </Card>
               );
             })}
           </View>
@@ -772,13 +801,8 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   brandLogo: {
-    width: 36,
-    height: 36,
-  },
-  brandName: {
-    fontSize: 20,
-    color: colors.rose[800],
-    letterSpacing: 0.2,
+    width: 80,
+    height: 80,
   },
   iconBtn: {
     width: 44,
@@ -789,11 +813,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: 'rgba(0,0,0,0.1)',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.06,
-    shadowRadius: 2,
-    elevation: 1,
+    ...shadows.sm,
   },
   iconBtnTablet: {
     width: 56,
@@ -835,8 +855,13 @@ const styles = StyleSheet.create({
   },
   bannerStack: {
     position: 'relative',
+    marginTop: spacing.lg,
+    height: 132,
+  },
+  // Headline jumps 16→26px on tablet; the phone height would clip two lines.
+  bannerStackTablet: {
     marginTop: spacing.xl,
-    height: 160,
+    height: 230,
   },
   swipeOverlay: {
     ...StyleSheet.absoluteFillObject,
@@ -848,9 +873,12 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    gap: spacing.md,
+    gap: spacing.sm,
     alignItems: 'flex-start',
     justifyContent: 'flex-start',
+  },
+  bannerPageTablet: {
+    gap: spacing.md,
   },
   dateChip: {
     alignSelf: 'flex-start',
@@ -862,6 +890,14 @@ const styles = StyleSheet.create({
     borderRadius: radii.pill,
     backgroundColor: semantic.surface,
   },
+  dateChipTablet: {
+    paddingHorizontal: spacing.md,
+    paddingVertical: 8,
+    gap: 8,
+  },
+  dateTextTablet: {
+    fontSize: 16,
+  },
   dateDot: {
     width: 8,
     height: 8,
@@ -870,28 +906,62 @@ const styles = StyleSheet.create({
   },
   bannerHeadline: {
     fontSize: 16,
-    lineHeight: 24,
+    lineHeight: 26,
     paddingRight: 140,
+  },
+  bannerHeadlineName: {
+    fontSize: 16,
+    lineHeight: 26,
+  },
+  bannerHeadlineTablet: {
+    fontSize: 26,
+    lineHeight: 40,
+    paddingRight: 220,
+  },
+  bannerHeadlineNameTablet: {
+    fontSize: 26,
+    lineHeight: 40,
   },
   bannerClinic: {
     paddingRight: 140,
   },
+  bannerClinicTablet: {
+    fontSize: 16,
+    paddingRight: 220,
+  },
   bannerIllus: {
     position: 'absolute',
     right: -40,
-    bottom: -96,
-    width: 200,
-    height: 178,
+    bottom: -80,
+    width: 180,
+    height: 160,
+  },
+  // ~1.5× to match the taller tablet banner (160 → 230)
+  bannerIllusTablet: {
+    width: 300,
+    height: 267,
+    right: -50,
+    bottom: -130,
   },
   bannerIllusImg: {
     width: '100%',
     height: '100%',
   },
   bannerIllusRaster: {
-    width: 220,
-    height: 220,
+    width: 195,
+    height: 195,
     right: -40,
-    bottom: -110,
+    bottom: -92,
+  },
+  bannerIllusRasterTablet: {
+    width: 330,
+    height: 330,
+    right: -50,
+    bottom: -155,
+  },
+  bannerPetAvatarTablet: {
+    top: -22,
+    left: 52,
   },
   bannerPetAvatar: {
     position: 'absolute',
@@ -900,11 +970,7 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     backgroundColor: '#FFFFFF',
     padding: 3,
-    shadowColor: '#7E3D4F',
-    shadowOpacity: 0.18,
-    shadowRadius: 12,
-    shadowOffset: { width: 0, height: 6 },
-    elevation: 6,
+    ...shadows.md,
   },
   bannerLogoFade: {
     position: 'absolute',
@@ -957,6 +1023,12 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
   },
+  // Tablet: the card still spans the width, but space-between would fling the
+  // avatars to the far edges — group them in the middle instead.
+  petsRowTablet: {
+    justifyContent: 'center',
+    gap: 72,
+  },
   petItem: {
     alignItems: 'center',
     gap: spacing.sm,
@@ -994,19 +1066,11 @@ const styles = StyleSheet.create({
     flex: 1,
     minHeight: 130,
     borderRadius: 24,
-    shadowColor: '#1A1A2E',
-    shadowOpacity: 0.08,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 3,
+    ...shadows.md,
   },
   cardShadow: {
     borderRadius: 24,
-    shadowColor: '#1A1A2E',
-    shadowOpacity: 0.08,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 3,
+    ...shadows.md,
   },
   bentoTileOverflow: {
     overflow: 'hidden',
@@ -1045,11 +1109,7 @@ const styles = StyleSheet.create({
     height: 188,
   },
   glassCard: {
-    shadowColor: '#1A1A2E',
-    shadowOpacity: 0.32,
-    shadowRadius: 22,
-    shadowOffset: { width: 0, height: 14 },
-    elevation: 18,
+    ...shadows.lift,
   },
   strokeGradient: {
     borderRadius: 24,
@@ -1139,17 +1199,10 @@ const styles = StyleSheet.create({
   boardingList: {
     gap: spacing.md,
   },
+  // Chrome (radius, surface, border) now comes from Card's `elevated` variant —
+  // this only deepens the ambient shadow so the card lifts off the page.
   boardingCard: {
-    borderRadius: 20,
-    overflow: 'hidden',
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: 'rgba(184,106,124,0.18)',
-    shadowColor: '#5E303C',
-    shadowOpacity: 0.28,
-    shadowRadius: 24,
-    shadowOffset: { width: 0, height: 12 },
-    elevation: 10,
+    ...shadows.pop,
   },
   boardingInner: {
     flexDirection: 'row',
@@ -1167,10 +1220,7 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     borderWidth: 3,
     borderColor: '#FFFFFF',
-    shadowColor: '#5E303C',
-    shadowOpacity: 0.10,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 3 },
+    ...shadows.md,
   },
   boardingPetImg: {
     width: '100%',

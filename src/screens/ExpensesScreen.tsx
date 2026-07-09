@@ -40,7 +40,7 @@ import {
   useSkeletonShimmer,
 } from '../components';
 import { HEADER_HEIGHT } from '../components/SubPageHeader';
-import { semantic, spacing } from '../theme';
+import { semantic, shadows, spacing } from '../theme';
 import {
   categoryMeta,
   sumByCategory,
@@ -1316,11 +1316,7 @@ const styles = StyleSheet.create({
   summaryCardShadow: {
     borderRadius: 16,
     backgroundColor: '#F5E4E7',
-    shadowColor: '#9F5266',
-    shadowOpacity: 0.35,
-    shadowRadius: 28,
-    shadowOffset: { width: 0, height: 14 },
-    elevation: 12,
+    ...shadows.lift,
   },
   summaryCard: {
     flexDirection: 'row',
@@ -1410,11 +1406,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     borderRadius: 16,
     overflow: 'hidden',
-    shadowColor: '#5E303C',
-    shadowOpacity: 0.08,
-    shadowRadius: 16,
-    shadowOffset: { width: 0, height: 6 },
-    elevation: 4,
+    ...shadows.md,
   },
   groupRow: {
     flexDirection: 'row',
@@ -1497,11 +1489,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     borderRadius: 16,
     padding: 16,
-    shadowColor: '#5E303C',
-    shadowOpacity: 0.08,
-    shadowRadius: 16,
-    shadowOffset: { width: 0, height: 6 },
-    elevation: 4,
+    ...shadows.md,
   },
   txAvatar: {
     width: 40,
@@ -1616,11 +1604,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: 'rgba(255,255,255,0.55)',
-    shadowColor: '#000',
-    shadowOpacity: 0.12,
-    shadowRadius: 20,
-    shadowOffset: { width: 0, height: 8 },
-    elevation: 6,
+    ...shadows.pop,
   },
   sheetBodyScroll: {
     paddingHorizontal: 16,
@@ -1660,11 +1644,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 16,
     alignItems: 'center',
-    shadowColor: '#5E303C',
-    shadowOpacity: 0.18,
-    shadowRadius: 16,
-    shadowOffset: { width: 0, height: 8 },
-    elevation: 6,
+    ...shadows.pop,
   },
   sheetBannerContent: {
     flex: 1,
@@ -1738,11 +1718,7 @@ const styles = StyleSheet.create({
     backgroundColor: semantic.surface,
     borderWidth: 1.5,
     borderColor: semantic.primary,
-    shadowColor: '#5E303C',
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 2,
+    ...shadows.sm,
   },
   sheetBtnSecondaryText: {
     fontSize: 16,
@@ -1820,11 +1796,7 @@ const styles = StyleSheet.create({
     borderRadius: 28,
     padding: 2,
     backgroundColor: '#FFFFFF',
-    shadowColor: '#5E303C',
-    shadowOpacity: 0.12,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 3,
+    ...shadows.md,
   },
   detailHeroPetItemOverlap: {
     marginLeft: -18,
@@ -1900,11 +1872,7 @@ const styles = StyleSheet.create({
   detailMenuMorph: {
     position: 'absolute',
     backgroundColor: '#FFFFFF',
-    shadowColor: '#000',
-    shadowOpacity: 0.18,
-    shadowRadius: 22,
-    shadowOffset: { width: 0, height: 8 },
-    elevation: 10,
+    ...shadows.pop,
   },
   detailMenuClip: {
     overflow: 'hidden',
@@ -1977,11 +1945,7 @@ const styles = StyleSheet.create({
     borderRadius: 26,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#000',
-    shadowOpacity: 0.18,
-    shadowRadius: 12,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 6,
+    ...shadows.md,
   },
   actionCircleInfo: {
     backgroundColor: '#FFFFFF',
@@ -2007,11 +1971,7 @@ const styles = StyleSheet.create({
     padding: spacing.md,
     overflow: 'hidden',
     gap: spacing.md,
-    shadowColor: '#000',
-    shadowOpacity: 0.06,
-    shadowRadius: 4,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 2,
+    ...shadows.sm,
   },
   skelCatRow: {
     flexDirection: 'row',
@@ -2026,10 +1986,6 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     padding: spacing.md,
     overflow: 'hidden',
-    shadowColor: '#000',
-    shadowOpacity: 0.06,
-    shadowRadius: 4,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 2,
+    ...shadows.sm,
   },
 });

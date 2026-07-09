@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Image, Pressable, StyleSheet, View, ViewStyle } from 'react-native';
 import { Product, fmtBaht } from '../data/products';
 import { useIsTablet } from '../lib/responsive';
+import { shadows } from '../theme';
 import Text from './Text';
 
 type Props = {
@@ -87,11 +88,7 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     borderWidth: 1,
     borderColor: '#EFE7E9',
-    shadowColor: '#5E303C',
-    shadowOpacity: 0.08,
-    shadowRadius: 16,
-    shadowOffset: { width: 0, height: 6 },
-    elevation: 4,
+    ...shadows.md,
   },
   cardFlex: {
     flexBasis: '47%',

@@ -26,7 +26,7 @@ import {
   Text,
 } from '../components';
 import { HEADER_HEIGHT } from '../components/SubPageHeader';
-import { semantic, spacing } from '../theme';
+import { semantic, shadows, spacing } from '../theme';
 import { fmtBaht } from '../data/products';
 import { useCart, cartStore, CartItem } from '../data/cart';
 
@@ -1082,11 +1082,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     gap: 8,
     alignItems: 'flex-start',
-    shadowColor: '#5E303C',
-    shadowOpacity: 0.08,
-    shadowRadius: 16,
-    shadowOffset: { width: 0, height: 6 },
-    elevation: 3,
+    ...shadows.md,
   },
   addressHeader: {
     flexDirection: 'row',
@@ -1140,11 +1136,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     backgroundColor: '#FFFFFF',
     overflow: 'hidden',
-    shadowColor: '#5E303C',
-    shadowOpacity: 0.08,
-    shadowRadius: 16,
-    shadowOffset: { width: 0, height: 6 },
-    elevation: 3,
+    ...shadows.md,
   },
   itemCard: {
     flexDirection: 'row',
@@ -1210,11 +1202,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     backgroundColor: '#FFFFFF',
     gap: 8,
-    shadowColor: '#5E303C',
-    shadowOpacity: 0.08,
-    shadowRadius: 16,
-    shadowOffset: { width: 0, height: 6 },
-    elevation: 3,
+    ...shadows.md,
   },
   cardHeaderRow: {
     flexDirection: 'row',
@@ -1323,11 +1311,7 @@ const styles = StyleSheet.create({
   actionBarShadow: {
     borderRadius: 42,
     backgroundColor: 'rgba(255,255,255,0.3)',
-    shadowColor: '#5E303C',
-    shadowOpacity: 0.28,
-    shadowRadius: 32,
-    shadowOffset: { width: 0, height: -8 },
-    elevation: 18,
+    ...shadows.up,
   },
   actionBar: {
     borderRadius: 42,
@@ -1404,11 +1388,7 @@ const styles = StyleSheet.create({
     paddingTop: 6,
     overflow: 'hidden',
     // Drop shadow for the floating sheet
-    shadowColor: '#000',
-    shadowOpacity: 0.18,
-    shadowRadius: 30,
-    shadowOffset: { width: 0, height: -8 },
-    elevation: 24,
+    ...shadows.up,
   },
   sheetTint: {
     ...StyleSheet.absoluteFillObject,
@@ -1611,11 +1591,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: 'rgba(255,255,255,0.55)',
-    shadowColor: '#000',
-    shadowOpacity: 0.12,
-    shadowRadius: 20,
-    shadowOffset: { width: 0, height: 8 },
-    elevation: 6,
+    ...shadows.pop,
   },
   payScrollContent: {
     paddingBottom: spacing.lg,

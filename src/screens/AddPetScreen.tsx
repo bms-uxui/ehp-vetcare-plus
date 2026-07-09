@@ -5,6 +5,7 @@ import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { RootStackParamList } from '../../App';
 import { AppBackground, Icon, Text } from '../components';
+import { shadows, tintedShadow } from '../theme';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'AddPet'>;
 
@@ -77,15 +78,7 @@ export default function AddPetScreen({ navigation }: Props) {
             onPress={() => navigation.navigate(opt.route as any)}
             style={({ pressed }) => [
               styles.cardShadow,
-              opt.shadowColor
-                ? {
-                    shadowColor: opt.shadowColor,
-                    shadowOpacity: 0.28,
-                    shadowRadius: 22,
-                    shadowOffset: { width: 0, height: 12 },
-                    elevation: 10,
-                  }
-                : null,
+              opt.shadowColor ? tintedShadow(opt.shadowColor, 'pop') : null,
               pressed && { opacity: 0.92 },
             ]}
           >
@@ -168,11 +161,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#000',
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 2,
+    ...shadows.sm,
   },
   title: {
     fontSize: 18,
@@ -187,11 +176,7 @@ const styles = StyleSheet.create({
   },
   cardShadow: {
     borderRadius: 24,
-    shadowColor: '#7E3D4F',
-    shadowOpacity: 0.14,
-    shadowRadius: 16,
-    shadowOffset: { width: 0, height: 8 },
-    elevation: 6,
+    ...shadows.pop,
   },
   cardStroke: {
     borderRadius: 24,

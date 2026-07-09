@@ -33,7 +33,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import { useCallback } from 'react';
 import { RootStackParamList } from '../../App';
 import { AppBackground, Icon, Screen, StickyAppBar, Text } from '../components';
-import { semantic, spacing } from '../theme';
+import { semantic, shadows, spacing } from '../theme';
 import { mockPets, Pet, VisitRecord } from '../data/pets';
 import { FeedingSchedule, mockSchedules } from '../data/reminders';
 
@@ -1264,11 +1264,7 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     borderWidth: 1,
     borderColor: 'rgba(184,106,124,0.12)',
-    shadowColor: '#7E3D4F',
-    shadowOpacity: 0.12,
-    shadowRadius: 18,
-    shadowOffset: { width: 0, height: 8 },
-    elevation: 6,
+    ...shadows.pop,
   },
   infoRow: {
     flexDirection: 'row',
@@ -1294,11 +1290,7 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     borderWidth: 1,
     borderColor: 'rgba(184,106,124,0.12)',
-    shadowColor: '#7E3D4F',
-    shadowOpacity: 0.12,
-    shadowRadius: 18,
-    shadowOffset: { width: 0, height: 8 },
-    elevation: 6,
+    ...shadows.pop,
   },
   neuterBody: {
     backgroundColor: '#FFFFFF',
@@ -1571,11 +1563,7 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
     borderWidth: 1,
     borderColor: 'rgba(184,106,124,0.12)',
-    shadowColor: '#7E3D4F',
-    shadowOpacity: 0.12,
-    shadowRadius: 18,
-    shadowOffset: { width: 0, height: 8 },
-    elevation: 6,
+    ...shadows.pop,
   },
   visitHeader: {
     flexDirection: 'row',
@@ -1945,11 +1933,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFDFB',
     borderWidth: 1,
     borderColor: 'rgba(184,106,124,0.12)',
-    shadowColor: '#7E3D4F',
-    shadowOpacity: 0.1,
-    shadowRadius: 14,
-    shadowOffset: { width: 0, height: 6 },
-    elevation: 4,
+    ...shadows.md,
   },
   feedAddIllusSlot: {
     position: 'absolute',
@@ -2038,11 +2022,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: 'rgba(255,255,255,0.55)',
-    shadowColor: '#000',
-    shadowOpacity: 0.12,
-    shadowRadius: 20,
-    shadowOffset: { width: 0, height: 8 },
-    elevation: 6,
+    ...shadows.pop,
   },
   editSheetBody: {
     paddingHorizontal: 16,
@@ -2107,11 +2087,7 @@ const styles = StyleSheet.create({
   meowFabBorder: {
     padding: 2,
     borderRadius: 999,
-    shadowColor: '#7E3D4F',
-    shadowOpacity: 0.16,
-    shadowRadius: 14,
-    shadowOffset: { width: 0, height: 6 },
-    elevation: 6,
+    ...shadows.md,
   },
   meowFab: {
     flexDirection: 'row',
@@ -2162,11 +2138,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 12,
     zIndex: 9999,
-    shadowColor: '#000',
-    shadowOpacity: 0.25,
-    shadowRadius: 14,
-    shadowOffset: { width: 0, height: 8 },
-    elevation: 24,
+    ...shadows.pop,
   },
   toastText: {
     fontSize: 14,

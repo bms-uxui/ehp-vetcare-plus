@@ -3,6 +3,7 @@ import { BlurView } from 'expo-blur';
 import { GlassView, isLiquidGlassAvailable } from '../lib/glass-effect';
 import * as LucideIcons from 'lucide-react-native';
 import { useIsTablet } from '../lib/responsive';
+import { shadows } from '../theme';
 
 const LIQUID_GLASS = isLiquidGlassAvailable();
 
@@ -120,11 +121,7 @@ export default function IconButton({
 const styles = StyleSheet.create({
   // Outer Pressable: holds drop shadow per Figma spec — 0px 8px 40px rgba(0,0,0,0.12)
   shadow: {
-    shadowColor: '#000',
-    shadowOpacity: 0.12,
-    shadowRadius: 20,
-    shadowOffset: { width: 0, height: 8 },
-    elevation: 6,
+    ...shadows.pop,
     backgroundColor: 'transparent',
   },
   // Inner View: clips the glass material to the rounded shape

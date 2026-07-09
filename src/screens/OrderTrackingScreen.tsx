@@ -24,7 +24,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { RootStackParamList } from '../../App';
 import { AppBackground, Icon, SubPageHeader, Text } from '../components';
 import { HEADER_HEIGHT } from '../components/SubPageHeader';
-import { semantic, spacing } from '../theme';
+import { semantic, shadows, spacing, tintedShadow } from '../theme';
 import { fmtBaht, categoryMeta } from '../data/products';
 import {
   fmtOrderDate,
@@ -271,7 +271,7 @@ function FilterChip({
           active
             ? [
                 styles.chipActive,
-                { backgroundColor: f.activeBg, shadowColor: f.activeBg },
+                { backgroundColor: f.activeBg, ...tintedShadow(f.activeBg, 'pop') },
               ]
             : styles.chipCompact,
           animatedStyle,
@@ -564,11 +564,8 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(118,118,128,0.12)',
   },
   chipActive: {
+    // backgroundColor + boxShadow applied inline, tinted to the active filter
     backgroundColor: semantic.primary,
-    shadowOpacity: 0.28,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 3 },
-    elevation: 3,
   },
   chipCompact: {
     width: 40,
@@ -623,11 +620,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     borderRadius: 16,
     overflow: 'hidden',
-    shadowColor: '#5E303C',
-    shadowOpacity: 0.08,
-    shadowRadius: 16,
-    shadowOffset: { width: 0, height: 6 },
-    elevation: 4,
+    ...shadows.md,
   },
   cardHeader: {
     padding: 16,

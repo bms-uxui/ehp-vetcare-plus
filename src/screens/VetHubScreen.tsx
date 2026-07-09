@@ -16,7 +16,7 @@ import { useResponsiveScale } from '../lib/responsive';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../App';
 import { Card, Icon, SkeletonBox, SkeletonShimmer, Text, useSkeletonShimmer } from '../components';
-import { colors, radii, semantic, spacing } from '../theme';
+import { colors, radii, semantic, shadows, spacing } from '../theme';
 import { useIsTablet, useTabletHorizontalPadding } from '../lib/responsive';
 import { Appointment, typeMeta, MOCK_VETS } from '../data/appointments';
 import { useAppointments } from '../data/appointmentsContext';
@@ -1201,11 +1201,7 @@ const styles = StyleSheet.create({
     marginTop: -24,
     paddingHorizontal: spacing.xl,
     paddingBottom: 220,
-    shadowColor: '#000',
-    shadowOpacity: 0.06,
-    shadowRadius: 16,
-    shadowOffset: { width: 0, height: -6 },
-    elevation: 6,
+    ...shadows.up,
   },
   addWrap: {
     flexDirection: 'row',
@@ -1287,11 +1283,7 @@ const styles = StyleSheet.create({
     backgroundColor: semantic.surface,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.08,
-    shadowRadius: 12,
-    elevation: 3,
+    ...shadows.md,
   },
   headerIconBtnTablet: {
     width: 60,
@@ -1310,11 +1302,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#F5C26B',
     borderRadius: 16,
     overflow: 'hidden',
-    shadowColor: '#92400E',
-    shadowOpacity: 0.18,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 3,
+    ...shadows.md,
   },
   bentoCardPressed: {
     opacity: 0.9,
@@ -1426,11 +1414,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     overflow: 'hidden',
     backgroundColor: '#FFFFFF',
-    shadowColor: '#000',
-    shadowOpacity: 0.06,
-    shadowRadius: 4,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 2,
+    ...shadows.sm,
   },
   skelApptTop: {
     backgroundColor: '#D7D7DB',
@@ -1452,11 +1436,7 @@ const styles = StyleSheet.create({
   apptCardOuter: {
     borderRadius: 16,
     backgroundColor: 'transparent',
-    shadowColor: '#000',
-    shadowOpacity: 0.08,
-    shadowRadius: 6,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 2,
+    ...shadows.sm,
   },
   apptCard: {
     borderRadius: 16,
@@ -1490,11 +1470,7 @@ const styles = StyleSheet.create({
     borderBottomLeftRadius: 16,
     borderBottomRightRadius: 16,
     zIndex: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.12,
-    shadowRadius: 3,
-    elevation: 2,
+    ...shadows.sm,
   },
   apptCardTop: {
     paddingHorizontal: spacing.md,

@@ -41,7 +41,7 @@ import {
   Text,
   useSkeletonShimmer,
 } from '../components';
-import { radii, semantic, spacing } from '../theme';
+import { radii, semantic, shadows, spacing } from '../theme';
 import { mockProducts, categoryMeta, fmtBaht, getProductImages } from '../data/products';
 import { cartStore, useCart } from '../data/cart';
 
@@ -961,11 +961,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: 'rgba(0,0,0,0.1)',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.06,
-    shadowRadius: 2,
-    elevation: 1,
+    ...shadows.sm,
   },
   appbarTitleWrap: {
     position: 'absolute',
@@ -1356,11 +1352,7 @@ const styles = StyleSheet.create({
   actionBarShadow: {
     borderRadius: 42,
     backgroundColor: 'rgba(255,255,255,0.3)', // shadow needs an opaque-ish source on iOS
-    shadowColor: '#5E303C',
-    shadowOpacity: 0.28,
-    shadowRadius: 32,
-    shadowOffset: { width: 0, height: -8 },
-    elevation: 18,
+    ...shadows.up,
   },
   actionBarTint: {
     ...StyleSheet.absoluteFillObject,
@@ -1436,11 +1428,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     zIndex: 100,
-    shadowColor: '#5E303C',
-    shadowOpacity: 0.4,
-    shadowRadius: 12,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 12,
+    ...shadows.lift,
   },
 
   // Lightbox
@@ -1474,10 +1462,6 @@ const styles = StyleSheet.create({
     backgroundColor: semantic.surface,
     borderRadius: 16,
     padding: spacing.lg,
-    shadowColor: '#000',
-    shadowOpacity: 0.06,
-    shadowRadius: 4,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 2,
+    ...shadows.sm,
   },
 });

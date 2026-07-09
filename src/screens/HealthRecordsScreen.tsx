@@ -13,7 +13,7 @@ import {
   WeightChart,
   useSkeletonShimmer,
 } from '../components';
-import { radii, semantic, spacing } from '../theme';
+import { radii, semantic, shadows, spacing } from '../theme';
 import { mockPets } from '../data/pets';
 import { visitsForPet, thDate } from '../data/visits';
 
@@ -195,20 +195,12 @@ const styles = StyleSheet.create({
     borderRadius: radii.xl,
     padding: spacing.lg,
     marginBottom: spacing.xl,
-    shadowColor: '#000',
-    shadowOpacity: 0.06,
-    shadowRadius: 4,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 2,
+    ...shadows.sm,
   },
   skelVisit: {
     backgroundColor: semantic.surface,
     borderRadius: radii.xl,
     padding: spacing.lg,
-    shadowColor: '#000',
-    shadowOpacity: 0.06,
-    shadowRadius: 4,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 2,
+    ...shadows.sm,
   },
 });

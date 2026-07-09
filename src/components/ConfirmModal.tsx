@@ -2,7 +2,7 @@ import { Modal, Pressable, StyleSheet, View } from 'react-native';
 import * as LucideIcons from 'lucide-react-native';
 import Icon from './Icon';
 import Text from './Text';
-import { semantic, spacing } from '../theme';
+import { semantic, shadows, spacing } from '../theme';
 
 type IconName = keyof typeof LucideIcons;
 type Tone = 'warning' | 'danger' | 'info' | 'primary';
@@ -131,11 +131,7 @@ const styles = StyleSheet.create({
     borderRadius: 24,
     padding: spacing['2xl'],
     alignItems: 'center',
-    shadowColor: '#000',
-    shadowOpacity: 0.2,
-    shadowRadius: 24,
-    shadowOffset: { width: 0, height: 12 },
-    elevation: 14,
+    ...shadows.lg,
   },
   iconCircle: {
     width: 64,

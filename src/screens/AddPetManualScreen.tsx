@@ -19,7 +19,7 @@ import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../App';
 import { AppBackground, DropdownField, Icon, StepProgress, Text } from '../components';
-import { semantic } from '../theme';
+import { semantic, shadows } from '../theme';
 import { breedOptions } from '../data/breeds';
 import { mockPets, Pet } from '../data/pets';
 
@@ -510,11 +510,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#000',
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 2,
+    ...shadows.sm,
   },
   headerTitle: {
     fontSize: 16,
@@ -653,11 +649,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: 'rgba(184,106,124,0.12)',
     marginTop: 6,
-    shadowColor: '#7E3D4F',
-    shadowOpacity: 0.12,
-    shadowRadius: 18,
-    shadowOffset: { width: 0, height: 8 },
-    elevation: 6,
+    ...shadows.pop,
   },
   neuterBody: {
     flexDirection: 'row',

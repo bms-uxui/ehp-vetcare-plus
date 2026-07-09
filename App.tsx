@@ -121,10 +121,15 @@ export type RootStackParamList = {
       }
     | undefined;
   BookAppointmentSummary: {
-    petId: string;
+    /** One booking can cover several pets — each gets its own appointment. */
+    petIds: string[];
+    /** Clinic chosen for a checkup; other types derive it from the vet. */
+    clinicName?: string;
     mode: 'online' | 'clinic';
     type: 'checkup' | 'vaccine' | 'grooming' | 'boarding' | 'consultation';
     dateISO: string;
+    /** Check-out date. Boarding only — a stay spans a range, not one day. */
+    endDateISO?: string;
     time: string;
     vetId: string;
     notes?: string;

@@ -12,7 +12,7 @@ import {
   Text,
   useSkeletonShimmer,
 } from '../components';
-import { radii, semantic, spacing } from '../theme';
+import { radii, semantic, shadows, spacing } from '../theme';
 import { mockVets, mockConversations, statusMeta, thRelative, TeleVet } from '../data/televet';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'TeleVet'>;
@@ -333,10 +333,6 @@ const styles = StyleSheet.create({
     borderRadius: radii.xl,
     padding: spacing.lg,
     overflow: 'hidden',
-    shadowColor: '#000',
-    shadowOpacity: 0.06,
-    shadowRadius: 4,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 2,
+    ...shadows.sm,
   },
 });

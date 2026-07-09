@@ -1,5 +1,5 @@
 import { ReactNode } from 'react';
-import { Platform, Pressable, StyleSheet, View, ViewStyle } from 'react-native';
+import { AccessibilityRole, Platform, Pressable, StyleSheet, View, ViewStyle } from 'react-native';
 import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
 import { gradients, radii, semantic, shadows, spacing } from '../theme';
@@ -13,6 +13,9 @@ type Props = {
   onPress?: () => void;
   padding?: keyof typeof spacing | 0;
   style?: ViewStyle;
+  /** Forwarded to the Pressable when `onPress` is set. */
+  accessibilityRole?: AccessibilityRole;
+  accessibilityLabel?: string;
 };
 
 const CARD_RADIUS = radii.xl;
@@ -24,6 +27,8 @@ export default function Card({
   onPress,
   padding = 'xl',
   style,
+  accessibilityRole,
+  accessibilityLabel,
 }: Props) {
   const paddingValue = padding === 0 ? 0 : spacing[padding];
   const resolvedVariant: Variant = selected ? 'selected' : variant;
@@ -89,6 +94,8 @@ export default function Card({
     return (
       <Pressable
         onPress={onPress}
+        accessibilityRole={accessibilityRole}
+        accessibilityLabel={accessibilityLabel}
         style={({ pressed }) => [wrapperStyle, pressed && styles.pressed]}
       >
         {inner}
