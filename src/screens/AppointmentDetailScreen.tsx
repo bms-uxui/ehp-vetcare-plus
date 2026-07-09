@@ -22,7 +22,7 @@ import {
   useSkeletonShimmer,
 } from '../components';
 import { HEADER_HEIGHT } from '../components/SubPageHeader';
-import { semantic, spacing } from '../theme';
+import { semantic, shadows, spacing } from '../theme';
 import { thDate } from '../data/appointments';
 import { useAppointments } from '../data/appointmentsContext';
 import {
@@ -453,11 +453,7 @@ const styles = StyleSheet.create({
   },
   card: {
     marginBottom: spacing.md,
-    shadowColor: '#000',
-    shadowOpacity: 0.06,
-    shadowRadius: 4,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 2,
+    ...shadows.sm,
   },
   infoRow: {
     flexDirection: 'row',
@@ -507,11 +503,7 @@ const styles = StyleSheet.create({
     borderRadius: 42,
     backgroundColor: '#F2F2F3',
     padding: spacing['2xl'],
-    shadowColor: '#000',
-    shadowOpacity: 0.12,
-    shadowRadius: 24,
-    shadowOffset: { width: 0, height: -6 },
-    elevation: 14,
+    ...shadows.up,
   },
   callRow: {
     flexDirection: 'row',
@@ -622,10 +614,6 @@ const styles = StyleSheet.create({
     backgroundColor: semantic.surface,
     borderRadius: 16,
     padding: spacing.lg,
-    shadowColor: '#000',
-    shadowOpacity: 0.06,
-    shadowRadius: 4,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 2,
+    ...shadows.sm,
   },
 });

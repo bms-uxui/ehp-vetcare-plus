@@ -4,7 +4,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useCall } from '../data/callContext';
 import { mockConversations, mockVets } from '../data/televet';
 import { navigationRef } from '../lib/navigationRef';
-import { semantic, spacing } from '../theme';
+import { semantic, shadows, spacing } from '../theme';
 import Text from './Text';
 
 const formatTime = (s: number) => {
@@ -92,11 +92,7 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
     borderRadius: 32,
     backgroundColor: semantic.primary,
-    shadowColor: '#000',
-    shadowOpacity: 0.28,
-    shadowRadius: 16,
-    shadowOffset: { width: 0, height: 6 },
-    elevation: 12,
+    ...shadows.md,
   },
   avatar: {
     width: 44,

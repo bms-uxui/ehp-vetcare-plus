@@ -21,7 +21,7 @@ import DraggableFlatList, {
   RenderItemParams,
   ScaleDecorator,
 } from 'react-native-draggable-flatlist';
-import { radii, semantic, spacing } from '../theme';
+import { radii, semantic, shadows, spacing } from '../theme';
 import { useIsTablet, useTabletHorizontalPadding } from '../lib/responsive';
 import { mockPets, petAgeString, Pet } from '../data/pets';
 
@@ -716,11 +716,7 @@ const styles = StyleSheet.create({
     marginTop: -24,
     marginBottom: -TAB_BAR_SPACE,
     paddingBottom: TAB_BAR_SPACE,
-    shadowColor: '#000',
-    shadowOpacity: 0.08,
-    shadowRadius: 16,
-    shadowOffset: { width: 0, height: -6 },
-    elevation: 8,
+    ...shadows.up,
   },
   // Wraps the add/edit row inside the ListHeaderComponent. Visually it looks
   // like the top portion of a single rounded "sheet" — the FlatList's own
@@ -732,11 +728,7 @@ const styles = StyleSheet.create({
     borderTopRightRadius: 24,
     marginTop: -24,
     paddingTop: 24,
-    shadowColor: '#000',
-    shadowOpacity: 0.08,
-    shadowRadius: 16,
-    shadowOffset: { width: 0, height: -6 },
-    elevation: 8,
+    ...shadows.up,
   },
   listWrap: {
     flex: 1,
@@ -826,11 +818,7 @@ const styles = StyleSheet.create({
     marginHorizontal: spacing.xl,
     borderRadius: radii.xl,
     backgroundColor: '#FFFFFF',
-    shadowColor: '#7E3D4F',
-    shadowOpacity: 0.25,
-    shadowRadius: 24,
-    shadowOffset: { width: 0, height: 14 },
-    elevation: 12,
+    ...shadows.lg,
   },
   card: {
     position: 'relative',
@@ -974,11 +962,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#000',
-    shadowOpacity: 0.15,
-    shadowRadius: 4,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 3,
+    ...shadows.sm,
   },
   genderText: {
     fontSize: 16,

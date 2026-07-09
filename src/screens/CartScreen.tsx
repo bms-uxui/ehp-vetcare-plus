@@ -23,7 +23,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { RootStackParamList } from '../../App';
 import { AppBackground, Button, Icon, SubPageHeader, Text } from '../components';
 import { HEADER_HEIGHT } from '../components/SubPageHeader';
-import { semantic, spacing } from '../theme';
+import { semantic, shadows, spacing } from '../theme';
 import { useTabletHorizontalPadding } from '../lib/responsive';
 import { fmtBaht } from '../data/products';
 import { useCart, cartStore, CartItem } from '../data/cart';
@@ -664,11 +664,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     overflow: 'hidden',
     backgroundColor: 'transparent',
-    shadowColor: '#5E303C',
-    shadowOpacity: 0.08,
-    shadowRadius: 16,
-    shadowOffset: { width: 0, height: 6 },
-    elevation: 3,
+    ...shadows.md,
   },
   swipeActions: {
     position: 'absolute',
@@ -693,11 +689,7 @@ const styles = StyleSheet.create({
     borderRadius: 28,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#000',
-    shadowOpacity: 0.18,
-    shadowRadius: 14,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 8,
+    ...shadows.md,
   },
   actionCircleCancel: {
     backgroundColor: '#FFFFFF',
@@ -819,11 +811,7 @@ const styles = StyleSheet.create({
   actionBarShadow: {
     borderRadius: 42,
     backgroundColor: 'rgba(255,255,255,0.3)',
-    shadowColor: '#5E303C',
-    shadowOpacity: 0.28,
-    shadowRadius: 32,
-    shadowOffset: { width: 0, height: -8 },
-    elevation: 18,
+    ...shadows.up,
   },
   actionBar: {
     borderRadius: 42,

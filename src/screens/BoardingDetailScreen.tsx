@@ -8,7 +8,7 @@ import { RootStackParamList } from '../../App';
 import { AppBackground, Card, Icon, SubPageHeader, Text } from '../components';
 import { HEADER_HEIGHT } from '../components/SubPageHeader';
 import { useTabletHorizontalPadding } from '../lib/responsive';
-import { colors, semantic, spacing } from '../theme';
+import { colors, semantic, shadows, spacing } from '../theme';
 import { mockPets } from '../data/pets';
 import { mockBoardings, boardingNights, BoardingActivity } from '../data/boarding';
 import { mockBoardingClinics, mockVets } from '../data/televet';
@@ -472,11 +472,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     borderWidth: 1,
     borderColor: 'rgba(184,106,124,0.18)',
-    shadowColor: '#5E303C',
-    shadowOpacity: 0.12,
-    shadowRadius: 18,
-    shadowOffset: { width: 0, height: 6 },
-    elevation: 4,
+    ...shadows.md,
     marginBottom: spacing.lg,
   },
   heroBlob: {
@@ -502,10 +498,7 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     borderWidth: 4,
     borderColor: '#FFFFFF',
-    shadowColor: '#5E303C',
-    shadowOpacity: 0.16,
-    shadowRadius: 14,
-    shadowOffset: { width: 0, height: 6 },
+    ...shadows.md,
   },
   heroAvatarImg: {
     width: '100%',
@@ -524,10 +517,7 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     borderRadius: 999,
     backgroundColor: semantic.primary,
-    shadowColor: '#5E303C',
-    shadowOpacity: 0.18,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 3 },
+    ...shadows.md,
   },
   heroDayBadgeText: {
     fontSize: 12,
@@ -562,11 +552,7 @@ const styles = StyleSheet.create({
     marginBottom: spacing.md,
     borderWidth: 1,
     borderColor: 'rgba(184,106,124,0.12)',
-    shadowColor: '#5E303C',
-    shadowOpacity: 0.08,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: 3 },
-    elevation: 2,
+    ...shadows.md,
   },
   summaryRow: {
     flexDirection: 'row',
@@ -600,11 +586,7 @@ const styles = StyleSheet.create({
     marginBottom: spacing.lg,
     borderWidth: 1,
     borderColor: 'rgba(184,106,124,0.12)',
-    shadowColor: '#5E303C',
-    shadowOpacity: 0.08,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: 3 },
-    elevation: 2,
+    ...shadows.md,
   },
   caretakerHeader: {
     flexDirection: 'row',
@@ -644,11 +626,7 @@ const styles = StyleSheet.create({
   },
   callBtnPrimary: {
     backgroundColor: semantic.primary,
-    shadowColor: '#5E303C',
-    shadowOpacity: 0.22,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 4,
+    ...shadows.md,
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.18)',
   },
@@ -683,11 +661,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
     borderWidth: 1,
     borderColor: 'rgba(184,106,124,0.12)',
-    shadowColor: '#5E303C',
-    shadowOpacity: 0.08,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: 3 },
-    elevation: 2,
+    ...shadows.md,
   },
   activityRow: {
     flexDirection: 'row',
@@ -782,11 +756,7 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: '#FFFFFF',
     backgroundColor: semantic.primaryMuted,
-    shadowColor: '#5E303C',
-    shadowOpacity: 0.18,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 3 },
-    elevation: 3,
+    ...shadows.md,
   },
   activityPhoto: {
     width: '100%',

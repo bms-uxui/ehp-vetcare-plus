@@ -31,7 +31,7 @@ import {
   Text,
   useSkeletonShimmer,
 } from '../components';
-import { radii, semantic, spacing } from '../theme';
+import { radii, semantic, shadows, spacing } from '../theme';
 import { ExperienceEntry, mockConversations, mockReviews, mockVets, TeleVet, VetReview } from '../data/televet';
 
 const LIQUID_GLASS = isLiquidGlassAvailable();
@@ -713,11 +713,7 @@ const styles = StyleSheet.create({
   actionBarShadow: {
     borderRadius: 64,
     backgroundColor: 'rgba(255,255,255,0.3)',
-    shadowColor: '#5E303C',
-    shadowOpacity: 0.28,
-    shadowRadius: 32,
-    shadowOffset: { width: 0, height: -8 },
-    elevation: 18,
+    ...shadows.up,
   },
   actionBar: {
     borderRadius: 64,
@@ -763,20 +759,12 @@ const styles = StyleSheet.create({
     padding: spacing.lg,
     borderRadius: radii.xl,
     backgroundColor: semantic.surface,
-    shadowColor: '#000',
-    shadowOpacity: 0.06,
-    shadowRadius: 4,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 2,
+    ...shadows.sm,
   },
   skelReviewCard: {
     padding: spacing.lg,
     borderRadius: radii.xl,
     backgroundColor: semantic.surface,
-    shadowColor: '#000',
-    shadowOpacity: 0.06,
-    shadowRadius: 4,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 2,
+    ...shadows.sm,
   },
 });

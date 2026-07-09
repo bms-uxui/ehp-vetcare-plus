@@ -18,7 +18,7 @@ import {
   useSkeletonShimmer,
 } from '../components';
 import { HEADER_HEIGHT } from '../components/SubPageHeader';
-import { semantic, spacing } from '../theme';
+import { semantic, shadows, spacing } from '../theme';
 import { useTabletHorizontalPadding } from '../lib/responsive';
 import { mockConversations, mockVets } from '../data/televet';
 
@@ -280,10 +280,6 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     padding: spacing.md,
     overflow: 'hidden',
-    shadowColor: '#000',
-    shadowOpacity: 0.06,
-    shadowRadius: 4,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 2,
+    ...shadows.sm,
   },
 });

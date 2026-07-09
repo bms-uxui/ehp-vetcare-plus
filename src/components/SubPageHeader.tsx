@@ -13,6 +13,7 @@ import * as LucideIcons from 'lucide-react-native';
 import Icon from './Icon';
 import Text from './Text';
 import { useIsTablet } from '../lib/responsive';
+import { shadows } from '../theme';
 
 type IconName = keyof typeof LucideIcons;
 
@@ -192,11 +193,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: 'rgba(0,0,0,0.1)',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.06,
-    shadowRadius: 2,
-    elevation: 1,
+    ...shadows.sm,
   },
   iconBtnTablet: {
     width: 48,

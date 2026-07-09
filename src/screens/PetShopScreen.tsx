@@ -38,7 +38,7 @@ import {
   Text,
   useSkeletonShimmer,
 } from '../components';
-import { semantic, spacing } from '../theme';
+import { semantic, shadows, spacing } from '../theme';
 import {
   mockProducts,
   categoryMeta,
@@ -910,11 +910,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 18,
     borderRadius: 999,
     backgroundColor: '#FFFFFF',
-    shadowColor: '#000',
-    shadowOpacity: 0.12,
-    shadowRadius: 20,
-    shadowOffset: { width: 0, height: 8 },
-    elevation: 6,
+    ...shadows.pop,
   },
   searchPillTablet: {
     height: 60,
@@ -932,11 +928,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: '#FFFFFF',
-    shadowColor: '#000',
-    shadowOpacity: 0.12,
-    shadowRadius: 20,
-    shadowOffset: { width: 0, height: 8 },
-    elevation: 6,
+    ...shadows.pop,
   },
   toolbarBtnTablet: {
     width: 60,
@@ -950,10 +942,7 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     paddingTop: spacing.sm,
-    shadowColor: '#000',
-    shadowOpacity: 0.08,
-    shadowRadius: 24,
-    shadowOffset: { width: 0, height: -4 },
+    ...shadows.up,
   },
 
   // Category chips
@@ -1066,11 +1055,7 @@ const styles = StyleSheet.create({
     borderRadius: 28,
     backgroundColor: '#FFFFFF',
     padding: 2,
-    shadowColor: '#5E303C',
-    shadowOpacity: 0.12,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 3,
+    ...shadows.md,
   },
   bigPetAvatarOverlap: {
     marginLeft: -18,
@@ -1139,11 +1124,7 @@ const styles = StyleSheet.create({
     backgroundColor: semantic.surface,
     borderRadius: 16,
     overflow: 'hidden',
-    shadowColor: '#000',
-    shadowOpacity: 0.06,
-    shadowRadius: 4,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 2,
+    ...shadows.sm,
   },
   skelTileImg: {
     backgroundColor: '#E6E6E8',

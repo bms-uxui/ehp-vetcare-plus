@@ -33,7 +33,7 @@ import {
   StickyAppBar,
   Text,
 } from '../components';
-import { radii, semantic, spacing } from '../theme';
+import { radii, semantic, shadows, spacing, tintedShadow } from '../theme';
 import {
   mockReminders,
   reminderMeta,
@@ -668,7 +668,7 @@ function FilterChip({
           active
             ? [
                 styles.chipActive,
-                { backgroundColor: f.activeBg, shadowColor: f.activeBg },
+                { backgroundColor: f.activeBg, ...tintedShadow(f.activeBg, 'pop') },
               ]
             : styles.chipCompact,
           animatedStyle,
@@ -1298,11 +1298,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: 'rgba(255,255,255,0.55)',
-    shadowColor: '#000',
-    shadowOpacity: 0.12,
-    shadowRadius: 20,
-    shadowOffset: { width: 0, height: 8 },
-    elevation: 6,
+    ...shadows.pop,
   },
 
   // Hero header
@@ -1342,11 +1338,8 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(118,118,128,0.12)',
   },
   chipActive: {
+    // backgroundColor + boxShadow applied inline, tinted to the active filter
     backgroundColor: semantic.primary,
-    shadowOpacity: 0.28,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 3 },
-    elevation: 3,
   },
   chipGradient: {
     position: 'absolute',
@@ -1548,11 +1541,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: 'rgba(255,255,255,0.55)',
-    shadowColor: '#000',
-    shadowOpacity: 0.12,
-    shadowRadius: 20,
-    shadowOffset: { width: 0, height: 8 },
-    elevation: 6,
+    ...shadows.pop,
   },
   sheetBody: {
     paddingHorizontal: 16,
@@ -1599,22 +1588,14 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: 'rgba(255,255,255,0.55)',
-    shadowColor: '#000',
-    shadowOpacity: 0.12,
-    shadowRadius: 20,
-    shadowOffset: { width: 0, height: 8 },
-    elevation: 6,
+    ...shadows.pop,
   },
 
   // Outer wrapper — carries the shadow (no overflow:hidden so iOS renders shadow)
   morph: {
     position: 'absolute',
     backgroundColor: '#FFFFFF',
-    shadowColor: '#000',
-    shadowOpacity: 0.18,
-    shadowRadius: 22,
-    shadowOffset: { width: 0, height: 8 },
-    elevation: 10,
+    ...shadows.pop,
   },
   // Inner wrapper — clips content (BlurView, items) to rounded shape
   morphInside: {
