@@ -1,10 +1,12 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Image, KeyboardAvoidingView, Platform, Pressable, StyleSheet, View } from 'react-native';
+import { Image, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import Animated, { useAnimatedScrollHandler, useSharedValue } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../App';
-import { AppBackground, CalendarSheet, Card, ConfirmModal, Icon, Input, SubPageHeader, Text } from '../components';
+import { AppBackground, CalendarSheet, Card, CoachMarks, ConfirmModal, Icon, Input, SubPageHeader, Text } from '../components';
+import { useGuide } from '../lib/useGuide';
+import { BOOKING_GUIDE_STEPS, BOOKING_GUIDE_VERSION } from '../data/guides';
 import { HEADER_HEIGHT } from '../components/SubPageHeader';
 import { colors, semantic, shadows, spacing } from '../theme';
 import { mockPets } from '../data/pets';
@@ -13,6 +15,7 @@ import { mockVets, mockGroomers } from '../data/televet';
 import { clinicOptionsForPets, unbookableClinicsForPets } from '../data/clinics';
 import { getBoardingOptions } from '../data/boarding';
 import { bookingSubmitted } from '../data/bookingState';
+import { endGuideTour, guideTour } from '../data/guideState';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'BookAppointment'>;
 
@@ -323,6 +326,46 @@ export default function BookAppointmentScreen({ navigation, route }: Props) {
     scrollY.value = e.contentOffset.y;
   });
 
+  // Quick start guide — สอนลำดับการจองสี่ขั้น
+  const guideScrollRef = useRef<ScrollView>(null);
+  const guide = useGuide({
+    id: 'booking',
+    version: BOOKING_GUIDE_VERSION,
+    steps: BOOKING_GUIDE_STEPS,
+    scrollRef: guideScrollRef,
+  });
+
+  // ปลายทางของทัวร์ — หน้านี้ mount ใหม่ทุกครั้ง เช็คตอน mount พอ
+  useEffect(() => {
+    if (guideTour.queue[0] !== 'booking') return;
+    const t = setTimeout(guide.start, 450);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  const inTour = guide.open && guideTour.queue[0] === 'booking';
+  // จบหน้านี้ → ปิดฟอร์มจองแล้วส่งไม้ต่อให้หน้าร้านค้า
+  const advanceTour = () => {
+    guide.finish();
+    if (guideTour.queue[0] === 'booking') {
+      guideTour.queue.shift();
+      // รอ Modal ของ guide dismiss จบก่อนค่อย pop — push/pop ชน dismiss แล้วจอตาย
+      setTimeout(
+        () => navigation.navigate('Main', { screen: 'PetShop' } as never),
+        400,
+      );
+    }
+  };
+  // กด X กลางทัวร์ — เลิกทั้งทัวร์แล้วพากลับหน้าแรกที่เป็นจุดเริ่ม
+  // ไม่ทิ้งผู้ใช้ไว้กับฟอร์มจองเปล่า ๆ ที่เขาไม่ได้ตั้งใจเปิด
+  const abortTour = () => {
+    const wasTour = guideTour.queue[0] === 'booking';
+    endGuideTour();
+    guide.finish();
+    if (wasTour) {
+      setTimeout(() => navigation.navigate('Main', { screen: 'Home' } as never), 400);
+    }
+  };
+
   // ทุกคลินิกในเครือ เรียงตามจำนวนสัตว์ที่เลือกซึ่งเคยมา — ประวัติเป็นตัวจัดลำดับ
   // และป้ายบอกสถานะ ไม่ใช่ตัวกรอง (ดูเหตุผลใน data/clinics.ts)
   const clinicSection = isClinicFlow ? (
@@ -439,6 +482,7 @@ export default function BookAppointmentScreen({ navigation, route }: Props) {
   ) : null;
 
   const dateSection = (
+    <View {...guide.register('bk-date')}>
     <Section label={isBoarding ? 'ช่วงวันที่ฝากเลี้ยง' : 'วันที่'}>
       <Pressable
         onPress={dateLocked ? undefined : () => setDatePickerOpen(true)}
@@ -469,10 +513,12 @@ export default function BookAppointmentScreen({ navigation, route }: Props) {
         </Text>
       )}
     </Section>
+    </View>
   );
 
   // Time — hidden for boarding (guests stay all day)
   const timeSection = isBoarding ? null : (
+    <View {...guide.register('bk-time')}>
     <Section label="เวลา">
       {!date ? null : availableSlots.length === 0 ? (
         <Text variant="caption" color={semantic.textSecondary} style={styles.helperText}>
@@ -498,6 +544,7 @@ export default function BookAppointmentScreen({ navigation, route }: Props) {
         ))}
       </View>
     </Section>
+    </View>
   );
 
   return (
@@ -513,6 +560,7 @@ export default function BookAppointmentScreen({ navigation, route }: Props) {
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
         <Animated.ScrollView
+          ref={guideScrollRef as never}
           contentContainerStyle={[
             styles.scrollContent,
             { paddingTop: insets.top + HEADER_HEIGHT },
@@ -523,6 +571,7 @@ export default function BookAppointmentScreen({ navigation, route }: Props) {
           scrollEventThrottle={16}
         >
           {/* Pet */}
+          <View {...guide.register('bk-pets')}>
           <Section label="สัตว์เลี้ยง">
             <View style={styles.petsRow}>
               {mockPets.map((p) => {
@@ -568,8 +617,8 @@ export default function BookAppointmentScreen({ navigation, route }: Props) {
               })}
             </View>
           </Section>
+          </View>
 
-          {/* Type — 4 options: checkup / grooming / boarding / online consult */}
           <Section label="ประเภทการนัด">
             <View style={styles.chipGrid}>
               {(['checkup', 'grooming', 'boarding', 'consultation'] as const).map((t) => {
@@ -579,6 +628,7 @@ export default function BookAppointmentScreen({ navigation, route }: Props) {
                 return (
                   <Pressable
                     key={t}
+                    {...guide.register(`bk-type-${t}`)}
                     onPress={() => setAppointmentType(t)}
                     style={({ pressed }) => [
                       styles.modeTile,
@@ -632,7 +682,7 @@ export default function BookAppointmentScreen({ navigation, route }: Props) {
                   !v.ehpPartner &&
                   (i === 0 || !!matchingVets[i - 1].ehpPartner);
                 return (
-                  <View key={v.id}>
+                  <View key={v.id} {...(i === 0 ? guide.register('bk-staff') : {})}>
                   {startsNearbyGroup && (
                     <View style={styles.groupHeader}>
                       <Icon name="MapPin" size={13} color={semantic.textMuted} strokeWidth={2.2} />
@@ -768,7 +818,7 @@ export default function BookAppointmentScreen({ navigation, route }: Props) {
             />
           </Section>
 
-          <View style={styles.submit}>
+          <View {...guide.register('bk-submit')} style={styles.submit}>
             <Pressable
               onPress={onSubmit}
               disabled={!canSubmit}
@@ -834,6 +884,17 @@ export default function BookAppointmentScreen({ navigation, route }: Props) {
         confirmLabel="ตกลง"
         onConfirm={() => setNoVetModalOpen(false)}
         onCancel={() => setNoVetModalOpen(false)}
+      />
+
+      <CoachMarks
+        visible={guide.open}
+        steps={BOOKING_GUIDE_STEPS}
+        rects={guide.rects}
+        step={guide.step}
+        onStepChange={guide.setStep}
+        onFinish={inTour ? advanceTour : guide.finish}
+        onSkip={inTour ? abortTour : guide.finish}
+        nextPage={inTour ? { label: 'ร้านค้า', onPress: advanceTour } : undefined}
       />
     </View>
   );

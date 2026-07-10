@@ -1,5 +1,13 @@
-import { memo, useCallback, useEffect, useMemo, useState } from 'react';
-import { Image, Pressable, StyleSheet, useWindowDimensions, View } from 'react-native';
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import {
+  FlatList,
+  Image,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  useWindowDimensions,
+  View,
+} from 'react-native';
 import Animated, {
   Easing,
   Extrapolation,
@@ -16,7 +24,10 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../App';
-import { AppBackground, Icon, Text } from '../components';
+import { AppBackground, CoachMarks, Icon, Text } from '../components';
+import { useGuide } from '../lib/useGuide';
+import { PETS_GUIDE_STEPS, PETS_GUIDE_VERSION } from '../data/guides';
+import { endGuideTour, guideTour } from '../data/guideState';
 import DraggableFlatList, {
   RenderItemParams,
   ScaleDecorator,
@@ -115,6 +126,51 @@ export default function PetsListScreen({ navigation }: Props) {
     return () => clearTimeout(t);
   }, []);
 
+  // ── Quick start guide ───────────────────────────────────────────────────
+  // target ทุกตัวอยู่ช่วงบนของหน้า จึงไม่ผูก scrollRef (หน้านี้เป็น
+  // DraggableFlatList ไม่ใช่ ScrollView) — focus() จะวัดตำแหน่งโดยไม่เลื่อนจอ
+  // แต่กันกรณีผู้ใช้เลื่อนลิสต์ค้างไว้ ด้วยการดันกลับหัวลิสต์ตอน guide เปิด
+  const guideScrollRef = useRef<ScrollView>(null);
+  const listRef = useRef<FlatList<Pet>>(null);
+  const guide = useGuide({
+    id: 'pets',
+    version: PETS_GUIDE_VERSION,
+    steps: PETS_GUIDE_STEPS,
+    scrollRef: guideScrollRef,
+    // ให้ skeleton (700ms) หายก่อน ไม่งั้นการ์ดจริงยังไม่อยู่ให้วัดตำแหน่ง
+    startDelayMs: 900,
+  });
+  const { register } = guide;
+  useEffect(() => {
+    if (guide.open) listRef.current?.scrollToOffset({ offset: 0, animated: true });
+  }, [guide.open]);
+
+  // รับไม้ต่อของทัวร์จากหน้าแรก — แท็บนี้อาจเพิ่ง mount ตอนทัวร์พามา
+  // (focus event อาจยิงก่อน listener จะทัน) จึงเช็คทั้งตอน mount และตอน focus
+  useEffect(() => {
+    const maybeStart = () => {
+      if (guideTour.queue[0] !== 'pets') return;
+      // 450ms เท่ากันทุกหน้าของทัวร์ ให้จังหวะเปิด → เลื่อนหา focus รู้สึกเหมือนกัน
+      setTimeout(guide.start, 450);
+    };
+    if (navigation.isFocused()) maybeStart();
+    return navigation.addListener('focus', maybeStart);
+  }, [navigation, guide.start]);
+  const inTour = guide.open && guideTour.queue[0] === 'pets';
+  // จบหน้านี้ (ดูครบหรือกดข้าม) → ส่งไม้ต่อให้หน้าเพิ่มสัตว์เลี้ยง
+  const advanceTour = () => {
+    guide.finish();
+    if (guideTour.queue[0] === 'pets') {
+      guideTour.queue.shift();
+      // iOS ห้าม push ระหว่าง Modal กำลัง dismiss — จังหวะชนกันแล้วจอตาย
+      setTimeout(() => navigation.navigate('AddPet'), 400);
+    }
+  };
+  const abortTour = () => {
+    endGuideTour();
+    guide.finish();
+  };
+
   // ── Edit-mode (reorder) state ──
   const [editMode, setEditMode] = useState(false);
   const [petOrder, setPetOrder] = useState<string[]>(() =>
@@ -192,11 +248,15 @@ export default function PetsListScreen({ navigation }: Props) {
     [ITEM_HEIGHT],
   );
 
+  const firstPetId = orderedPets[0]?.id;
   const renderDraggableItem = useCallback(
     ({ item, drag, isActive }: RenderItemParams<Pet>) => (
       <ScaleDecorator activeScale={1.08}>
         <View style={{ paddingHorizontal: padX }}>
           <PetCard
+            // การ์ดใบแรกเป็น target ของ guide — ผูกที่ตัวการ์ดตรง ๆ ไม่ใช่แถวครอบ
+            // เพื่อให้ spotlight รัดพอดีขอบการ์ด ไม่กินระยะขอบซ้ายขวา
+            coachTarget={item.id === firstPetId ? register('pt-card') : undefined}
             pet={item}
             accent={accentByPetId.get(item.id) ?? CARD_PALETTE[0]}
             onOpen={onOpenPet}
@@ -207,7 +267,7 @@ export default function PetsListScreen({ navigation }: Props) {
         </View>
       </ScaleDecorator>
     ),
-    [accentByPetId, editMode, onOpenPet, padX],
+    [accentByPetId, editMode, firstPetId, onOpenPet, padX, register],
   );
 
   const renderHeader = useCallback(() => (
@@ -300,6 +360,7 @@ export default function PetsListScreen({ navigation }: Props) {
           ) : (
             <View style={[styles.addRow, styles.addRowFloat]}>
               <Pressable
+                {...register('pt-add')}
                 onPress={onAddPet}
                 android_ripple={RIPPLE_LIGHT}
                 style={({ pressed }) => [
@@ -322,6 +383,7 @@ export default function PetsListScreen({ navigation }: Props) {
                 </Text>
               </Pressable>
               <Pressable
+                {...register('pt-reorder')}
                 onPress={() => setEditMode(true)}
                 android_ripple={RIPPLE}
                 accessibilityLabel="จัดเรียงสัตว์เลี้ยง"
@@ -364,6 +426,7 @@ export default function PetsListScreen({ navigation }: Props) {
       ) : (
         <View style={styles.listWrap}>
           <DraggableFlatList
+          ref={listRef as never}
           data={orderedPets}
           keyExtractor={(p) => p.id}
           activationDistance={editMode ? 8 : 9999}
@@ -422,6 +485,17 @@ export default function PetsListScreen({ navigation }: Props) {
           <View style={styles.appbarPlaceholder} />
         </View>
       </View>
+
+      <CoachMarks
+        visible={guide.open}
+        steps={PETS_GUIDE_STEPS}
+        rects={guide.rects}
+        step={guide.step}
+        onStepChange={guide.setStep}
+        onFinish={inTour ? advanceTour : guide.finish}
+        onSkip={inTour ? abortTour : guide.finish}
+        nextPage={inTour ? { label: 'เพิ่มสัตว์เลี้ยง', onPress: advanceTour } : undefined}
+      />
     </View>
   );
 }
@@ -504,6 +578,7 @@ function PetCardImpl({
   editMode = false,
   onDrag,
   isDragging = false,
+  coachTarget,
 }: {
   pet: Pet;
   accent: CardAccent;
@@ -511,10 +586,12 @@ function PetCardImpl({
   editMode?: boolean;
   onDrag?: () => void;
   isDragging?: boolean;
+  /** ref จาก guide.register() — ให้ spotlight วัดขอบการ์ดจริง */
+  coachTarget?: { ref: (node: View | null) => void };
 }) {
   const handlePress = useCallback(() => onOpen(pet.id), [onOpen, pet.id]);
   return (
-    <View style={styles.cardShadow}>
+    <View style={styles.cardShadow} {...(coachTarget ?? {})}>
       <Pressable
         onPress={editMode ? undefined : handlePress}
         android_ripple={editMode ? undefined : RIPPLE}

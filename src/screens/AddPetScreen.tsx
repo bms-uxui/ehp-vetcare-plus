@@ -1,10 +1,20 @@
-import { ImageSourcePropType, Pressable, StyleSheet, View } from 'react-native';
+import { useEffect, useRef } from 'react';
+import {
+  ImageSourcePropType,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  View,
+} from 'react-native';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { RootStackParamList } from '../../App';
-import { AppBackground, Icon, Text } from '../components';
+import { AppBackground, CoachMarks, Icon, Text } from '../components';
+import { useGuide } from '../lib/useGuide';
+import { ADDPET_GUIDE_STEPS, ADDPET_GUIDE_VERSION } from '../data/guides';
+import { endGuideTour, guideTour } from '../data/guideState';
 import { shadows, tintedShadow } from '../theme';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'AddPet'>;
@@ -50,6 +60,40 @@ const OPTIONS: PathOption[] = [
 
 export default function AddPetScreen({ navigation }: Props) {
   const insets = useSafeAreaInsets();
+
+  // Quick start guide — สองวิธีเพิ่มสัตว์เลี้ยง หน้านี้สั้นไม่ต้องเลื่อน
+  // จึงไม่ผูก scrollRef (focus() จะวัดตำแหน่งเฉย ๆ)
+  const guideScrollRef = useRef<ScrollView>(null);
+  const guide = useGuide({
+    id: 'addpet',
+    version: ADDPET_GUIDE_VERSION,
+    steps: ADDPET_GUIDE_STEPS,
+    scrollRef: guideScrollRef,
+  });
+  const { register } = guide;
+
+  // รับไม้ต่อของทัวร์ — หน้านี้ mount ใหม่ทุกครั้ง เช็คตอน mount พอ
+  useEffect(() => {
+    if (guideTour.queue[0] !== 'addpet') return;
+    const t = setTimeout(guide.start, 450);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  const inTour = guide.open && guideTour.queue[0] === 'addpet';
+  // ทัวร์จบแค่หน้าเลือกวิธี ไม่พาเข้าฟอร์มกรอก → ส่งไม้ต่อให้หน้านัดหมาย
+  const advanceTour = () => {
+    guide.finish();
+    if (guideTour.queue[0] === 'addpet') {
+      guideTour.queue.shift();
+      // รอ Modal ของ guide dismiss จบก่อนค่อย pop กลับไปสลับแท็บ
+      setTimeout(() => navigation.navigate('Main', { screen: 'Vet' } as never), 400);
+    }
+  };
+  const abortTour = () => {
+    endGuideTour();
+    guide.finish();
+  };
+
   return (
     <View style={styles.root}>
       <AppBackground />
@@ -75,6 +119,7 @@ export default function AddPetScreen({ navigation }: Props) {
         {OPTIONS.map((opt) => (
           <Pressable
             key={opt.key}
+            {...register(`ap-${opt.key}`)}
             onPress={() => navigation.navigate(opt.route as any)}
             style={({ pressed }) => [
               styles.cardShadow,
@@ -142,6 +187,17 @@ export default function AddPetScreen({ navigation }: Props) {
           </Pressable>
         ))}
       </View>
+
+      <CoachMarks
+        visible={guide.open}
+        steps={ADDPET_GUIDE_STEPS}
+        rects={guide.rects}
+        step={guide.step}
+        onStepChange={guide.setStep}
+        onFinish={inTour ? advanceTour : guide.finish}
+        onSkip={inTour ? abortTour : guide.finish}
+        nextPage={inTour ? { label: 'นัดหมาย', onPress: advanceTour } : undefined}
+      />
     </View>
   );
 }

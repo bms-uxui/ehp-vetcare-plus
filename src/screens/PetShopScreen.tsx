@@ -30,6 +30,7 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { AppTabsParamList } from '../navigation/AppTabs';
 import { RootStackParamList } from '../../App';
 import {
+  CoachMarks,
   Icon,
   PetAvatar,
   ProductTile,
@@ -38,6 +39,9 @@ import {
   Text,
   useSkeletonShimmer,
 } from '../components';
+import { useGuide } from '../lib/useGuide';
+import { SHOP_GUIDE_STEPS, SHOP_GUIDE_VERSION } from '../data/guides';
+import { endGuideTour, guideTour } from '../data/guideState';
 import { semantic, shadows, spacing } from '../theme';
 import {
   mockProducts,
@@ -59,7 +63,7 @@ const CARD_GAP = 10;
 const FADE_START = 30;
 const FADE_END = 90;
 
-export default function PetShopScreen({}: Props) {
+export default function PetShopScreen({ navigation }: Props) {
   const insets = useSafeAreaInsets();
   const isTablet = useIsTablet();
   const rootNav = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
@@ -88,6 +92,38 @@ export default function PetShopScreen({}: Props) {
     const t = setTimeout(() => setLoading(false), 700);
     return () => clearTimeout(t);
   }, []);
+
+  // ── Quick start guide ───────────────────────────────────────────────────
+  const guideScrollRef = useRef<ScrollView>(null);
+  const guide = useGuide({
+    id: 'shop',
+    version: SHOP_GUIDE_VERSION,
+    steps: SHOP_GUIDE_STEPS,
+    scrollRef: guideScrollRef,
+    // ให้ skeleton (700ms) หายก่อน ไม่งั้น section สินค้ายังไม่อยู่ให้วัด
+    startDelayMs: 900,
+  });
+  const { register } = guide;
+
+  // รับไม้ต่อของทัวร์ — แท็บนี้อาจเพิ่ง mount ตอนทัวร์พามา (focus event
+  // อาจยิงก่อน listener จะทัน) จึงเช็คทั้งตอน mount และตอน focus
+  useEffect(() => {
+    const maybeStart = () => {
+      if (guideTour.queue[0] !== 'shop') return;
+      // 450ms เท่ากันทุกหน้าของทัวร์ ให้จังหวะเปิด → เลื่อนหา focus รู้สึกเหมือนกัน
+      setTimeout(guide.start, 450);
+    };
+    if (navigation.isFocused()) maybeStart();
+    return navigation.addListener('focus', maybeStart);
+  }, [navigation, guide.start]);
+  const inTour = guide.open && guideTour.queue[0] === 'shop';
+  // หน้าสุดท้ายของทัวร์ — จบหรือกด X ก็พากลับหน้าแรกที่เป็นจุดเริ่มเสมอ
+  const finishTour = () => {
+    endGuideTour();
+    guide.finish();
+    // ให้ Modal ของ guide dismiss จบก่อนค่อยสลับแท็บ
+    setTimeout(() => navigation.navigate('Home' as never), 300);
+  };
 
   const openSearch = () => {
     setSearchOpen(true);
@@ -172,6 +208,7 @@ export default function PetShopScreen({}: Props) {
   return (
     <View style={styles.root}>
       <Animated.ScrollView
+        ref={guideScrollRef as never}
         contentContainerStyle={styles.scroll}
         showsVerticalScrollIndicator={false}
         onScroll={scrollHandler}
@@ -243,6 +280,7 @@ export default function PetShopScreen({}: Props) {
         {!searchOpen && (
           <View style={[styles.toolbarWrap, { paddingHorizontal: sectionPadX }]}>
             <Pressable
+              {...register('sh-search')}
               onPress={openSearch}
               style={({ pressed }) => [
                 styles.searchPill,
@@ -258,7 +296,7 @@ export default function PetShopScreen({}: Props) {
               />
               <Text style={styles.searchPillText}>ค้นหาสินค้า</Text>
             </Pressable>
-            <View>
+            <View {...register('sh-orders')}>
               <Pressable
                 onPress={() => rootNav.navigate('OrderTracking')}
                 style={({ pressed }) => [
@@ -283,7 +321,7 @@ export default function PetShopScreen({}: Props) {
                 </View>
               )}
             </View>
-            <View>
+            <View {...register('sh-cart')}>
               <Pressable
                 onPress={() => rootNav.navigate('Cart')}
                 style={({ pressed }) => [
@@ -312,6 +350,7 @@ export default function PetShopScreen({}: Props) {
         )}
 
         {/* Category chips — horizontal scroll */}
+        <View {...register('sh-categories')}>
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
@@ -327,6 +366,7 @@ export default function PetShopScreen({}: Props) {
               />
             ))}
           </ScrollView>
+        </View>
 
         {loading ? (
           <PetShopSkeleton
@@ -374,7 +414,10 @@ export default function PetShopScreen({}: Props) {
             {/* Recommend for your pets — section header is a rose banner
                 with pet photos peeking from the right. */}
             {!activeCategory && recommended.length > 0 && (
-              <View style={[styles.section, { paddingHorizontal: sectionPadX }]}>
+              <View
+                {...register('sh-recommend')}
+                style={[styles.section, { paddingHorizontal: sectionPadX }]}
+              >
                 <View style={styles.recBanner}>
                   <LinearGradient
                     pointerEvents="none"
@@ -404,6 +447,7 @@ export default function PetShopScreen({}: Props) {
             )}
 
             {/* All products / filtered */}
+            <View {...register('sh-products')}>
             <Section
               title={
                 activeCategory
@@ -418,6 +462,7 @@ export default function PetShopScreen({}: Props) {
                 cardWidth={cardWidth}
               />
             </Section>
+            </View>
           </>
         )}
 
@@ -570,6 +615,16 @@ export default function PetShopScreen({}: Props) {
           </ScrollView>
         </View>
       </Modal>
+
+      <CoachMarks
+        visible={guide.open}
+        steps={SHOP_GUIDE_STEPS}
+        rects={guide.rects}
+        step={guide.step}
+        onStepChange={guide.setStep}
+        onFinish={inTour ? finishTour : guide.finish}
+        onSkip={inTour ? finishTour : guide.finish}
+      />
     </View>
   );
 }
