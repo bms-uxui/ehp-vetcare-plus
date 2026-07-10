@@ -1,5 +1,5 @@
-import { ComponentProps, useEffect, useState } from 'react';
-import { Image, Linking, Pressable, StyleSheet, useWindowDimensions, View } from 'react-native';
+import { ComponentProps, useEffect, useRef, useState } from 'react';
+import { Image, Linking, Pressable, ScrollView, StyleSheet, useWindowDimensions, View } from 'react-native';
 import Animated, {
   Extrapolation,
   interpolate,
@@ -15,7 +15,10 @@ import { tabBarCompact } from '../navigation/tabBarVisibility';
 import { useResponsiveScale } from '../lib/responsive';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../App';
-import { Card, Icon, SkeletonBox, SkeletonShimmer, Text, useSkeletonShimmer } from '../components';
+import { Card, CoachMarks, Icon, SkeletonBox, SkeletonShimmer, Text, useSkeletonShimmer } from '../components';
+import { useGuide } from '../lib/useGuide';
+import { VET_GUIDE_STEPS, VET_GUIDE_VERSION } from '../data/guides';
+import { endGuideTour, guideTour } from '../data/guideState';
 import { colors, radii, semantic, shadows, spacing } from '../theme';
 import { useIsTablet, useTabletHorizontalPadding } from '../lib/responsive';
 import { Appointment, typeMeta, MOCK_VETS } from '../data/appointments';
@@ -120,6 +123,40 @@ export default function VetHubScreen({ navigation }: Props) {
     return () => clearInterval(id);
   }, []);
   const [loading, setLoading] = useState(true);
+
+  // Quick start guide — สามจุดหลักของหน้านัดหมาย
+  const guideScrollRef = useRef<ScrollView>(null);
+  const guide = useGuide({
+    id: 'vet',
+    version: VET_GUIDE_VERSION,
+    steps: VET_GUIDE_STEPS,
+    scrollRef: guideScrollRef,
+  });
+
+  // รับไม้ต่อของทัวร์ — แท็บนี้อาจเพิ่ง mount ตอนทัวร์พามา (focus event
+  // อาจยิงก่อน listener จะทัน) จึงเช็คทั้งตอน mount และตอน focus
+  useEffect(() => {
+    const maybeStart = () => {
+      if (guideTour.queue[0] !== 'vet') return;
+      // 450ms เท่ากันทุกหน้าของทัวร์ ให้จังหวะเปิด → เลื่อนหา focus รู้สึกเหมือนกัน
+      setTimeout(guide.start, 450);
+    };
+    if (navigation.isFocused()) maybeStart();
+    return navigation.addListener('focus', maybeStart);
+  }, [navigation, guide.start]);
+  const inTour = guide.open && guideTour.queue[0] === 'vet';
+  const advanceTour = () => {
+    guide.finish();
+    if (guideTour.queue[0] === 'vet') {
+      guideTour.queue.shift();
+      // iOS ห้าม push ระหว่าง Modal กำลัง dismiss — จังหวะชนกันแล้วจอตาย
+      setTimeout(() => navigation.navigate('BookAppointment'), 400);
+    }
+  };
+  const abortTour = () => {
+    endGuideTour();
+    guide.finish();
+  };
   useEffect(() => {
     const t = setTimeout(() => setLoading(false), 700);
     return () => clearTimeout(t);
@@ -129,6 +166,7 @@ export default function VetHubScreen({ navigation }: Props) {
     <View style={styles.root}>
 
       <Animated.ScrollView
+        ref={guideScrollRef as never}
         contentContainerStyle={{ paddingBottom: 0 }}
         showsVerticalScrollIndicator={false}
         onScroll={scrollHandler}
@@ -197,7 +235,7 @@ export default function VetHubScreen({ navigation }: Props) {
           ]}
         >
           {/* CTA row — big pill + chat icon */}
-          <View style={styles.addWrap}>
+          <View {...guide.register('vet-actions')} style={styles.addWrap}>
             <Pressable
               onPress={() => navigation.navigate('BookAppointment')}
               style={({ pressed }) => [
@@ -228,7 +266,7 @@ export default function VetHubScreen({ navigation }: Props) {
           </View>
 
       {/* Quick action bento — 2 cards per Figma */}
-      <View style={styles.bentoRow}>
+      <View {...guide.register('vet-next')} style={styles.bentoRow}>
         {false && (
           <Card
             variant="elevated"
@@ -358,6 +396,7 @@ export default function VetHubScreen({ navigation }: Props) {
         </Pressable>
       </View>
 
+      <View {...guide.register('vet-list')}>
       {loading ? (
         <UpcomingTabSkeleton shimmerStyle={shimmerStyle} />
       ) : (
@@ -368,6 +407,7 @@ export default function VetHubScreen({ navigation }: Props) {
           nowMs={nowMs}
         />
       )}
+      </View>
         </View>
       </Animated.ScrollView>
 
@@ -396,6 +436,17 @@ export default function VetHubScreen({ navigation }: Props) {
           <View style={styles.appbarPlaceholder} />
         </View>
       </View>
+
+      <CoachMarks
+        visible={guide.open}
+        steps={VET_GUIDE_STEPS}
+        rects={guide.rects}
+        step={guide.step}
+        onStepChange={guide.setStep}
+        onFinish={inTour ? advanceTour : guide.finish}
+        onSkip={inTour ? abortTour : guide.finish}
+        nextPage={inTour ? { label: 'จองนัด', onPress: advanceTour } : undefined}
+      />
     </View>
   );
 }

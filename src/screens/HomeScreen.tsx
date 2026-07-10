@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Image,
   ImageSourcePropType,
@@ -20,7 +20,10 @@ import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { RootStackParamList } from '../../App';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Button, Card, Icon, PetAvatar, ProductTile, Screen, Text } from '../components';
+import { Button, Card, CoachMarks, Icon, PetAvatar, ProductTile, Screen, Text } from '../components';
+import { useGuide } from '../lib/useGuide';
+import { HOME_GUIDE_STEPS, HOME_GUIDE_VERSION } from '../data/guides';
+import { endGuideTour, guideTour } from '../data/guideState';
 import VaccinationIllus from '../../assets/vaccination-appointment.svg';
 import { getProductColumns, useIsTablet, useTabletHorizontalPadding } from '../lib/responsive';
 import { colors, radii, semantic, shadows, spacing } from '../theme';
@@ -94,6 +97,52 @@ export default function HomeScreen({ navigation }: Props) {
 
   // Active boarding stays — pets currently checked-in to a boarding facility
   const activeBoardings = getActiveBoardings();
+
+  // ── Quick start coach marks ─────────────────────────────────────────────
+  const scrollRef = useRef<ScrollView>(null);
+
+  // The boarding card only exists when a pet is checked in — teaching a card
+  // that isn't on screen would highlight nothing.
+  const guideSteps = useMemo(
+    () =>
+      HOME_GUIDE_STEPS.filter(
+        (s) => s.key !== 'boarding' || activeBoardings.length > 0,
+      ),
+    [activeBoardings.length],
+  );
+  const guide = useGuide({
+    id: 'home',
+    version: HOME_GUIDE_VERSION,
+    steps: guideSteps,
+    scrollRef,
+  });
+  const { register } = guide;
+
+  // ทัวร์จากหน้าตั้งค่า — Home เป็นแท็บที่ไม่ unmount จึงต้องฟัง focus เอง
+  useEffect(
+    () =>
+      navigation.addListener('focus', () => {
+        if (guideTour.queue[0] !== 'home') return;
+        // 450ms เท่ากันทุกหน้าของทัวร์ ให้จังหวะเปิด → เลื่อนหา focus รู้สึกเหมือนกัน
+        setTimeout(guide.start, 450);
+      }),
+    [navigation, guide.start],
+  );
+
+  const inTour = guide.open && guideTour.queue[0] === 'home';
+  // จบหน้านี้ (ดูครบหรือกดข้าม) → ส่งไม้ต่อให้หน้าสัตว์เลี้ยง
+  const advanceTour = () => {
+    guide.finish();
+    if (guideTour.queue[0] === 'home') {
+      guideTour.queue.shift();
+      // ให้ Modal ของ guide หน้านี้ dismiss จบก่อนค่อยสลับแท็บ
+      setTimeout(() => navigation.navigate('PetsList' as never), 300);
+    }
+  };
+  const abortTour = () => {
+    endGuideTour();
+    guide.finish();
+  };
 
   // ── Banner carousel ──
   type BannerItem = {
@@ -229,7 +278,7 @@ export default function HomeScreen({ navigation }: Props) {
   const currentBanner = bannerItems[bannerIndex];
 
   return (
-    <Screen scroll tabBarSpace padded={false} topFade={false}>
+    <Screen scroll tabBarSpace padded={false} topFade={false} scrollRef={scrollRef}>
       {/* ── BANNER SECTION (full bleed, contains header + reminder + dots) ── */}
       <View style={[styles.bannerSection, { paddingTop: insets.top }]}>
         {/* Layer 1: per-page illustration backgrounds (crossfade) */}
@@ -302,6 +351,8 @@ export default function HomeScreen({ navigation }: Props) {
         </View>
 
         {/* ── Banner text content — stacked, crossfade ── */}
+        {/* guide target = เฉพาะเนื้อหาแบนเนอร์ + แถวปุ่ม ไม่รวมโลโก้/กระดิ่งด้านบน */}
+        <View {...register('banner')}>
         <View style={[styles.bannerStack, isTablet && styles.bannerStackTablet]}>
           {bannerItems.map((item, i) => (
             <Animated.View
@@ -448,10 +499,12 @@ export default function HomeScreen({ navigation }: Props) {
             ))}
           </View>
         </View>
+        </View>
       </View>
 
       <View style={[styles.content, { paddingHorizontal: contentPadX }]}>
         {/* ── PETS ROW (overlaps banner bottom) — glass card ── */}
+        <View {...register('pets')}>
         <Card variant="elevated" padding="lg" style={styles.petsCard}>
           <View style={[styles.petsRow, isTablet && styles.petsRowTablet]}>
             {mockPets.slice(0, 3).map((pet) => (
@@ -493,10 +546,11 @@ export default function HomeScreen({ navigation }: Props) {
             </Pressable>
           </View>
         </Card>
+        </View>
 
         {/* ── ACTIVE BOARDING ── (only when at least one pet is currently checked-in) */}
         {activeBoardings.length > 0 && (
-          <View style={styles.boardingList}>
+          <View {...register('boarding')} style={styles.boardingList}>
             {activeBoardings.map((b) => {
               const pet = mockPets.find((p) => p.id === b.petId);
               if (!pet) return null;
@@ -556,7 +610,7 @@ export default function HomeScreen({ navigation }: Props) {
         )}
 
         {/* ── BENTO 2-COL: COST + FEEDING ── */}
-        <View style={styles.bentoRow}>
+        <View {...register('bento')} style={styles.bentoRow}>
           <Pressable
             onPress={() => navigation.navigate('Expenses')}
             android_ripple={RIPPLE}
@@ -653,6 +707,7 @@ export default function HomeScreen({ navigation }: Props) {
         </View>
 
         {/* ── VET SERVICE WIDE CARD ── */}
+        <View {...register('vet')}>
         <Pressable
           onPress={() => navigation.navigate('BookAppointment')}
           android_ripple={RIPPLE}
@@ -710,9 +765,10 @@ export default function HomeScreen({ navigation }: Props) {
           </View>
           </LinearGradient>
         </Pressable>
+        </View>
 
         {/* ── PRODUCTS ── */}
-        <View style={styles.productsHeader}>
+        <View {...register('products')} style={styles.productsHeader}>
           <View style={{ flex: 1 }}>
             <Text variant="bodyStrong" style={styles.productsTitle}>
               สินค้าแนะนำ
@@ -779,6 +835,16 @@ export default function HomeScreen({ navigation }: Props) {
           </Pressable>
         </View>
       </View>
+      <CoachMarks
+        visible={guide.open}
+        steps={guideSteps}
+        rects={guide.rects}
+        step={guide.step}
+        onStepChange={guide.setStep}
+        onFinish={inTour ? advanceTour : guide.finish}
+        onSkip={inTour ? abortTour : guide.finish}
+        nextPage={inTour ? { label: 'สัตว์เลี้ยง', onPress: advanceTour } : undefined}
+      />
     </Screen>
   );
 }

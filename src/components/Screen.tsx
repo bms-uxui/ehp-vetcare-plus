@@ -31,6 +31,8 @@ type Props = {
   style?: ViewStyle;
   backgroundColor?: string;
   tabBarSpace?: boolean;
+  /** Exposes the inner ScrollView — needed to drive coach marks / deep links. */
+  scrollRef?: React.RefObject<ScrollView | null>;
   // Legacy props — accepted but ignored.
   edges?: string[];
   gradient?: 'app' | 'soft' | 'none';
@@ -47,6 +49,7 @@ export default function Screen({
   style,
   backgroundColor = semantic.background,
   tabBarSpace = false,
+  scrollRef,
 }: Props) {
   const insets = useSafeAreaInsets();
   const tabletPadX = useTabletHorizontalPadding(spacing.xl);
@@ -75,6 +78,7 @@ export default function Screen({
 
   const body = scroll ? (
     <ScrollView
+      ref={scrollRef}
       contentContainerStyle={contentStyle}
       keyboardShouldPersistTaps="handled"
       showsVerticalScrollIndicator={false}

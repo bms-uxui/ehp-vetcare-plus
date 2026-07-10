@@ -2,6 +2,8 @@ export { default as AppBackground } from './AppBackground';
 export { default as Button } from './Button';
 export { default as CalendarSheet } from './CalendarSheet';
 export { default as Card } from './Card';
+export { default as CoachMarks } from './CoachMarks';
+export type { CoachRect, CoachStep } from './CoachMarks';
 export { default as ConfirmModal } from './ConfirmModal';
 export { default as DropdownField } from './DropdownField';
 export { default as FeedingTypeCard } from './FeedingTypeCard';

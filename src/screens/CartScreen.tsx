@@ -25,7 +25,7 @@ import { AppBackground, Button, Icon, SubPageHeader, Text } from '../components'
 import { HEADER_HEIGHT } from '../components/SubPageHeader';
 import { semantic, shadows, spacing } from '../theme';
 import { useTabletHorizontalPadding } from '../lib/responsive';
-import { fmtBaht } from '../data/products';
+import { fmtBaht, productImageSource } from '../data/products';
 import { useCart, cartStore, CartItem } from '../data/cart';
 
 const LIQUID_GLASS = isLiquidGlassAvailable();
@@ -490,10 +490,10 @@ function CartItemRow({
       {/* Image square — 80px white card on left */}
       <View style={styles.itemImageWrap}>
         <View style={styles.itemImage}>
-          {item.product.imageUrl && !imgFailed ? (
+          {productImageSource(item.product) && !imgFailed ? (
             <Image
-              source={{ uri: item.product.imageUrl }}
-              style={StyleSheet.absoluteFill}
+              source={productImageSource(item.product)!}
+              style={[StyleSheet.absoluteFill, { width: '100%', height: '100%' }]}
               resizeMode="cover"
               onError={() => setImgFailed(true)}
             />

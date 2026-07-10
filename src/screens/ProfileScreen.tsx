@@ -3,8 +3,15 @@ import { Pressable, StyleSheet, View } from 'react-native';
 import { CommonActions, useNavigation } from '@react-navigation/native';
 import { Button, Card, ConfirmModal, Icon, Screen, Text } from '../components';
 import { semantic, spacing } from '../theme';
+import { startGuideTour } from '../data/guideState';
 
-type MenuItem = { icon: string; label: string; route?: keyof import('../../App').RootStackParamList };
+type MenuItem = {
+  icon: string;
+  label: string;
+  route?: keyof import('../../App').RootStackParamList;
+  /** ทางเลือกแทน route — ทำอะไรบางอย่างแล้วค่อยพาไปเอง */
+  action?: 'replayHomeGuide';
+};
 
 const MENU: MenuItem[] = [
   { icon: 'User', label: 'ข้อมูลส่วนตัว', route: 'ProfileInfo' },
@@ -12,6 +19,7 @@ const MENU: MenuItem[] = [
   { icon: 'Bell', label: 'การแจ้งเตือน', route: 'Notifications' },
   { icon: 'Hospital', label: 'คลินิกที่เชื่อมต่อ', route: 'ConnectedClinics' },
   { icon: 'Lock', label: 'ความปลอดภัย', route: 'Security' },
+  { icon: 'Sparkles', label: 'ดูคำแนะนำการใช้งานอีกครั้ง', action: 'replayHomeGuide' },
   { icon: 'HelpCircle', label: 'ช่วยเหลือ', route: 'Help' },
 ];
 
@@ -54,6 +62,17 @@ export default function ProfileScreen() {
               {m.route ? (
                 <Pressable
                   onPress={() => navigation.navigate(m.route as never)}
+                  style={({ pressed }) => [pressed && { opacity: 0.6 }]}
+                >
+                  {row}
+                </Pressable>
+              ) : m.action === 'replayHomeGuide' ? (
+                <Pressable
+                  onPress={() => {
+                    // เริ่มทัวร์ต่อเนื่อง หน้าแรก → นัดหมาย → จองนัด
+                    startGuideTour();
+                    navigation.navigate('Home' as never);
+                  }}
                   style={({ pressed }) => [pressed && { opacity: 0.6 }]}
                 >
                   {row}
