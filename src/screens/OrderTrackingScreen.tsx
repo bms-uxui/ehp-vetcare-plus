@@ -25,7 +25,7 @@ import { RootStackParamList } from '../../App';
 import { AppBackground, Icon, SubPageHeader, Text } from '../components';
 import { HEADER_HEIGHT } from '../components/SubPageHeader';
 import { semantic, shadows, spacing, tintedShadow } from '../theme';
-import { fmtBaht, categoryMeta } from '../data/products';
+import { fmtBaht, categoryMeta, productImageSource } from '../data/products';
 import {
   fmtOrderDate,
   fmtOrderDateTime,
@@ -501,10 +501,10 @@ function ThumbAvatar({
   const size = small ? styles.thumbSmall : styles.thumb;
   return (
     <View style={[size, { backgroundColor: cat.bg }]}>
-      {product.imageUrl && !failed ? (
+      {productImageSource(product) && !failed ? (
         <Image
-          source={{ uri: product.imageUrl }}
-          style={StyleSheet.absoluteFill}
+          source={productImageSource(product)!}
+          style={[StyleSheet.absoluteFill, { width: '100%', height: '100%' }]}
           resizeMode="cover"
           onError={() => setFailed(true)}
         />

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Image, Pressable, StyleSheet, View, ViewStyle } from 'react-native';
-import { Product, fmtBaht } from '../data/products';
+import { Product, fmtBaht, productImageSource } from '../data/products';
 import { useIsTablet } from '../lib/responsive';
 import { shadows } from '../theme';
 import Text from './Text';
@@ -19,7 +19,8 @@ export default function ProductTile({ product, onPress, cardWidth, style }: Prop
   const isTablet = useIsTablet();
   const isOnSale = !!product.originalPriceBaht;
   const priceColor = isOnSale ? '#C25450' : '#4FB36C';
-  const showImage = !!product.imageUrl && !imgFailed;
+  const imageSource = productImageSource(product);
+  const showImage = !!imageSource && !imgFailed;
 
   return (
     <Pressable
@@ -39,8 +40,9 @@ export default function ProductTile({ product, onPress, cardWidth, style }: Prop
       >
         {showImage ? (
           <Image
-            source={{ uri: product.imageUrl }}
-            style={StyleSheet.absoluteFill}
+            source={imageSource!}
+            // รูป require() มีขนาดจริงในตัว ต้องบังคับ 100% ไม่งั้น Fabric ใช้ขนาดจริงแล้วทะลุการ์ด
+            style={[StyleSheet.absoluteFill, { width: '100%', height: '100%' }]}
             resizeMode="cover"
             onError={() => setImgFailed(true)}
           />

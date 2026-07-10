@@ -12,11 +12,11 @@ export type CartItem = {
 // once real cart persistence (AsyncStorage / API) is in place.
 const seedCart = (): CartItem[] => {
   const seedIds: Array<{ id: string; qty: number; subscribe: boolean }> = [
-    { id: 'pr1', qty: 2, subscribe: true },  // Hill's hypoallergenic — subscriber
-    { id: 'pr2', qty: 1, subscribe: false }, // Royal Canin
-    { id: 'pr4', qty: 3, subscribe: false }, // Dental chews
-    { id: 'pr8', qty: 1, subscribe: false }, // Chlorhexidine shampoo
-    { id: 'pr9', qty: 1, subscribe: true },  // Frontline — subscriber
+    { id: 'pr1', qty: 2, subscribe: true },   // Complete Nutrition อาหารแมว — subscriber
+    { id: 'pr2', qty: 1, subscribe: false },  // PUREPUP อาหารสุนัข
+    { id: 'pr14', qty: 3, subscribe: false }, // ขนมขัดฟัน Dental Chew
+    { id: 'pr24', qty: 1, subscribe: false }, // CAT SHAMPOO อาบน้ำแมว
+    { id: 'pr21', qty: 1, subscribe: true },  // PURR CARE อาหารเสริมแมว — subscriber
   ];
   return seedIds
     .map(({ id, qty, subscribe }) => {

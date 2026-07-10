@@ -3,6 +3,7 @@ import {
   Alert,
   Dimensions,
   Image,
+  ImageSourcePropType,
   Modal,
   NativeScrollEvent,
   NativeSyntheticEvent,
@@ -308,8 +309,8 @@ export default function ProductDetailScreen({ route, navigation }: Props) {
                     </View>
                   ) : (
                     <Image
-                      source={{ uri: url }}
-                      style={StyleSheet.absoluteFill}
+                      source={url}
+                      style={[StyleSheet.absoluteFill, { width: '100%', height: '100%' }]}
                       resizeMode="cover"
                       onError={() => markFailed(i)}
                     />
@@ -770,7 +771,7 @@ function Lightbox({
   initialIndex,
   onClose,
 }: {
-  images: string[];
+  images: ImageSourcePropType[];
   initialIndex: number;
   onClose: () => void;
 }) {
@@ -822,7 +823,7 @@ function Lightbox({
             }}
           >
             <Image
-              source={{ uri: url }}
+              source={url}
               style={{ width: SCREEN_W, height: screenH * 0.75 }}
               resizeMode="contain"
             />
