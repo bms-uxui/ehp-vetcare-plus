@@ -184,6 +184,50 @@ export function notifyNow(input: Omit<ScheduleInput, 'seconds' | 'date'>) {
   return scheduleLocal({ ...input, seconds: 1 });
 }
 
+// Grooming service updates pushed from EHP Vetcare (the salon-side system that
+// Pawmely runs alongside). The web actions "บันทึกและเปิดบิล" (open bill) and
+// "บันทึกและปิดเคส" (close case) map to the two phases below.
+export const GROOMING_KIND = 'grooming';
+export type GroomingPhase = 'start' | 'done';
+
+/**
+ * Banner for a grooming (อาบน้ำตัดขน) service update. Renders as a single line
+ * under the "Pawmely" app name — no subtitle — to match the spec:
+ *   start → "{petName} กำลังรับบริการอาบน้ำตัดขน"
+ *   done  → "{petName} รับบริการอาบน้ำตัดขนเรียบร้อยแล้ว"
+ * A few seconds' delay lets the presenter switch to another screen and watch
+ * the banner drop, mirroring a push arriving from EHP Vetcare.
+ */
+export async function notifyGrooming({
+  petName,
+  phase,
+  seconds = 4,
+}: {
+  petName: string;
+  phase: GroomingPhase;
+  seconds?: number;
+}): Promise<string | null> {
+  const ok = await ensurePermission();
+  if (!ok) return null;
+  const body =
+    phase === 'start'
+      ? `${petName} กำลังรับบริการอาบน้ำตัดขน`
+      : `${petName} รับบริการอาบน้ำตัดขนเรียบร้อยแล้ว`;
+  return Notifications.scheduleNotificationAsync({
+    content: {
+      title: APP_NAME,
+      body,
+      sound: 'default',
+      data: { kind: GROOMING_KIND, phase },
+    },
+    trigger: {
+      type: Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL,
+      seconds: Math.max(1, seconds),
+      repeats: false,
+    },
+  });
+}
+
 export async function cancelAll() {
   await Notifications.cancelAllScheduledNotificationsAsync();
 }

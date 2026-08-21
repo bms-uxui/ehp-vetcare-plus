@@ -3,6 +3,7 @@ export type ReminderType =
   | 'appointment'
   | 'feeding'
   | 'medication'
+  | 'grooming'
   | 'chat'
   | 'call'
   | 'order';
@@ -25,12 +26,37 @@ export const reminderMeta: Record<ReminderType, { label: string; icon: string; b
   appointment: { label: 'นัดหมาย', icon: 'Calendar', bg: '#F5E4E7', fg: '#B86A7C' },
   feeding: { label: 'ให้อาหาร', icon: 'UtensilsCrossed', bg: '#FFF6D9', fg: '#D99A20' },
   medication: { label: 'ยา', icon: 'Pill', bg: '#EEF0FF', fg: '#5A6BD8' },
+  grooming: { label: 'อาบน้ำตัดขน', icon: 'Scissors', bg: '#E4F4F1', fg: '#2E9E86' },
   chat: { label: 'แชท', icon: 'MessageCircle', bg: '#E0F0FB', fg: '#4A8FD1' },
   call: { label: 'โทร', icon: 'Phone', bg: '#E8F8F0', fg: '#3DA67A' },
   order: { label: 'คำสั่งซื้อ', icon: 'Package', bg: '#FBEFE6', fg: '#D17A4A' },
 };
 
 export const mockReminders: Reminder[] = [
+  {
+    id: 'g2',
+    type: 'grooming',
+    title: 'อาบน้ำตัดขนเสร็จเรียบร้อยแล้ว',
+    description: 'ทรงลูกสุนัข (Puppy Cut) · รับสัตว์เลี้ยงได้เลย',
+    petId: 'p1',
+    petName: 'ข้าวปั้น',
+    petEmoji: '🐕',
+    dueISO: '2026-08-20T16:42:00',
+    leadTimeLabel: 'จาก EHP Vetcare',
+    read: false,
+  },
+  {
+    id: 'g1',
+    type: 'grooming',
+    title: 'กำลังรับบริการอาบน้ำตัดขน',
+    description: 'เข้ารับบริการที่ร้าน · เปิดบิลแล้ว ฿700',
+    petId: 'p1',
+    petName: 'ข้าวปั้น',
+    petEmoji: '🐕',
+    dueISO: '2026-08-20T15:10:00',
+    leadTimeLabel: 'จาก EHP Vetcare',
+    read: true,
+  },
   {
     id: 'r1',
     type: 'appointment',

@@ -45,6 +45,7 @@ import { useSchedules } from '../data/schedulesContext';
 import { useNotifyPrefs } from '../data/notifyPrefsContext';
 import {
   notifyNow,
+  notifyGrooming,
   scheduleLocal,
   FEEDING_FOOD_CATEGORY,
   FEEDING_WATER_CATEGORY,
@@ -1200,6 +1201,24 @@ function SettingsSheet({
                 body: 'Order #ORD-2025 · Prescription Diet 7kg · ถึงภายใน 2 วัน',
                 seconds: 5,
                 data: { kind: 'order-test' },
+              })
+            }
+          />
+          <TestRow
+            label="ทดสอบ: เริ่มอาบน้ำตัดขน — EHP เปิดบิล (4 วินาที)"
+            onPress={() =>
+              notifyGrooming({
+                petName: firstFoodSchedule?.petName ?? 'ข้าวปั้น',
+                phase: 'start',
+              })
+            }
+          />
+          <TestRow
+            label="ทดสอบ: อาบน้ำตัดขนเสร็จ — EHP ปิดเคส (4 วินาที)"
+            onPress={() =>
+              notifyGrooming({
+                petName: firstFoodSchedule?.petName ?? 'ข้าวปั้น',
+                phase: 'done',
               })
             }
           />
