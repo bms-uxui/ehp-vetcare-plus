@@ -39,6 +39,7 @@ import BookAppointmentScreen from './src/screens/BookAppointmentScreen';
 import BookAppointmentSummaryScreen from './src/screens/BookAppointmentSummaryScreen';
 import HealthRecordsScreen from './src/screens/HealthRecordsScreen';
 import VisitDetailScreen from './src/screens/VisitDetailScreen';
+import VaccineCardScreen from './src/screens/VaccineCardScreen';
 import NotificationsScreen from './src/screens/NotificationsScreen';
 import AddFeedingScheduleScreen from './src/screens/AddFeedingScheduleScreen';
 import MealTimeSettingScreen from './src/screens/MealTimeSettingScreen';
@@ -136,6 +137,7 @@ export type RootStackParamList = {
   };
   HealthRecords: { petId: string };
   VisitDetail: { visitId: string };
+  VaccineCard: { petId: string };
   Notifications: undefined;
   AddFeedingSchedule: undefined;
   MealTimeSetting: { petId: string; scheduleId?: string };
@@ -348,6 +350,11 @@ export default function App() {
             name="VisitDetail"
             component={VisitDetailScreen}
             options={transparentHeader}
+          />
+          <Stack.Screen
+            name="VaccineCard"
+            component={VaccineCardScreen}
+            options={{ headerShown: false }}
           />
           <Stack.Screen
             name="Notifications"
