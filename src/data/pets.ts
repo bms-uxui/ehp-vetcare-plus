@@ -4,6 +4,9 @@ export type VaccineRecord = {
   date: string;
   nextDue?: string;
   clinic?: string;
+  /** Vaccine batch / lot number from the vial sticker. */
+  lotNo?: string;
+  vetName?: string;
 };
 
 export type HealthCondition = {
@@ -79,12 +82,12 @@ export const mockPets: Pet[] = [
     neutered: true,
     neuteredDate: '2023-11-02',
     vaccines: [
-      { id: 'v1', name: 'วัคซีนรวม 5 โรค', date: '2025-03-15', nextDue: '2026-03-15', clinic: 'ปุกปุยสัตวแพทย์ PUKPUI Rabbit&Exotic Pet Clinic' },
-      { id: 'v2', name: 'วัคซีนพิษสุนัขบ้า', date: '2025-03-15', nextDue: '2026-03-15', clinic: 'ปุกปุยสัตวแพทย์ PUKPUI Rabbit&Exotic Pet Clinic' },
-      { id: 'v3', name: 'วัคซีนลายม์', date: '2024-09-20', nextDue: '2025-09-20', clinic: 'โรงพยาบาลสัตว์ทองหล่อ' },
-      { id: 'v4', name: 'วัคซีนเลปโตสไปโรซิส', date: '2024-12-04', nextDue: '2025-12-04', clinic: 'ปุกปุยสัตวแพทย์ PUKPUI Rabbit&Exotic Pet Clinic' },
-      { id: 'v5', name: 'วัคซีนหวัดสุนัข (Bordetella)', date: '2024-06-18', nextDue: '2025-06-18', clinic: 'โรงพยาบาลสัตว์ทองหล่อ' },
-      { id: 'v6', name: 'วัคซีนพยาธิหนอนหัวใจ', date: '2025-01-22', clinic: 'ปุกปุยสัตวแพทย์ PUKPUI Rabbit&Exotic Pet Clinic' },
+      { id: 'v1', lotNo: 'A1234', name: 'วัคซีนรวม 5 โรค', date: '2025-03-15', nextDue: '2026-03-15', clinic: 'ปุกปุยสัตวแพทย์ PUKPUI Rabbit&Exotic Pet Clinic' },
+      { id: 'v2', lotNo: 'B5678', name: 'วัคซีนพิษสุนัขบ้า', date: '2025-03-15', nextDue: '2026-03-15', clinic: 'ปุกปุยสัตวแพทย์ PUKPUI Rabbit&Exotic Pet Clinic' },
+      { id: 'v3', lotNo: 'L2091', name: 'วัคซีนลายม์', date: '2024-09-20', nextDue: '2025-09-20', clinic: 'โรงพยาบาลสัตว์ทองหล่อ' },
+      { id: 'v4', lotNo: 'C9012', name: 'วัคซีนเลปโตสไปโรซิส', date: '2024-12-04', nextDue: '2025-12-04', clinic: 'ปุกปุยสัตวแพทย์ PUKPUI Rabbit&Exotic Pet Clinic' },
+      { id: 'v5', lotNo: 'K4410', name: 'วัคซีนหวัดสุนัข (Bordetella)', date: '2024-06-18', nextDue: '2025-06-18', clinic: 'โรงพยาบาลสัตว์ทองหล่อ' },
+      { id: 'v6', lotNo: 'H7720', name: 'วัคซีนพยาธิหนอนหัวใจ', date: '2025-01-22', clinic: 'ปุกปุยสัตวแพทย์ PUKPUI Rabbit&Exotic Pet Clinic' },
     ],
     conditions: [
       { id: 'c1', name: 'ภูมิแพ้ผิวหนัง', since: '2024-05-10', notes: 'หลีกเลี่ยงอาหารเนื้อไก่' },
@@ -161,10 +164,10 @@ export const mockPets: Pet[] = [
     neutered: true,
     neuteredDate: '2024-02-14',
     vaccines: [
-      { id: 'v7', name: 'วัคซีนรวม 3 โรค (FVRCP)', date: '2025-05-08', nextDue: '2026-05-08', clinic: 'โรงพยาบาลสัตว์ทองหล่อ' },
-      { id: 'v8', name: 'วัคซีนพิษสุนัขบ้า', date: '2025-05-08', nextDue: '2026-05-08', clinic: 'โรงพยาบาลสัตว์ทองหล่อ' },
-      { id: 'v9', name: 'วัคซีนลิวคีเมียแมว (FeLV)', date: '2024-11-12', nextDue: '2025-11-12', clinic: 'คลินิกแมวมะลิ' },
-      { id: 'v10', name: 'วัคซีน FIP', date: '2024-08-30', nextDue: '2025-08-30', clinic: 'คลินิกแมวมะลิ' },
+      { id: 'v7', lotNo: 'F3381', name: 'วัคซีนรวม 3 โรค (FVRCP)', date: '2025-05-08', nextDue: '2026-05-08', clinic: 'โรงพยาบาลสัตว์ทองหล่อ' },
+      { id: 'v8', lotNo: 'R5521', name: 'วัคซีนพิษสุนัขบ้า', date: '2025-05-08', nextDue: '2026-05-08', clinic: 'โรงพยาบาลสัตว์ทองหล่อ' },
+      { id: 'v9', lotNo: 'E1180', name: 'วัคซีนลิวคีเมียแมว (FeLV)', date: '2024-11-12', nextDue: '2025-11-12', clinic: 'คลินิกแมวมะลิ' },
+      { id: 'v10', lotNo: 'P6603', name: 'วัคซีน FIP', date: '2024-08-30', nextDue: '2025-08-30', clinic: 'คลินิกแมวมะลิ' },
     ],
     conditions: [],
     visits: [
@@ -223,9 +226,9 @@ export const mockPets: Pet[] = [
     color: 'น้ำตาลเทา',
     neutered: false,
     vaccines: [
-      { id: 'v11', name: 'วัคซีน RHDV (โรคไวรัสกระต่าย)', date: '2024-12-10', nextDue: '2025-12-10', clinic: 'ปุกปุยสัตวแพทย์ PUKPUI Rabbit&Exotic Pet Clinic' },
-      { id: 'v12', name: 'วัคซีน Myxomatosis', date: '2024-12-10', nextDue: '2025-12-10', clinic: 'ปุกปุยสัตวแพทย์ PUKPUI Rabbit&Exotic Pet Clinic' },
-      { id: 'v13', name: 'วัคซีนรวม Pasteurella', date: '2025-02-18', nextDue: '2026-02-18', clinic: 'ปุกปุยสัตวแพทย์ PUKPUI Rabbit&Exotic Pet Clinic' },
+      { id: 'v11', lotNo: 'RH902', name: 'วัคซีน RHDV (โรคไวรัสกระต่าย)', date: '2024-12-10', nextDue: '2025-12-10', clinic: 'ปุกปุยสัตวแพทย์ PUKPUI Rabbit&Exotic Pet Clinic' },
+      { id: 'v12', lotNo: 'MX417', name: 'วัคซีน Myxomatosis', date: '2024-12-10', nextDue: '2025-12-10', clinic: 'ปุกปุยสัตวแพทย์ PUKPUI Rabbit&Exotic Pet Clinic' },
+      { id: 'v13', lotNo: 'PA228', name: 'วัคซีนรวม Pasteurella', date: '2025-02-18', nextDue: '2026-02-18', clinic: 'ปุกปุยสัตวแพทย์ PUKPUI Rabbit&Exotic Pet Clinic' },
     ],
     conditions: [],
     visits: [

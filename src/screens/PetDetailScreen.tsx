@@ -332,6 +332,32 @@ export default function PetDetailScreen({ route, navigation }: Props) {
 
     vaccines: (
       <View style={styles.content}>
+        <Pressable
+          onPress={() => navigation.navigate('VaccineCard', { petId })}
+          accessibilityRole="button"
+          style={({ pressed }) => [styles.vaxCardBtn, pressed && { opacity: 0.92, transform: [{ scale: 0.99 }] }]}
+        >
+          <LinearGradient
+            pointerEvents="none"
+            colors={['#3E2027', '#6B3646', '#9F5266']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={StyleSheet.absoluteFill}
+          />
+          <View pointerEvents="none" style={styles.vaxCardRing} />
+          <View style={styles.vaxCardIcon}>
+            <Icon name="IdCard" size={22} color="#9F5266" strokeWidth={2} />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text variant="bodyStrong" style={styles.vaxCardTitle}>
+              บัตรฉีดวัคซีน
+            </Text>
+            <Text variant="caption" style={styles.vaxCardSub}>
+              บัตรวัคซีนดิจิทัล พร้อม QR ให้คลินิกสแกนตรวจสอบ
+            </Text>
+          </View>
+          <Icon name="ChevronRight" size={20} color="#FFFFFF" strokeWidth={2.2} />
+        </Pressable>
         {pet.vaccines.length === 0 ? (
           <View style={styles.infoCard}>
             <View style={styles.conditionWrap}>
@@ -1423,6 +1449,36 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#000000',
   },
+  vaxCardBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    borderRadius: 18,
+    paddingVertical: 14,
+    paddingHorizontal: 14,
+    overflow: 'hidden',
+    ...shadows.pop,
+  },
+  vaxCardRing: {
+    position: 'absolute',
+    width: 180,
+    height: 180,
+    borderRadius: 90,
+    right: -60,
+    top: -100,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.12)',
+  },
+  vaxCardIcon: {
+    width: 42,
+    height: 42,
+    borderRadius: 12,
+    backgroundColor: '#FFFFFF',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  vaxCardTitle: { color: '#FFFFFF' },
+  vaxCardSub: { color: 'rgba(255,255,255,0.75)', fontSize: 12, lineHeight: 17 },
   timelineWrap: {
     paddingVertical: spacing.sm,
   },
